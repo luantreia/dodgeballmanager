@@ -1,5 +1,5 @@
 import { useState, type FC } from 'react';
-import GraficoEstadisticasSet from '../../estadisticas/components/GraficoEstadisticasSet';
+import GraficoEstadisticasSet from '../../../estadisticas/components/GraficoEstadisticasSet';
 
 interface SetPartidoResumen {
   _id: string;
@@ -14,11 +14,10 @@ interface PartidoConSets {
 
 interface SeccionEstadisticasSetASetProps {
   partido: PartidoConSets;
-  token: string;
-  onAbrirCaptura?: (numeroSet: number) => void;
+  onAbrirCaptura?: (numeroSet?: number) => void;
 }
 
-export const SeccionEstadisticasSetASet: FC<SeccionEstadisticasSetASetProps> = ({ partido, token, onAbrirCaptura }) => {
+export const SeccionEstadisticasSetASet: FC<SeccionEstadisticasSetASetProps> = ({ partido, onAbrirCaptura }) => {
   const [setsExpandidos, setSetsExpandidos] = useState<Record<string, boolean>>({});
 
   return (
@@ -28,6 +27,16 @@ export const SeccionEstadisticasSetASet: FC<SeccionEstadisticasSetASetProps> = (
           <h4 className="text-lg font-semibold text-purple-800">🎯 Estadísticas Set a Set</h4>
           <p className="text-sm text-purple-700">Análisis detallado de cada set individual del partido</p>
         </div>
+
+        {onAbrirCaptura && (
+          <button
+            type="button"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-white bg-purple-600 rounded hover:bg-purple-700 transition-colors"
+            onClick={() => onAbrirCaptura(partido.sets?.[0]?.numeroSet)}
+          >
+            <span>Capturar estadísticas</span>
+          </button>
+        )}
       </div>
       {partido.sets && partido.sets.length > 0 ? (
         <div className="space-y-3">
@@ -38,7 +47,7 @@ export const SeccionEstadisticasSetASet: FC<SeccionEstadisticasSetASetProps> = (
               <div key={set._id} className="bg-white rounded border">
                 {/* Header del set */}
                 <div
-                  className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="flex justify-between items-center gap-4 p-3 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => setSetsExpandidos(prev => ({
                     ...prev,
                     [set._id]: !prev[set._id]
@@ -61,22 +70,24 @@ export const SeccionEstadisticasSetASet: FC<SeccionEstadisticasSetASetProps> = (
                       Ganador: <span className="font-medium">{set.ganadorSet}</span>
                     </span>
                   </div>
+                  {onAbrirCaptura && (
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-white bg-purple-600 rounded hover:bg-purple-700 transition-colors"
+                      onClick={event => {
+                        event.stopPropagation();
+                        onAbrirCaptura(set.numeroSet);
+                      }}
+                    >
+                      <span>Capturar estadísticas</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Estadísticas expandidas */}
                 {isExpanded && (
                   <div className="border-t px-3 pb-3 space-y-3">
-                    {onAbrirCaptura && (
-                      <div className="flex justify-end">
-                        <button
-                          onClick={() => onAbrirCaptura(set.numeroSet)}
-                          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700 transition-colors"
-                        >
-                          <span>Capturar estadísticas de este set</span>
-                        </button>
-                      </div>
-                    )}
-                    <GraficoEstadisticasSet setId={set._id} token={token} />
+                    <GraficoEstadisticasSet setId={set._id} />
                   </div>
                 )}
               </div>

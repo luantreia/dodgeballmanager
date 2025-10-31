@@ -1,4 +1,5 @@
 import { useState, useEffect, type FC } from 'react';
+import { getEstadisticasJugadorSet } from '../services/estadisticasService';
 
 type JugadorReferencia = {
   _id?: string;
@@ -32,38 +33,27 @@ type EquipoStats = {
 
 type TablaEstadisticasSetProps = {
   setId?: string;
-  token?: string;
 };
 
-const TablaEstadisticasSet: FC<TablaEstadisticasSetProps> = ({ setId, token }) => {
+const TablaEstadisticasSet: FC<TablaEstadisticasSetProps> = ({ setId }) => {
   const [estadisticas, setEstadisticas] = useState<EstadisticaJugadorSet[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [equiposStats, setEquiposStats] = useState<Record<string, EquipoStats>>({});
 
   useEffect(() => {
-    if (!setId || !token) return;
+    if (!setId) return;
 
     const cargarEstadisticas = async (): Promise<void> => {
       try {
         setLoading(true);
-        const response = await fetch(
-          `https://overtime-ddyl.onrender.com/api/estadisticas/jugador-set?set=${setId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error('Error al cargar estadísticas');
-        }
-
-        const data: EstadisticaJugadorSet[] = await response.json();
-        setEstadisticas(Array.isArray(data) ? data : []);
+        const data = await getEstadisticasJugadorSet(setId);
+        const estadisticasSet = Array.isArray(data) ? data : [];
+        setEstadisticas(estadisticasSet);
 
         // Calcular totales por equipo
         const totalesPorEquipo: Record<string, EquipoStats> = {};
-        data.forEach(stat => {
+        estadisticasSet.forEach(stat => {
           const equipo = stat.equipo;
           const equipoId = typeof equipo === 'string' ? equipo : equipo?._id;
           const equipoNombre = typeof equipo === 'string' ? 'Equipo' : (equipo?.nombre ?? 'Equipo');
@@ -100,7 +90,7 @@ const TablaEstadisticasSet: FC<TablaEstadisticasSetProps> = ({ setId, token }) =
     };
 
     cargarEstadisticas();
-  }, [setId, token]);
+  }, [setId]);
 
   if (loading) {
     return (
@@ -219,3 +209,5 @@ const TablaEstadisticasSet: FC<TablaEstadisticasSetProps> = ({ setId, token }) =
     </div>
   );
 }
+
+export default TablaEstadisticasSet;

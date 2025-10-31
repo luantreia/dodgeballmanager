@@ -7,9 +7,18 @@ type PartidoQuery = {
   competenciaId?: string;
 };
 
-type PartidoUpdatePayload = Partial<Pick<Partido, 'estado' | 'escenario'>> & {
+type PartidoUpdatePayload = {
+  estado?: Partido['estado'] | BackendPartido['estado'];
+  escenario?: Partido['escenario'];
   fecha?: string;
   hora?: string;
+  nombrePartido?: string;
+  marcadorLocal?: number;
+  marcadorVisitante?: number;
+  marcadorModificadoManualmente?: boolean;
+  modalidad?: string;
+  categoria?: string;
+  competencia?: string | BackendCompetencia;
 };
 
 type PartidoCreatePayload = {
@@ -35,11 +44,37 @@ type AsistenciaPayload = {
   notas?: string;
 };
 
+export type JugadorSimple = {
+  _id?: string;
+  nombre?: string;
+  apellido?: string;
+  alias?: string;
+  name?: string;
+  fullName?: string;
+};
+
+export type EquipoReferencia = string | { _id: string };
+
+export interface JugadorPartidoResumen {
+  _id: string;
+  jugador: JugadorSimple | string;
+  equipo: EquipoReferencia;
+}
+
+export type JugadorPartidoCreatePayload = {
+  partido: string;
+  jugador: string;
+  equipo: string;
+  creadoPor?: string;
+};
+
 export type PartidoDetallado = BackendPartido & {
   marcadorModificadoManualmente?: boolean;
   modalidad?: string;
   categoria?: string;
   sets?: SetPartido[];
+  modoVisualizacion?: 'automatico' | 'manual';
+  modoEstadisticas?: 'automatico' | 'manual';
 };
 
 export type SetPartido = {
@@ -50,6 +85,8 @@ export type SetPartido = {
   ganadorSet: 'local' | 'visitante' | 'pendiente' | string;
   estadisticas?: unknown;
   creadoPor?: string;
+  marcadorLocal?: number;
+  marcadorVisitante?: number;
 };
 
 export type CrearSetPayload = {
@@ -252,6 +289,32 @@ export const registrarAsistencia = (jugadorPartidoId: string, payload: Asistenci
     body: payload,
   });
 
+export const crearJugadorPartido = (payload: JugadorPartidoCreatePayload) =>
+  authFetch<JugadorPartidoResumen>('/jugador-partido', {
+    method: 'POST',
+    body: payload,
+  });
+
+export const eliminarJugadorPartido = (jugadorPartidoId: string) =>
+  authFetch<void>(`/jugador-partido/${jugadorPartidoId}`, { method: 'DELETE' });
+
+export const obtenerJugadoresDePartido = (partidoId: string) =>
+  authFetch<JugadorPartidoResumen[]>(`/jugador-partido?partido=${partidoId}`);
+
+export const actualizarEstadisticasEquipoPartido = (
+  partidoId: string,
+  equipoId: string,
+  creadoPor: string = 'usuario',
+) =>
+  authFetch<void>(`/estadisticas/equipo-partido/actualizar`, {
+    method: 'POST',
+    body: {
+      partidoId,
+      equipoId,
+      creadoPor,
+    },
+  });
+
 export const getPartidoDetallado = (partidoId: string) =>
   authFetch<PartidoDetallado>(`/partidos/${partidoId}`);
 
@@ -278,5 +341,23 @@ export const recalcularMarcadorPartido = (partidoId: string) =>
 
 export const eliminarPartido = (partidoId: string) =>
   authFetch<{ message: string }>(`/partidos/${partidoId}`, { method: 'DELETE' });
+
+export const actualizarModoEstadisticasPartido = (
+  partidoId: string,
+  modo: 'manual' | 'automatico',
+) =>
+  authFetch<PartidoDetallado>(`/partidos/${partidoId}`, {
+    method: 'PUT',
+    body: { modoEstadisticas: modo },
+  });
+
+export const actualizarModoVisualizacionPartido = (
+  partidoId: string,
+  modo: 'manual' | 'automatico',
+) =>
+  authFetch<PartidoDetallado>(`/partidos/${partidoId}`, {
+    method: 'PUT',
+    body: { modoVisualizacion: modo },
+  });
 
 export const editarPartido = actualizarPartido;

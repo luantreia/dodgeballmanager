@@ -1,14 +1,14 @@
 import type { FC, ChangeEvent } from 'react';
 import { CheckCircleIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { CacheInfo } from '../../estadisticas/components/index';
-import type { PartidoDetallado } from '../services/partidoService';
-import { extractEquipoId } from '../services/partidoService';
+import CacheInfo from '../CacheInfo';
+import type { PartidoDetallado } from '../../services/partidoService';
+import { extractEquipoId } from '../../services/partidoService';
 import type {
   JugadorBackend,
   EstadisticasMap,
   EstadisticaCampoEditable,
   EstadisticaEstado,
-} from './useEstadisticasModal';
+} from '../../hooks/useEstadisticasModal';
 
 type JugadorDisponible = JugadorBackend;
 

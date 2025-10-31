@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FC } from 'react';
 import JugadorEstadisticasCard, {
-  type JugadorEstadisticasCardProps,
   type EstadisticasJugador,
-} from '../../estadisticas/components/JugadorEstadisticasCard';
-import { getJugadoresEquipo } from '../../jugadores/services/jugadorEquipoService';
+} from '../../../estadisticas/components/JugadorEstadisticasCard';
+import { getJugadoresEquipo } from '../../../jugadores/services/jugadorEquipoService';
 
 export type EstadisticaJugadorEntrada = {
   jugadorId?: string;

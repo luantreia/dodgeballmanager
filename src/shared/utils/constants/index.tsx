@@ -83,7 +83,7 @@ export const BREAKPOINTS = {
 // Validaciones comunes
 export const VALIDATION_RULES = {
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  PHONE_REGEX: /^\+?[\d\s\-\(\)]+$/,
+  PHONE_REGEX: /^\+?[\d\s]+$/,
   MIN_PASSWORD_LENGTH: 8,
   MAX_NAME_LENGTH: 100
 };

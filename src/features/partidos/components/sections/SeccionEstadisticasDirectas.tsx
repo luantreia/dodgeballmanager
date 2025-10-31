@@ -1,6 +1,6 @@
 import { useState, useEffect, type FC } from 'react';
-import type { PartidoDetallado } from '../services/partidoService';
-import type { EstadisticaManualBackend } from './useEstadisticasModal';
+import type { PartidoDetallado } from '../../services/partidoService';
+import type { EstadisticaManualBackend } from '../../hooks/useEstadisticasModal';
 
 type EstadisticaAutomatica = EstadisticaManualBackend & {
   jugadorPartido?: EstadisticaManualBackend['jugadorPartido'] | string;
@@ -195,4 +195,3 @@ export const SeccionEstadisticasDirectas: FC<SeccionEstadisticasDirectasProps> =
     </div>
   );
 };
-

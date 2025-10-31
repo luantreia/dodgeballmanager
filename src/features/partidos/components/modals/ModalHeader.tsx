@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import type { TipoAutocompletado } from './useEstadisticasModal';
+import type { TipoAutocompletado } from '../../hooks/useEstadisticasModal';
 
 type ModalHeaderProps = {
   tipoAutocompletado: TipoAutocompletado;

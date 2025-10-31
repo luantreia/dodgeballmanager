@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, type FC } from 'react';
+import { useState, useEffect, useCallback, useMemo, type FC } from 'react';
 import EncabezadoEstadisticas from './EncabezadoEstadisticas';
 import EquiposEstadisticas from './EquipoEstadisticas';
-import { SetManager } from './SetManager';
-import ModalBase from '../../../shared/components/ModalBase/ModalBase';
-import type { PartidoDetallado, SetPartido } from '../services/partidoService';
-import { useModalSetEstadisticas, type JugadorSet } from './useModalSetEstadisticas';
+import { SetManager } from '../sections/SetManager';
+import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
+import type { PartidoDetallado, SetPartido } from '../../services/partidoService';
+import { useModalSetEstadisticas, type JugadorSet } from '../../hooks/useModalSetEstadisticas';
 import type { EstadisticaJugadorEntrada } from './ListaJugadores';
 
 type ModalEstadisticasProps = {
@@ -74,7 +74,7 @@ const ModalEstadisticas: FC<ModalEstadisticasProps> = ({
   );
   const [uiStatsOverride, setUiStatsOverride] = useState<{ local: JugadorSet[]; visitante: JugadorSet[] } | null>(null);
 
-  const setsLocales = partidoLocal?.sets ?? [];
+  const setsLocales = useMemo(() => partidoLocal?.sets ?? [], [partidoLocal?.sets]);
   const estadisticasSet = setsLocales.find((s) => s.numeroSet.toString() === numeroSetSeleccionado);
 
   const actualizarSetSeleccionado = useCallback(
@@ -100,8 +100,6 @@ const ModalEstadisticas: FC<ModalEstadisticasProps> = ({
     cambiarEstadistica,
     copiarJugadoresDeSetAnterior,
     mostrarConfirmacionManual,
-    estadisticasManualesDetectadas,
-    setDataPendiente,
     confirmarRecalculo,
     cancelarRecalculo,
   } = useModalSetEstadisticas({
@@ -125,22 +123,21 @@ const ModalEstadisticas: FC<ModalEstadisticasProps> = ({
   }, [numeroSetInicial]);
 
   useEffect(() => {
-    if (setsLocales.length > 0 && !numeroSetSeleccionado) {
-      // Seleccionar el set con el número más alto (el más reciente)
-      const ultimoSet = setsLocales.reduce((max, set) =>
-        set.numeroSet > max.numeroSet ? set : max
-      );
-      setNumeroSetSeleccionado(ultimoSet.numeroSet.toString());
+    if (!setsLocales.length || numeroSetSeleccionado) {
+      return;
     }
-  }, [setsLocales.length]); // Solo depender de la cantidad de sets
+
+    const ultimoSet = setsLocales.reduce((max, set) =>
+      set.numeroSet > max.numeroSet ? set : max
+    , setsLocales[0]);
+    setNumeroSetSeleccionado(ultimoSet.numeroSet.toString());
+  }, [setsLocales, numeroSetSeleccionado]);
 
   useEffect(() => {
-    if (partidoLocal && typeof actualizarSetsLocales === 'function') {
-      // Solo actualizar si realmente cambió el número de sets
-      const setsActuales = partidoLocal.sets || [];
-      actualizarSetsLocales(setsActuales);
-    }
-  }, [partidoLocal?.sets ? partidoLocal.sets.length : 0]);
+    const setsActuales = partidoLocal?.sets;
+    if (!setsActuales) return;
+    actualizarSetsLocales(setsActuales);
+  }, [partidoLocal?.sets, actualizarSetsLocales]);
 
   useEffect(() => {
     setUiStatsOverride(null);
@@ -235,11 +232,6 @@ const ModalEstadisticas: FC<ModalEstadisticasProps> = ({
       },
     }));
   }, [equiposDelSet]);
-
-  const obtenerEstadisticasUI = (equipoId: string, override?: JugadorSet[]): EstadisticaJugadorEntrada[] => {
-    const origen = override ?? obtenerEstadisticasEquipo(equipoId);
-    return mapearAEntrada(origen);
-  };
 
   const handleCopiarJugadores = () => {
     copiarJugadoresDeSetAnterior();

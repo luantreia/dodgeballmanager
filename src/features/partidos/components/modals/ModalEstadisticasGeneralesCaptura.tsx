@@ -1,16 +1,16 @@
 import React, { useEffect } from 'react';
-import ModalBase from '../../../shared/components/ModalBase/ModalBase';
-import { useJugadoresSeleccion } from './useJugadoresSeleccion';
-import { useAsignacionJugadores } from './useAsignacionJugadores';
-import { useEstadisticasModal } from './useEstadisticasModal';
-import { extractEquipoId } from '../services/partidoService';
+import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
+import { useJugadoresSeleccion } from '../../hooks/useJugadoresSeleccion';
+import { useAsignacionJugadores } from '../../hooks/useAsignacionJugadores';
+import { useEstadisticasModal } from '../../hooks/useEstadisticasModal';
+import { extractEquipoId } from '../../services/partidoService';
 import ModalHeader from './ModalHeader';
 import AutocompletadoInfo from './AutocompletadoInfo';
-import AsignacionJugadores from './AsignacionJugadores';
+import AsignacionJugadores from '../sections/AsignacionJugadores';
 import CapturaEstadisticas from './CapturaEstadisticas';
-import type { PartidoDetallado } from '../services/partidoService';
-import type { EstadisticaManualJugador } from '../../estadisticas/services/estadisticasService';
-import type { EstadisticaManualBackend, EstadisticaCampoEditable } from './useEstadisticasModal';
+import type { PartidoDetallado } from '../../services/partidoService';
+import type { EstadisticaManualJugador } from '../../../estadisticas/services/estadisticasService';
+import type { EstadisticaManualBackend, EstadisticaCampoEditable } from '../../hooks/useEstadisticasModal';
 
 type JugadorAsignado = {
   _id: string;
@@ -28,12 +28,6 @@ interface ModalEstadisticasGeneralesCapturaProps {
   hayDatosAutomaticos?: boolean;
 }
 
-const obtenerJugadorId = (jugador: JugadorAsignado['jugador']): string | undefined => {
-  if (!jugador) return undefined;
-  if (typeof jugador === 'string') return jugador;
-  return jugador._id;
-};
-
 const obtenerEquipoId = (equipo: JugadorAsignado['equipo']): string | undefined => {
   if (!equipo) return undefined;
   return typeof equipo === 'string' ? equipo : equipo._id;
@@ -50,6 +44,7 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
 }) => {
   // Hook principal para lógica de estadísticas
   const estadisticasState = useEstadisticasModal(partidoId, token);
+  const { cargarJugadoresYEstadisticas } = estadisticasState;
 
   // Hook para lógica de selección de jugadores
   const {
@@ -105,7 +100,7 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
     estadisticasState.setJugadoresSeleccionadosLocal,
     estadisticasState.setJugadoresSeleccionadosVisitante,
     estadisticasState.setAsignandoJugadores,
-    () => estadisticasState.cargarJugadoresYEstadisticas(
+    () => cargarJugadoresYEstadisticas(
       partido,
       normalizarDatosIniciales(datosIniciales),
       hayDatosAutomaticos,
@@ -118,12 +113,12 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
 
   // Efecto para cargar datos iniciales
   useEffect(() => {
-    estadisticasState.cargarJugadoresYEstadisticas(
+    cargarJugadoresYEstadisticas(
       partido,
       normalizarDatosIniciales(datosIniciales),
       hayDatosAutomaticos,
     );
-  }, [partidoId, token]);
+  }, [cargarJugadoresYEstadisticas, partido, datosIniciales, hayDatosAutomaticos]);
 
   // Función para guardar y cerrar
   const guardarYCerrar = async () => {

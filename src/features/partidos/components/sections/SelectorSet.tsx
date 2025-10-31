@@ -1,5 +1,5 @@
 import type { FC, ChangeEvent } from 'react';
-import Button from '../../../shared/components/ui/Button/Button';
+import Button from '../../../../shared/components/ui/Button/Button';
 
 type SetResumen = {
   numeroSet: number;

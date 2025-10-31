@@ -1,5 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { extractEquipoId, type EquipoRef } from '../services/partidoService';
+import {
+  getJugadoresPartido,
+  getEstadisticasJugadorPartidoManual,
+  guardarEstadisticaJugadorPartido,
+  actualizarEstadisticaJugadorPartido,
+  guardarEstadisticaManualJugadorPartido,
+  actualizarEstadisticaManualJugadorPartido,
+  recalcularEstadisticasEquipoPartido,
+  type EstadisticaJugadorPartidoPayload,
+  type EstadisticaManualJugador,
+} from '../../estadisticas/services/estadisticasService';
 
 export type TipoAutocompletado = 'automatico' | 'manual-previo' | null;
 
@@ -58,8 +69,6 @@ type JugadoresAsignadosResponse = JugadorBackend[];
 
 type EstadisticasJugadorPartidoManualResponse = EstadisticaManualBackend[];
 
-type EstadisticasJugadorPartidoResponse = EstadisticaManualBackend[];
-
 type UseEstadisticasModalReturn = {
   jugadores: JugadorBackend[];
   estadisticas: EstadisticasMap;
@@ -86,9 +95,6 @@ type UseEstadisticasModalReturn = {
   cambiarEstadistica: (jugadorPartidoId: string, campo: EstadisticaCampoEditable, valor: number) => void;
   guardarEstadisticas: (partido: PartidoReferencia) => Promise<boolean>;
 };
-
-const isObjectWithId = (value: unknown): value is { _id?: string } =>
-  typeof value === 'object' && value !== null && '_id' in value;
 
 const extractId = (value: string | { _id?: string } | EquipoRef | null | undefined): string | undefined => {
   if (!value) return undefined;
@@ -123,7 +129,91 @@ const buildCapturaPayload = (
   };
 };
 
-export const useEstadisticasModal = (partidoId: string, token: string): UseEstadisticasModalReturn => {
+const toBackendEstadistica = (stat: EstadisticaManualJugador | EstadisticaManualBackend): EstadisticaManualBackend | null => {
+  const jugadorPartidoValue = (stat as EstadisticaManualJugador).jugadorPartido;
+  if (!jugadorPartidoValue) return null;
+
+  const tipoCaptura =
+    stat.tipoCaptura === 'manual' || stat.tipoCaptura === 'automatico' ? stat.tipoCaptura : undefined;
+
+  if (typeof jugadorPartidoValue === 'string') {
+    return {
+      _id: stat._id,
+      jugadorPartido: {
+        _id: jugadorPartidoValue,
+      },
+      throws: stat.throws,
+      hits: stat.hits,
+      outs: stat.outs,
+      catches: stat.catches,
+      tipoCaptura,
+    };
+  }
+
+  const jugadorId = jugadorPartidoValue._id;
+  if (!jugadorId) return null;
+
+  return {
+    _id: stat._id,
+    jugadorPartido: {
+      _id: jugadorId,
+      equipo: jugadorPartidoValue.equipo,
+    },
+    throws: stat.throws,
+    hits: stat.hits,
+    outs: stat.outs,
+    catches: stat.catches,
+    tipoCaptura,
+  };
+};
+
+const preSeleccionarPosiciones = (
+  datos: EstadisticaManualBackend[],
+  partido: PartidoReferencia | null,
+  seleccionesLocal: string[],
+  seleccionesVisitante: string[],
+) => {
+  let posicionLocal = 0;
+  let posicionVisitante = 0;
+
+  const porEquipo: Record<string, EstadisticaManualBackend[]> = {};
+  datos.forEach((stat) => {
+    const equipoId = extractId(stat.jugadorPartido.equipo);
+    if (!equipoId) return;
+    if (!porEquipo[equipoId]) {
+      porEquipo[equipoId] = [];
+    }
+    porEquipo[equipoId].push(stat);
+  });
+
+  const equipoLocalId = extractEquipoId(partido?.equipoLocal);
+  const equipoVisitanteId = extractEquipoId(partido?.equipoVisitante);
+
+  Object.entries(porEquipo).forEach(([equipoId, stats]) => {
+    const esLocal = equipoLocalId && equipoId === equipoLocalId;
+    const esVisitante = equipoVisitanteId && equipoId === equipoVisitanteId;
+
+    if (esLocal || esVisitante) {
+      const selecciones = esLocal ? seleccionesLocal : seleccionesVisitante;
+      let posicion = esLocal ? posicionLocal : posicionVisitante;
+
+      stats.forEach((stat) => {
+        if (posicion < selecciones.length) {
+          selecciones[posicion] = stat.jugadorPartido._id;
+          posicion += 1;
+        }
+      });
+
+      if (esLocal) {
+        posicionLocal = posicion;
+      } else {
+        posicionVisitante = posicion;
+      }
+    }
+  });
+};
+
+export const useEstadisticasModal = (partidoId: string, _token: string): UseEstadisticasModalReturn => {
   const [jugadores, setJugadores] = useState<JugadorBackend[]>([]);
   const [estadisticas, setEstadisticas] = useState<EstadisticasMap>({});
   const [loading, setLoading] = useState<boolean>(true);
@@ -136,68 +226,71 @@ export const useEstadisticasModal = (partidoId: string, token: string): UseEstad
   const [jugadoresSeleccionadosVisitante, setJugadoresSeleccionadosVisitante] = useState<Set<string>>(new Set());
   const [asignandoJugadores, setAsignandoJugadores] = useState<boolean>(false);
 
-  const cargarJugadoresYEstadisticas = async (
+  const cargarJugadoresYEstadisticas = useCallback(async (
     partido: PartidoReferencia | null,
     datosIniciales: EstadisticaManualBackend[] = [],
     hayDatosAutomaticos: boolean = false,
   ): Promise<void> => {
     try {
-      const responseJugadores = await fetch(
-        `https://overtime-ddyl.onrender.com/api/jugador-partido?partido=${partidoId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const jugadoresData = await getJugadoresPartido(partidoId);
+      const jugadoresNormalizados = Array.isArray(jugadoresData)
+        ? (jugadoresData as JugadoresAsignadosResponse)
+        : [];
+      setJugadores(jugadoresNormalizados);
 
-      if (!responseJugadores.ok) {
-        throw new Error('Error al cargar jugadores');
-      }
-
-      const jugadoresData: JugadoresAsignadosResponse = await responseJugadores.json();
-      setJugadores(jugadoresData);
-
-      if (jugadoresData.length === 0) {
+      if (jugadoresNormalizados.length === 0) {
         setMostrarAsignacion(true);
         return;
       }
 
-      const responseEstadisticasManuales = await fetch(
-        `https://overtime-ddyl.onrender.com/api/estadisticas/jugador-partido-manual?partido=${partidoId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+      let hayDatosManualesPrevios = false;
+      let estadisticasManualesPrevias: EstadisticasJugadorPartidoManualResponse = [];
+      try {
+        const manuales = await getEstadisticasJugadorPartidoManual(partidoId);
+        const manualesNormalizados = Array.isArray(manuales)
+          ? manuales
+            .map(toBackendEstadistica)
+            .filter((stat): stat is EstadisticaManualBackend => stat !== null)
+          : [];
+        estadisticasManualesPrevias = manualesNormalizados;
+      } catch (manualError) {
+        console.warn('⚠️ Error obteniendo estadísticas manuales previas:', manualError);
+      }
+
+      const estadisticasManualesFiltradas = estadisticasManualesPrevias.filter((stat) =>
+        jugadoresNormalizados.some((j) => j._id === stat.jugadorPartido._id),
       );
 
-      let hayDatosManualesPrevios = false;
-      if (responseEstadisticasManuales.ok) {
-        const estadisticasManualesData: EstadisticasJugadorPartidoManualResponse = await responseEstadisticasManuales.json();
-        const estadisticasManualesFiltradas = estadisticasManualesData.filter((stat) =>
-          jugadoresData.some((j) => j._id === stat.jugadorPartido._id),
+      if (estadisticasManualesFiltradas.length > 0) {
+        hayDatosManualesPrevios = true;
+        const estadisticasMap: EstadisticasMap = {};
+        estadisticasManualesFiltradas.forEach((stat) => {
+          estadisticasMap[stat.jugadorPartido._id] = {
+            ...stat,
+            fuente: 'autocompletado-manual-previo',
+          };
+        });
+        setEstadisticas(estadisticasMap);
+
+        const nuevasSeleccionesLocal = Array<string>(10).fill('');
+        const nuevasSeleccionesVisitante = Array<string>(10).fill('');
+        preSeleccionarPosiciones(
+          estadisticasManualesFiltradas,
+          partido,
+          nuevasSeleccionesLocal,
+          nuevasSeleccionesVisitante,
         );
-
-        if (estadisticasManualesFiltradas.length > 0) {
-          hayDatosManualesPrevios = true;
-          const estadisticasMap: EstadisticasMap = {};
-          estadisticasManualesFiltradas.forEach((stat) => {
-            estadisticasMap[stat.jugadorPartido._id] = {
-              ...stat,
-              fuente: 'autocompletado-manual-previo',
-            };
-          });
-          setEstadisticas(estadisticasMap);
-
-          const nuevasSeleccionesLocal = Array<string>(10).fill('');
-          const nuevasSeleccionesVisitante = Array<string>(10).fill('');
-          preSeleccionarPosiciones(estadisticasManualesFiltradas, partido, nuevasSeleccionesLocal, nuevasSeleccionesVisitante);
-          setSeleccionesLocal(nuevasSeleccionesLocal);
-          setSeleccionesVisitante(nuevasSeleccionesVisitante);
-          setTipoAutocompletado('manual-previo');
-        }
+        setSeleccionesLocal(nuevasSeleccionesLocal);
+        setSeleccionesVisitante(nuevasSeleccionesVisitante);
+        setTipoAutocompletado('manual-previo');
       }
 
       if (!hayDatosManualesPrevios && hayDatosAutomaticos && datosIniciales.length > 0) {
         const estadisticasMap: EstadisticasMap = {};
-        datosIniciales.forEach((stat) => {
+        const datosNormalizados = datosIniciales
+          .map(toBackendEstadistica)
+          .filter((stat): stat is EstadisticaManualBackend => stat !== null);
+        datosNormalizados.forEach((stat) => {
           estadisticasMap[stat.jugadorPartido._id] = {
             ...stat,
             _id: undefined,
@@ -208,7 +301,12 @@ export const useEstadisticasModal = (partidoId: string, token: string): UseEstad
 
         const nuevasSeleccionesLocal = Array<string>(10).fill('');
         const nuevasSeleccionesVisitante = Array<string>(10).fill('');
-        preSeleccionarPosiciones(datosIniciales, partido, nuevasSeleccionesLocal, nuevasSeleccionesVisitante);
+        preSeleccionarPosiciones(
+          datosNormalizados,
+          partido,
+          nuevasSeleccionesLocal,
+          nuevasSeleccionesVisitante,
+        );
         setSeleccionesLocal(nuevasSeleccionesLocal);
         setSeleccionesVisitante(nuevasSeleccionesVisitante);
         setTipoAutocompletado('automatico');
@@ -223,53 +321,7 @@ export const useEstadisticasModal = (partidoId: string, token: string): UseEstad
     } finally {
       setLoading(false);
     }
-  };
-
-  const preSeleccionarPosiciones = (
-    datos: EstadisticaManualBackend[],
-    partido: PartidoReferencia | null,
-    seleccionesLocal: string[],
-    seleccionesVisitante: string[],
-  ): void => {
-    let posicionLocal = 0;
-    let posicionVisitante = 0;
-
-    const porEquipo: Record<string, EstadisticaManualBackend[]> = {};
-    datos.forEach((stat) => {
-      const equipoId = extractId(stat.jugadorPartido.equipo);
-      if (!equipoId) return;
-      if (!porEquipo[equipoId]) {
-        porEquipo[equipoId] = [];
-      }
-      porEquipo[equipoId].push(stat);
-    });
-
-    const equipoLocalId = extractEquipoId(partido?.equipoLocal);
-    const equipoVisitanteId = extractEquipoId(partido?.equipoVisitante);
-
-    Object.entries(porEquipo).forEach(([equipoId, stats]) => {
-      const esLocal = equipoLocalId && equipoId === equipoLocalId;
-      const esVisitante = equipoVisitanteId && equipoId === equipoVisitanteId;
-
-      if (esLocal || esVisitante) {
-        const selecciones = esLocal ? seleccionesLocal : seleccionesVisitante;
-        let posicion = esLocal ? posicionLocal : posicionVisitante;
-
-        stats.forEach((stat) => {
-          if (posicion < selecciones.length) {
-            selecciones[posicion] = stat.jugadorPartido._id;
-            posicion += 1;
-          }
-        });
-
-        if (esLocal) {
-          posicionLocal = posicion;
-        } else {
-          posicionVisitante = posicion;
-        }
-      }
-    });
-  };
+  }, [partidoId]);
 
   const cambiarEstadistica = (
     jugadorPartidoId: string,
@@ -294,43 +346,25 @@ export const useEstadisticasModal = (partidoId: string, token: string): UseEstad
   const guardarEstadisticas = async (partido: PartidoReferencia): Promise<boolean> => {
     setGuardando(true);
     try {
-      const tareas: Array<Promise<Response>> = [];
+      const tareas: Array<Promise<unknown>> = [];
 
       [...seleccionesLocal, ...seleccionesVisitante].forEach((jugadorPartidoId) => {
         if (!jugadorPartidoId) return;
         const stats = estadisticas[jugadorPartidoId];
         const payload = buildCapturaPayload(jugadorPartidoId, stats, tipoAutocompletado);
 
+        const payloadForService = payload as EstadisticaJugadorPartidoPayload;
+
         if (payload._id) {
-          const endpoint = payload.fuente === 'manual-con-autocompletado-manual-previo'
-            ? `https://overtime-ddyl.onrender.com/api/estadisticas/jugador-partido-manual/${payload._id}`
-            : `https://overtime-ddyl.onrender.com/api/estadisticas/jugador-partido/${payload._id}`;
-
-          tareas.push(
-            fetch(endpoint, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify(payload),
-            }),
-          );
+          if (payload.fuente === 'manual-con-autocompletado-manual-previo') {
+            tareas.push(actualizarEstadisticaManualJugadorPartido(payload._id, payloadForService));
+          } else {
+            tareas.push(actualizarEstadisticaJugadorPartido(payload._id, payloadForService));
+          }
+        } else if (payload.fuente === 'manual-con-autocompletado-manual-previo') {
+          tareas.push(guardarEstadisticaManualJugadorPartido(payloadForService));
         } else {
-          const endpoint = payload.fuente === 'manual-con-autocompletado-manual-previo'
-            ? 'https://overtime-ddyl.onrender.com/api/estadisticas/jugador-partido-manual'
-            : 'https://overtime-ddyl.onrender.com/api/estadisticas/jugador-partido';
-
-          tareas.push(
-            fetch(endpoint, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify(payload),
-            }),
-          );
+          tareas.push(guardarEstadisticaJugadorPartido(payloadForService));
         }
       });
 
@@ -339,40 +373,14 @@ export const useEstadisticasModal = (partidoId: string, token: string): UseEstad
       const equipoLocalId = extractEquipoId(partido?.equipoLocal);
       const equipoVisitanteId = extractEquipoId(partido?.equipoVisitante);
 
-      const actualizacionesEquipo: Array<Promise<Response>> = [];
+      const actualizacionesEquipo: Array<Promise<unknown>> = [];
 
       if (equipoLocalId) {
-        actualizacionesEquipo.push(
-          fetch('https://overtime-ddyl.onrender.com/api/estadisticas/equipo-partido/actualizar', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              partidoId,
-              equipoId: equipoLocalId,
-              creadoPor: 'usuario',
-            }),
-          }),
-        );
+        actualizacionesEquipo.push(recalcularEstadisticasEquipoPartido(partidoId, equipoLocalId));
       }
 
       if (equipoVisitanteId) {
-        actualizacionesEquipo.push(
-          fetch('https://overtime-ddyl.onrender.com/api/estadisticas/equipo-partido/actualizar', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              partidoId,
-              equipoId: equipoVisitanteId,
-              creadoPor: 'usuario',
-            }),
-          }),
-        );
+        actualizacionesEquipo.push(recalcularEstadisticasEquipoPartido(partidoId, equipoVisitanteId));
       }
 
       await Promise.all(actualizacionesEquipo);

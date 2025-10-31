@@ -3,9 +3,11 @@ import {
   crearJugadorPartido,
   eliminarJugadorPartido,
   actualizarEstadisticasEquipoPartido,
-} from '../services/jugadorPartidoService';
-import type { JugadorPartidoResumen, JugadorSimple, EquipoReferencia } from '../services/jugadorPartidoService';
-import { extractEquipoId } from '../services/partidoService';
+  extractEquipoId,
+  type JugadorPartidoResumen,
+  type JugadorSimple,
+  type EquipoReferencia,
+} from '../services/partidoService';
 
 type PartidoEquipo = string | { _id?: string; nombre?: string } | null | undefined;
 
@@ -77,7 +79,7 @@ export const useAsignacionJugadores = (
       setJugadoresSeleccionadosLocal(nuevosSeleccionadosLocal);
       setJugadoresSeleccionadosVisitante(nuevosSeleccionadosVisitante);
     }
-  }, [mostrarAsignacion, jugadores, partido]);
+  }, [mostrarAsignacion, jugadores, partido, setJugadoresSeleccionadosLocal, setJugadoresSeleccionadosVisitante]);
 
   // Función para alternar la selección de un jugador del equipo local
   const toggleJugadorLocal = (jugadorId: string) => {

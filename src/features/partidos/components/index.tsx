@@ -1,6 +1,6 @@
 // src/components/features/admin/partidos/components/index.js
-export { ModalPartidoAdmin } from './ModalPartidoAdmin';
-export { SeccionEstadisticasGenerales } from './SeccionEstadisticasGenerales';
-export { SeccionEstadisticasSetASet } from './SeccionEstadisticasSetASet';
-export { SeccionEstadisticasDirectas } from './SeccionEstadisticasDirectas';
+export { ModalPartidoAdmin } from './modals/ModalPartidoAdmin';
+export { SeccionEstadisticasGenerales } from './sections/SeccionEstadisticasGenerales';
+export { SeccionEstadisticasSetASet } from './sections/SeccionEstadisticasSetASet';
+export { SeccionEstadisticasDirectas } from './sections/SeccionEstadisticasDirectas';
 export { default as GraficoEstadisticasSet } from '../../estadisticas/components/GraficoEstadisticasSet';

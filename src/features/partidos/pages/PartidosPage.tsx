@@ -7,7 +7,6 @@ import {
   getAlineacion,
   getPartido,
   getPartidos,
-  guardarAlineacion,
 } from '../services/partidoService';
 import { obtenerOpcionesEquipos, type EquipoOpcion } from '../../equipo/services/equipoService';
 import type { JugadorPartido, Partido } from '../../../types';

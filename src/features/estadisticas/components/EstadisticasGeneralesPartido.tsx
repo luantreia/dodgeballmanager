@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, type FC, type ReactNode } from 'react';
-import { authFetch } from '../../../utils/authFetch';
 import { renderEstadisticasGenerales } from './EstadisticasGenerales';
 import { renderEstadisticasEquipos } from './EstadisticasEquipos';
 import { renderEstadisticasJugadores } from './EstadisticasJugadores';
@@ -13,6 +12,7 @@ import {
   type ResumenEstadisticasAutomaticas,
   type ResumenEstadisticasManual,
 } from '../services/estadisticasService';
+import { actualizarModoVisualizacionPartido } from '../../partidos/services/partidoService';
 
 type VistaEstadisticas = 'general' | 'equipos' | 'jugadores';
 type ModoEstadisticas = 'automatico' | 'manual';
@@ -281,10 +281,7 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
       // Intentar actualizar modo de visualización para que coincida (sin bloquear si falla)
       try {
         console.log('🔄 Intentando cambiar modoVisualizacion a:', nuevoModo);
-        await authFetch(`/partidos/${partido._id}`, {
-          method: 'PUT',
-          body: { modoVisualizacion: nuevoModo },
-        });
+        await actualizarModoVisualizacionPartido(partido._id, nuevoModo);
 
         // Actualizar estado local de visualización también
         setModoVisualizacionUI(nuevoModo);
@@ -309,35 +306,6 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
       // Revertir cambio local si falló
       setModoEstadisticasUI(modoAnterior ?? 'automatico');
       console.error('❌ Error cambiando modo de estadísticas:', error);
-    }
-  };
-
-  const handleCambiarModoVisualizacion = async (nuevoModo: ModoVisualizacion): Promise<void> => {
-    if (!partido) return;
-
-    const modoAnterior = partido.modoVisualizacion;
-
-    try {
-      console.log('🔄 Cambiando modo de visualización:', modoAnterior, '→', nuevoModo);
-
-      // Actualizar estado local inmediatamente
-      setModoVisualizacionUI(nuevoModo);
-
-      // Actualizar en el backend
-      await authFetch(`/partidos/${partido._id}`, {
-        method: 'PUT',
-        body: { modoVisualizacion: nuevoModo },
-      });
-
-      // Recargar estadísticas con el filtro actualizado
-      await cargarEstadisticas();
-
-      console.log('✅ Modo de visualización cambiado exitosamente');
-
-    } catch (error) {
-      // Revertir cambio local si falló
-      setModoVisualizacionUI(modoAnterior ?? 'automatico');
-      console.error('❌ Error cambiando modo de visualización:', error);
     }
   };
 
