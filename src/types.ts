@@ -131,3 +131,15 @@ export interface Notificacion {
   leida: boolean;
   relacionadoId?: string;
 }
+
+export type SolicitudEdicionEstado = 'pendiente' | 'aceptado' | 'rechazado';
+
+export interface SolicitudEdicion {
+  id: string;
+  tipo: string;
+  entidad?: string | null;
+  datosPropuestos: Record<string, unknown>;
+  estado: SolicitudEdicionEstado;
+  creadoPor: string;
+  fechaCreacion?: string;
+}

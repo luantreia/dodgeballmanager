@@ -1,16 +1,16 @@
 import { Routes, Route, Navigate, NavLink } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
-import Equipo from './pages/Equipo';
-import Jugadores from './pages/Jugadores';
-import Competencias from './pages/Competencias';
-import Partidos from './pages/Partidos';
-import Estadisticas from './pages/Estadisticas';
-import Notificaciones from './pages/Notificaciones';
-import Perfil from './pages/Perfil';
-import Login from './pages/Login';
-import ProtectedRoute from './components/ProtectedRoute';
-import TeamSelector from './components/TeamSelector';
-import { useAuth } from './context/AuthContext';
+import DashboardPage from './features/dashboard/pages/DashboardPage';
+import EquipoPage from './features/equipo/pages/EquipoPage';
+import JugadoresPage from './features/jugadores/pages/JugadoresPage';
+import CompetenciasPage from './features/competencias/pages/CompetenciasPage';
+import PartidosPage from './features/partidos/pages/PartidosPage';
+import EstadisticasPage from './features/estadisticas/pages/EstadisticasPage';
+import NotificacionesPage from './features/notificaciones/pages/NotificacionesPage';
+import PerfilPage from './features/perfil/pages/PerfilPage';
+import LoginPage from './features/auth/pages/LoginPage';
+import ProtectedRoute from './app/routes/ProtectedRoute';
+import TeamSelector from './features/equipo/components/TeamSelector';
+import { useAuth } from './app/providers/AuthContext';
 
 const navLinks = [
   { to: '/dashboard', label: 'Dashboard' },
@@ -80,12 +80,12 @@ const App = () => {
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8">
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <DashboardPage />
               </ProtectedRoute>
             }
           />
@@ -93,7 +93,7 @@ const App = () => {
             path="/equipo"
             element={
               <ProtectedRoute>
-                <Equipo />
+                <EquipoPage />
               </ProtectedRoute>
             }
           />
@@ -101,7 +101,7 @@ const App = () => {
             path="/jugadores"
             element={
               <ProtectedRoute>
-                <Jugadores />
+                <JugadoresPage />
               </ProtectedRoute>
             }
           />
@@ -109,7 +109,7 @@ const App = () => {
             path="/competencias"
             element={
               <ProtectedRoute>
-                <Competencias />
+                <CompetenciasPage />
               </ProtectedRoute>
             }
           />
@@ -117,7 +117,7 @@ const App = () => {
             path="/partidos"
             element={
               <ProtectedRoute>
-                <Partidos />
+                <PartidosPage />
               </ProtectedRoute>
             }
           />
@@ -125,7 +125,7 @@ const App = () => {
             path="/estadisticas"
             element={
               <ProtectedRoute>
-                <Estadisticas />
+                <EstadisticasPage />
               </ProtectedRoute>
             }
           />
@@ -133,7 +133,7 @@ const App = () => {
             path="/notificaciones"
             element={
               <ProtectedRoute>
-                <Notificaciones />
+                <NotificacionesPage />
               </ProtectedRoute>
             }
           />
@@ -141,7 +141,7 @@ const App = () => {
             path="/perfil"
             element={
               <ProtectedRoute>
-                <Perfil />
+                <PerfilPage />
               </ProtectedRoute>
             }
           />

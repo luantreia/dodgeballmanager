@@ -4,8 +4,8 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import { EquipoProvider } from './context/EquipoContext';
+import { AuthProvider } from './app/providers/AuthContext';
+import { EquipoProvider } from './app/providers/EquipoContext';
 
 const container = document.getElementById('root');
 
