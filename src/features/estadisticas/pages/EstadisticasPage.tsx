@@ -7,6 +7,9 @@ import { formatNumber } from '../../../utils/formatNumber';
 import type { EstadisticaEquipoResumen, EstadisticaJugador } from '../../../types';
 import { ArrowTrendingUpIcon, ChartBarIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
+import { SeccionTop5estadisticasDirectas } from '../components/sections/SeccionTop5estadisticasDirectas';
+
+
 
 const RESULTADO_STYLES: Record<'W' | 'D' | 'L', string> = {
   W: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
@@ -167,6 +170,10 @@ const EstadisticasPage = () => {
       ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[1.6fr_minmax(0,1fr)]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
+            <SeccionTop5estadisticasDirectas equipoId={equipoSeleccionado.id} />
+        </div>  
+
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
           <header className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div>

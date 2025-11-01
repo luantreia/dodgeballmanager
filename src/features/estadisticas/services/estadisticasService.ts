@@ -220,6 +220,24 @@ export const getResumenEstadisticasJugadorPartido = (partidoId: string) =>
     `/estadisticas/jugador-partido/resumen-partido/${partidoId}`,
   );
 
+export const getEstadisticasJugadorPartidoPorEquipo = (equipoId: string) =>
+  authFetch<EstadisticaManualJugador[]>(`/estadisticas/jugador-partido?equipo=${equipoId}`);
+
+export const getEstadisticasJugadorPartidoManualPorEquipo = (equipoId: string) =>
+  authFetch<EstadisticaManualJugador[]>(`/estadisticas/jugador-partido-manual?equipo=${equipoId}`);
+
+export const getEstadisticasJugadorPartidoPorPartido = (partidoId: string) =>
+  authFetch<EstadisticaManualJugador[]>(`/estadisticas/jugador-partido?partido=${partidoId}`);
+
+export const getEstadisticasJugadorPartidoManualPorPartido = (partidoId: string) =>
+  authFetch<EstadisticaManualJugador[]>(`/estadisticas/jugador-partido-manual?partido=${partidoId}`);
+
+export const getEstadisticasJugadorPartidoPorJugadorPartido = (jugadorPartidoId: string) =>
+  authFetch<EstadisticaManualJugador[]>(`/estadisticas/jugador-partido?jugadorPartido=${jugadorPartidoId}`);
+
+export const getEstadisticasJugadorPartidoManualPorJugadorPartido = (jugadorPartidoId: string) =>
+  authFetch<EstadisticaManualJugador[]>(`/estadisticas/jugador-partido-manual?jugadorPartido=${jugadorPartidoId}`);
+
 export const getEstadisticasJugadorSetPorPartido = (partidoId: string) =>
   authFetch<EstadisticaManualJugador[]>(`/estadisticas/jugador-set?partido=${partidoId}`);
 

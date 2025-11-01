@@ -3,7 +3,8 @@ import PartidoCard from '../../../shared/components/PartidoCard/PartidoCard';
 import EstadisticaCard from '../../../shared/components/EstadisticaCard/EstadisticaCard';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getPartidos } from '../../partidos/services/partidoService';
-import { getEstadisticasEquipo } from '../../estadisticas/services/estadisticasService';
+// Ranking reusable section
+import { SeccionTop5estadisticasDirectas } from '../../estadisticas/components/sections/SeccionTop5estadisticasDirectas';
 import { getSolicitudesJugadores } from '../../jugadores/services/jugadorEquipoService';
 import type {
   EstadisticaEquipoResumen,
@@ -12,7 +13,7 @@ import type {
   SolicitudJugador,
 } from '../../../types';
 import { formatNumber } from '../../../utils/formatNumber';
-import { SeccionEstadisticasGlobales } from '../../estadisticas/components/SeccionEstadisticasGlobales';
+ 
 
 const DashboardPage = () => {
   const { equipoSeleccionado, loading: loadingEquipo } = useEquipo();
@@ -38,18 +39,18 @@ const DashboardPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [partidos, solicitudes, estadisticas] = await Promise.all([
+        const [partidos, solicitudes] = await Promise.all([
           getPartidos({ equipoId, estado: 'pendiente' }),
           getSolicitudesJugadores(equipoId),
-          getEstadisticasEquipo(equipoId),
         ]);
 
         if (isCancelled) return;
 
-        setProximosPartidos(partidos.slice(0, 3));
+        const partidosOrdenados = [...partidos]
+          .sort((a, b) => new Date(a.fecha as any).getTime() - new Date(b.fecha as any).getTime())
+          .slice(0, 5);
+        setProximosPartidos(partidosOrdenados);
         setSolicitudesPendientes(solicitudes);
-        setResumenEquipo(estadisticas.resumen);
-        setRankingJugadores(estadisticas.jugadores.slice(0, 5));
         setError(null);
       } catch (err) {
         console.error(err);
@@ -69,6 +70,8 @@ const DashboardPage = () => {
       isCancelled = true;
     };
   }, [equipoSeleccionado?.id]);
+
+  
 
   const statsCards = useMemo(() => {
     if (!resumenEquipo) return [];
@@ -133,6 +136,10 @@ const DashboardPage = () => {
         />
       </section>
 
+        <div className="flex flex-col gap-4 ">
+          <SeccionTop5estadisticasDirectas equipoId={equipoSeleccionado.id} />
+        </div>
+
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-4">
           <header className="flex items-center justify-between">
@@ -158,37 +165,7 @@ const DashboardPage = () => {
           )}
         </div>
 
-        <div className="flex flex-col gap-4">
-          <header className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Ranking de jugadores</h2>
-            <span className="text-xs uppercase tracking-wide text-slate-400">Top 5</span>
-          </header>
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                <tr>
-                  <th className="px-4 py-3 text-left">Jugador</th>
-                  <th className="px-4 py-3 text-right">Efectividad</th>
-                  <th className="px-4 py-3 text-right">Puntos</th>
-                  <th className="px-4 py-3 text-right">Bloqueos</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {rankingJugadores.map((stats) => (
-                  <tr key={stats.jugador.id} className="hover:bg-slate-50/60">
-                    <td className="px-4 py-3 font-medium text-slate-900">{stats.jugador.nombre}</td>
-                    <td className="px-4 py-3 text-right">{formatNumber(stats.efectividad)}%</td>
-                    <td className="px-4 py-3 text-right">{formatNumber(stats.puntosPromedio)}</td>
-                    <td className="px-4 py-3 text-right">{formatNumber(stats.bloqueosPromedio)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {rankingJugadores.length === 0 ? (
-              <p className="px-4 py-5 text-sm text-slate-500">Aún no hay estadísticas registradas.</p>
-            ) : null}
-          </div>
-        </div>
+        
       </section>
 
       {solicitudesPendientes.length ? (
@@ -223,11 +200,6 @@ const DashboardPage = () => {
           </div>
         </section>
       ) : null}
-
-      {/* Estadísticas globales del equipo (acumulado de todos los partidos) */}
-      <section>
-        <SeccionEstadisticasGlobales equipoId={equipoSeleccionado.id} />
-      </section>
     </div>
   );
 };
