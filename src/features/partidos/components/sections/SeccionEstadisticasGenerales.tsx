@@ -44,16 +44,6 @@ export const SeccionEstadisticasGenerales: FC<SeccionEstadisticasGeneralesProps>
           <h4 className="text-lg font-semibold text-blue-800">📊 Estadísticas Generales</h4>
           <p className="text-sm text-blue-700">{descripcion}</p>
         </div>
-
-        {onAbrirCaptura && (
-          <button
-            type="button"
-            onClick={onAbrirCaptura}
-            className="px-3 py-2 text-sm font-semibold text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
-          >
-            Capturar estadísticas
-          </button>
-        )}
       </div>
       <EstadisticasGeneralesPartido
         key={`generales-${partido?.modoEstadisticas}-${partido?.modoVisualizacion}`}

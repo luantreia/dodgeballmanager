@@ -1,5 +1,8 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL ?? 'https://overtime-ddyl.onrender.com/api';
 
+const ACCESS_TOKEN_KEY = 'overtime_token';
+const REFRESH_TOKEN_KEY = 'overtime_refresh_token';
+
 type FetchMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 type BodyType = BodyInit | Record<string, unknown> | null | undefined;
@@ -23,7 +26,7 @@ export const authFetch = async <TResponse>(
   options: RequestOptions = {}
 ): Promise<TResponse> => {
   const { useAuth = true, headers, method = 'GET', body, ...rest } = options;
-  const token = localStorage.getItem('overtime_token');
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
 
   const fetchHeaders = new Headers(headers);
   if (!(body instanceof FormData)) {
@@ -36,12 +39,51 @@ export const authFetch = async <TResponse>(
 
   const serializedBody = serializeBody(body);
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method: method as FetchMethod,
-    headers: fetchHeaders,
-    body: serializedBody,
-    ...rest,
-  });
+  const doRequest = async (authHeader?: string) => {
+    const hdrs = new Headers(fetchHeaders);
+    if (authHeader) hdrs.set('Authorization', authHeader);
+    const resp = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: method as FetchMethod,
+      headers: hdrs,
+      body: serializedBody,
+      ...rest,
+    });
+    return resp;
+  };
+
+  let response = await doRequest();
+
+  if (useAuth && response.status === 401) {
+    // intento de refresh
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (refreshToken) {
+      try {
+        const refreshResp = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (refreshResp.ok) {
+          const data = (await refreshResp.json()) as { accessToken?: string; refreshToken?: string };
+          if (data.accessToken) {
+            localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+          }
+          if (data.refreshToken) {
+            localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+          }
+          // reintentar con nuevo token
+          response = await doRequest(`Bearer ${data.accessToken}`);
+        } else {
+          // limpiar tokens
+          localStorage.removeItem(ACCESS_TOKEN_KEY);
+          localStorage.removeItem(REFRESH_TOKEN_KEY);
+        }
+      } catch (_) {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+      }
+    }
+  }
 
   if (!response.ok) {
     const errorText = await response.text();

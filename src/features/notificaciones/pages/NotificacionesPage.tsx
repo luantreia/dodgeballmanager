@@ -5,13 +5,14 @@ import {
 } from '../../jugadores/services/jugadorEquipoService';
 import type { SolicitudJugador, ContratoJugadorResumen } from '../../../types';
 import { useEquipo } from '../../../app/providers/EquipoContext';
+import { useToast } from '../../../shared/components/Toast/ToastProvider';
 
 const NotificacionesPage = () => {
   const { equipoSeleccionado } = useEquipo();
+  const { addToast } = useToast();
   const [pendientes, setPendientes] = useState<SolicitudJugador[]>([]);
   const [historial, setHistorial] = useState<ContratoJugadorResumen[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const equipoId = equipoSeleccionado?.id;
@@ -33,11 +34,10 @@ const NotificacionesPage = () => {
         if (cancelado) return;
         setPendientes(solPendientes);
         setHistorial(historico);
-        setError(null);
       } catch (err) {
         console.error(err);
         if (!cancelado) {
-          setError('No pudimos cargar las solicitudes del equipo.');
+          addToast({ type: 'error', title: 'Error', message: 'No pudimos cargar las solicitudes del equipo.' });
         }
       } finally {
         if (!cancelado) {
@@ -66,10 +66,6 @@ const NotificacionesPage = () => {
           Revisá solicitudes, avisos de partidos y cambios importantes.
         </p>
       </header>
-
-      {error ? (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
-      ) : null}
 
       {loading ? <p className="text-sm text-slate-500">Cargando solicitudes…</p> : null}
 

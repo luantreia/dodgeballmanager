@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { actualizarUsuario, cambiarPassword } from '../services/usuarioService';
+import { Input } from '../../../shared/components/ui';
+import { useToast } from '../../../shared/components/Toast/ToastProvider';
 
 const PerfilPage = () => {
   const { user, refreshProfile, logout } = useAuth();
+  const { addToast } = useToast();
   const [nombre, setNombre] = useState(user?.nombre ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -21,9 +24,11 @@ const PerfilPage = () => {
       await actualizarUsuario({ nombre, email });
       await refreshProfile();
       setFeedback('Datos actualizados correctamente.');
+      addToast({ type: 'success', title: 'Perfil actualizado', message: 'Tus datos se guardaron correctamente' });
     } catch (error) {
       console.error(error);
       setFeedback('No pudimos actualizar tu perfil.');
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos actualizar tu perfil' });
     } finally {
       setSavingPerfil(false);
     }
@@ -37,9 +42,11 @@ const PerfilPage = () => {
       setPasswordActual('');
       setPasswordNueva('');
       setPasswordFeedback('Contraseña actualizada correctamente.');
+      addToast({ type: 'success', title: 'Contraseña actualizada', message: 'Se cambió tu contraseña' });
     } catch (error) {
       console.error(error);
       setPasswordFeedback('No pudimos cambiar la contraseña.');
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos cambiar la contraseña' });
     } finally {
       setSavingPassword(false);
     }
@@ -76,33 +83,23 @@ const PerfilPage = () => {
           <p className="mt-1 text-sm text-slate-500">Esta información se muestra en las áreas de gestión interna.</p>
 
           <div className="mt-4 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="nombre">
-                Nombre completo
-              </label>
-              <input
-                id="nombre"
-                type="text"
-                value={nombre}
-                onChange={(event) => setNombre(event.target.value)}
-                required
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              />
-            </div>
+            <Input
+              id="nombre"
+              label="Nombre completo"
+              type="text"
+              value={nombre}
+              onChange={(event) => setNombre((event.target as HTMLInputElement).value)}
+              required
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              />
-            </div>
+            <Input
+              id="email"
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail((event.target as HTMLInputElement).value)}
+              required
+            />
           </div>
 
           <div className="mt-4 flex items-center justify-between">
@@ -122,33 +119,23 @@ const PerfilPage = () => {
           <p className="mt-1 text-sm text-slate-500">Usá una clave segura y distinta en cada temporada.</p>
 
           <div className="mt-4 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="passwordActual">
-                Contraseña actual
-              </label>
-              <input
-                id="passwordActual"
-                type="password"
-                value={passwordActual}
-                onChange={(event) => setPasswordActual(event.target.value)}
-                required
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              />
-            </div>
+            <Input
+              id="passwordActual"
+              label="Contraseña actual"
+              type="password"
+              value={passwordActual}
+              onChange={(event) => setPasswordActual((event.target as HTMLInputElement).value)}
+              required
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="passwordNueva">
-                Nueva contraseña
-              </label>
-              <input
-                id="passwordNueva"
-                type="password"
-                value={passwordNueva}
-                onChange={(event) => setPasswordNueva(event.target.value)}
-                required
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              />
-            </div>
+            <Input
+              id="passwordNueva"
+              label="Nueva contraseña"
+              type="password"
+              value={passwordNueva}
+              onChange={(event) => setPasswordNueva((event.target as HTMLInputElement).value)}
+              required
+            />
           </div>
 
           <div className="mt-4 flex items-center justify_between">

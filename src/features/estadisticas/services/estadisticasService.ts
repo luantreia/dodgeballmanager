@@ -137,6 +137,38 @@ export const getEstadisticasJugadorSet = (setId: string) =>
 export const getJugadoresPartido = (partidoId: string) =>
   authFetch<JugadorPartidoResumen[]>(`/jugador-partido?partido=${partidoId}`);
 
+export const buscarEstadisticaJugadorSet = (setId: string, jugadorPartidoId: string) =>
+  authFetch<EstadisticaJugadorSetDetalle[]>(`/estadisticas/jugador-set?set=${setId}&jugadorPartido=${jugadorPartidoId}`);
+
+export const crearEstadisticaJugadorSet = (payload: {
+  set: string;
+  jugadorPartido: string;
+  jugador: string;
+  equipo: string;
+  throws?: number;
+  hits?: number;
+  outs?: number;
+  catches?: number;
+}) =>
+  authFetch(`/estadisticas/jugador-set`, {
+    method: 'POST',
+    body: payload,
+  });
+
+export const actualizarEstadisticaJugadorSet = (
+  id: string,
+  payload: {
+    throws?: number;
+    hits?: number;
+    outs?: number;
+    catches?: number;
+  },
+) =>
+  authFetch(`/estadisticas/jugador-set/${id}`, {
+    method: 'PUT',
+    body: payload,
+  });
+
 export const getEstadisticasJugadorPartidoManual = (partidoId: string) =>
   authFetch<EstadisticaManualJugador[]>(`/estadisticas/jugador-partido-manual?partido=${partidoId}`);
 

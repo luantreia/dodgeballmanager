@@ -87,9 +87,11 @@ export interface JugadorPartido {
   id: string;
   partidoId: string;
   jugador: Jugador;
-  rol: 'titular' | 'suplente' | 'staff';
+  rol: 'jugador' | 'entrenador';
   confirmoAsistencia?: boolean;
   notas?: string;
+  equipo?: string | { _id?: string };
+  numero?: number;
 }
 
 export interface SolicitudCompetencia {

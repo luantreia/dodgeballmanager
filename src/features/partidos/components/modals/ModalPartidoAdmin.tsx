@@ -1,12 +1,13 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
-import { InformacionPartidoSection } from '../sections/InformacionPartidoSection';
-import { ConfiguracionAvanzadaSection } from '../sections/ConfiguracionAvanzadaSection';
+import { ConfiguracionAvanzadaSection } from '../sections/SectionConfiguracionAvanzada';
 import { SeccionEstadisticasGenerales } from '../sections/SeccionEstadisticasGenerales';
 import { SeccionEstadisticasSetASet } from '../sections/SeccionEstadisticasSetASet';
 import { SeccionEstadisticasDirectas } from '../sections/SeccionEstadisticasDirectas';
-import ModalEstadisticas from './ModalEstadisticas';
-import ModalEstadisticasGeneralesCaptura from './ModalEstadisticasGeneralesCaptura';
+import ModalCapturaSetEstadisticas from './ModalCapturaSetEstadisticas';
+import ModalEstadisticasGeneralesCaptura from './ModalEstadisticasDirectasCaptura';
+import ModalAlineacionPartido from './ModalAlineacionPartido';
+import ModalGestionSets from './ModalGestionSets';
 import {
   getPartidoDetallado,
   obtenerSetsDePartido,
@@ -14,22 +15,28 @@ import {
   eliminarPartido,
   recalcularMarcadorPartido,
   actualizarModoVisualizacionPartido,
+  actualizarModoEstadisticasPartido,
   crearSetPartido,
   actualizarSetPartido,
   eliminarSetPartido,
+  extractEquipoId,
   type PartidoDetallado,
   type SetPartido,
 } from '../../services/partidoService';
 import type { EstadisticaManualBackend } from '../../hooks/useEstadisticasModal';
 
-import type { Competencia } from '../../../../types';
+import type { Competencia, JugadorPartido } from '../../../../types';
 import { getParticipaciones as getCompetencias } from '../../../competencias/services/equipoCompetenciaService';
+import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
+import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 
 type ModalPartidoAdminProps = {
   partidoId: string;
   token: string;
   onClose: () => void;
   onPartidoEliminado: (partidoId: string) => void;
+  equipoId?: string;
+  onAlineacionActualizada?: (alineacion: JugadorPartido[]) => void;
 };
 
 type DatosEdicionState = {
@@ -47,7 +54,7 @@ type DatosEdicionState = {
 
 type VistaEstadisticas = 'generales' | 'setASet' | 'directas';
 
-export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminado }: ModalPartidoAdminProps) => {
+export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminado, equipoId, onAlineacionActualizada }: ModalPartidoAdminProps) => {
   const [partido, setPartido] = useState<PartidoDetallado | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,9 +64,13 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
   const [competencias, setCompetencias] = useState<Competencia[]>([]);
   const [capturaSetAbierta, setCapturaSetAbierta] = useState<boolean>(false);
   const [numeroSetEnCaptura, setNumeroSetEnCaptura] = useState<number | null>(null);
+  const [gestionSetsAbierta, setGestionSetsAbierta] = useState<boolean>(false);
   const [capturaGeneralesAbierta, setCapturaGeneralesAbierta] = useState<boolean>(false);
   const [datosInicialesGenerales, setDatosInicialesGenerales] = useState<EstadisticaManualBackend[]>([]);
   const [hayDatosAutomaticosGenerales, setHayDatosAutomaticosGenerales] = useState<boolean>(false);
+  const [alineacionModalAbierta, setAlineacionModalAbierta] = useState<boolean>(false);
+  const [confirmEliminarAbierto, setConfirmEliminarAbierto] = useState<boolean>(false);
+  const { addToast } = useToast();
 
   // Cargar partido
   const cargarPartido = useCallback(async () => {
@@ -101,6 +112,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
     } catch (err) {
       setError('Error al cargar el partido. Por favor, intente nuevamente.');
       console.error('Error al cargar partido:', err);
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos cargar el partido' });
     } finally {
       setLoading(false);
     }
@@ -133,10 +145,33 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
     await cargarPartido();
   }, [cargarPartido]);
 
+  const equipoContextoId = useMemo(() => {
+    if (equipoId) return equipoId;
+    if (!partido) return undefined;
+    return extractEquipoId(partido.equipoLocal) ?? extractEquipoId(partido.equipoVisitante);
+  }, [equipoId, partido]);
+
+  const handleGestionarAlineacion = useCallback(() => {
+    setAlineacionModalAbierta(true);
+  }, []);
+
+  const handleCerrarAlineacion = useCallback(() => {
+    setAlineacionModalAbierta(false);
+  }, []);
+
+  const handleAlineacionGuardada = useCallback(async (alineacion: JugadorPartido[]) => {
+    onAlineacionActualizada?.(alineacion);
+    await cargarPartido();
+  }, [cargarPartido, onAlineacionActualizada]);
+
   // Cargar competencias
   const cargarCompetencias = useCallback(async () => {
     try {
-      const participaciones = await getCompetencias({ equipoId: '' });
+      if (!equipoContextoId) {
+        setCompetencias([]);
+        return;
+      }
+      const participaciones = await getCompetencias({ equipoId: equipoContextoId });
       const competencias = Array.isArray(participaciones)
         ? participaciones
             .map(p => p.competencia)
@@ -146,7 +181,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
     } catch (err) {
       console.error('Error al cargar competencias:', err);
     }
-  }, []);
+  }, [equipoContextoId]);
 
   const actualizarSetsLocales = useCallback((sets: SetPartido[]) => {
     setPartido(prev => (prev ? { ...prev, sets } : prev));
@@ -225,9 +260,11 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
       await editarPartido(partidoId, payload);
       await cargarPartido();
       setModoEdicion(false);
+      addToast({ type: 'success', title: 'Guardado', message: 'Se actualizaron los datos del partido' });
     } catch (err) {
       setError('Error al guardar los cambios. Por favor, intente nuevamente.');
       console.error('Error al guardar partido:', err);
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos guardar los cambios del partido' });
     }
   };
 
@@ -240,24 +277,29 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
         marcadorLocal: partidoActualizado.marcadorLocal || 0,
         marcadorVisitante: partidoActualizado.marcadorVisitante || 0,
       } : null);
+      addToast({ type: 'success', title: 'Marcador actualizado', message: 'Marcador recalculado desde sets' });
     } catch (err) {
       setError('Error al recalcular el marcador.');
       console.error('Error al recalcular marcador:', err);
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos recalcular el marcador' });
     }
   };
 
   const handleEliminarPartido = async () => {
-    if (!window.confirm('¿Está seguro de que desea eliminar este partido? Esta acción no se puede deshacer.')) {
-      return;
-    }
+    setConfirmEliminarAbierto(true);
+  };
 
+  const confirmarEliminarPartido = async () => {
     try {
       await eliminarPartido(partidoId);
       onPartidoEliminado(partidoId);
+      setConfirmEliminarAbierto(false);
       onClose();
+      addToast({ type: 'success', title: 'Partido eliminado', message: 'El partido fue eliminado' });
     } catch (err) {
       setError('Error al eliminar el partido. Por favor, intente nuevamente.');
       console.error('Error al eliminar partido:', err);
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos eliminar el partido' });
     }
   };
 
@@ -267,15 +309,17 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
     try {
       await actualizarModoVisualizacionPartido(partidoId, modo);
       setPartido(prev => prev ? { ...prev, modoVisualizacion: modo } : null);
+      addToast({ type: 'success', title: 'Modo actualizado', message: 'Se cambió el modo de visualización' });
     } catch (err) {
       setError('Error al actualizar el modo de visualización.');
       console.error('Error al cambiar modo de visualización:', err);
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos cambiar el modo de visualización' });
     }
   };
 
   if (loading) {
     return (
-      <ModalBase title="Cargando partido..." onClose={onClose}>
+      <ModalBase title="Cargando partido..." onClose={onClose} isOpen>
         <div className="p-4 text-center">
           <p>Cargando información del partido...</p>
         </div>
@@ -285,7 +329,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
 
   if (error || !partido || !datosEdicion) {
     return (
-      <ModalBase title="Error" onClose={onClose}>
+      <ModalBase title="Error" onClose={onClose} isOpen>
         <div className="p-4 text-red-600">
           <p>{error || 'No se pudo cargar la información del partido.'}</p>
           <button
@@ -300,28 +344,15 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
   }
 
   return (
-    <ModalBase title={`Partido: ${partido.nombrePartido || 'Sin nombre'}`} onClose={onClose} size="xl">
-      <div className="space-y-6 p-4">
-        <InformacionPartidoSection
-          partido={partido}
-          modoEdicion={modoEdicion}
-          datosEdicion={datosEdicion}
-          competencias={competencias}
-          onToggleModoEdicion={setModoEdicion}
-          onChangeDatosEdicion={(campo, valor) => 
-            setDatosEdicion(prev => prev ? { ...prev, [campo]: valor } : null)
-          }
-          onGuardar={handleGuardarEdicion}
-          onRecalcular={handleRecalcularMarcador}
-        />
-
-        <div className="bg-white rounded-lg shadow p-4">
+    <ModalBase title={`Estadísticas del Partido: ${partido.nombrePartido || 'Sin nombre'}`} onClose={onClose} size="xl" isOpen>
+      <div>
+        <div className="bg-white rounded-lg p-2 sm:p-1">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Estadísticas del Partido</h3>
-            <div className="flex space-x-2">
+            <h3 className="text-base font-semibold">Vistas</h3>
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setVistaEstadisticas('generales')}
-                className={`px-3 py-1 rounded ${
+                className={`px-3 py-1 rounded text-xs sm:text-sm ${
                   vistaEstadisticas === 'generales'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 hover:bg-gray-300'
@@ -331,7 +362,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
               </button>
               <button
                 onClick={() => setVistaEstadisticas('setASet')}
-                className={`px-3 py-1 rounded ${
+                className={`px-3 py-1 rounded text-xs sm:text-sm ${
                   vistaEstadisticas === 'setASet'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 hover:bg-gray-300'
@@ -341,7 +372,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
               </button>
               <button
                 onClick={() => setVistaEstadisticas('directas')}
-                className={`px-3 py-1 rounded ${
+                className={`px-3 py-1 rounded text-xs sm:text-sm ${
                   vistaEstadisticas === 'directas'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 hover:bg-gray-300'
@@ -356,8 +387,15 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
             <SeccionEstadisticasGenerales
               partido={{ ...partido, _id: partido._id ?? partidoId } as any}
               partidoId={partidoId}
-              onCambiarModoEstadisticas={async (id, modo) => {
-                // Implementar lógica de cambio de modo si es necesario
+              onCambiarModoEstadisticas={async (_id, modo) => {
+                try {
+                  await actualizarModoEstadisticasPartido(partidoId, modo);
+                  setPartido(prev => (prev ? { ...prev, modoEstadisticas: modo } : prev));
+                } catch (err) {
+                  setError('Error al actualizar el modo de estadísticas.');
+                  console.error('Error al cambiar modo de estadísticas:', err);
+                  addToast({ type: 'error', title: 'Error', message: 'No pudimos cambiar el modo de estadísticas' });
+                }
               }}
               onAbrirCaptura={() => abrirCapturaGenerales()}
             />
@@ -367,6 +405,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
             <SeccionEstadisticasSetASet
               partido={partido}
               onAbrirCaptura={abrirCapturaSet}
+              onAbrirGestionSets={() => setGestionSetsAbierta(true)}
             />
           )}
 
@@ -390,18 +429,28 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
         />
       </div>
 
-      {capturaSetAbierta && partido && (
-        <ModalEstadisticas
+      {capturaSetAbierta && (
+        <ModalCapturaSetEstadisticas
           partido={partido}
           partidoId={partidoId}
           token={token}
+          isOpen={capturaSetAbierta}
           onClose={cerrarCapturaSet}
-          actualizarSetsLocales={actualizarSetsLocales}
-          agregarSetAPartido={agregarSetAPartido}
-          actualizarSetDePartido={actualizarSetDePartido}
-          refrescarPartidoSeleccionado={cargarPartido}
-          eliminarSetDePartido={eliminarSetDePartido}
           numeroSetInicial={numeroSetEnCaptura}
+          onRefresh={cargarPartido}
+        />
+      )}
+
+      {gestionSetsAbierta && (
+        <ModalGestionSets
+          partidoId={partidoId}
+          isOpen={gestionSetsAbierta}
+          onClose={() => setGestionSetsAbierta(false)}
+          onAbrirCaptura={(numero) => {
+            setNumeroSetEnCaptura(numero);
+            setGestionSetsAbierta(false);
+            setCapturaSetAbierta(true);
+          }}
         />
       )}
 
@@ -414,8 +463,30 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
           onRefresh={cargarPartido}
           datosIniciales={datosInicialesGenerales}
           hayDatosAutomaticos={hayDatosAutomaticosGenerales}
+          onAbrirAlineacion={() => setAlineacionModalAbierta(true)}
         />
       )}
+
+      {partido ? (
+        <ModalAlineacionPartido
+          partidoId={partidoId}
+          equipoId={equipoContextoId}
+          isOpen={alineacionModalAbierta}
+          onClose={handleCerrarAlineacion}
+          onSaved={handleAlineacionGuardada}
+        />
+      ) : null}
+
+      <ConfirmModal
+        isOpen={confirmEliminarAbierto}
+        onCancel={() => setConfirmEliminarAbierto(false)}
+        onConfirm={confirmarEliminarPartido}
+        title="Eliminar partido"
+        message="¿Está seguro de que desea eliminar este partido? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+      />
     </ModalBase>
   );
 };

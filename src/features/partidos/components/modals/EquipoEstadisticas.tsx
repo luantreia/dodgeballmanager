@@ -17,10 +17,12 @@ type EstadisticasEquipo = {
   visitante: ListaJugadorEstadistica[];
 };
 
+type EstadisticaKey = 'throws' | 'hits' | 'outs' | 'catches';
+
 type CambiarEstadisticaHandler = (
   equipoId: string,
   index: number,
-  campo: string,
+  campo: EstadisticaKey,
   delta: number,
 ) => void;
 
@@ -37,6 +39,8 @@ type EquiposEstadisticasProps = {
   onCambiarEstadistica: CambiarEstadisticaHandler;
   onAsignarJugador: AsignarJugadorHandler;
   token: string;
+  opcionesJugadoresLocal?: Array<{ value: string; label: string }>;
+  opcionesJugadoresVisitante?: Array<{ value: string; label: string }>;
 };
 
 const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
@@ -46,6 +50,8 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
   onCambiarEstadistica,
   onAsignarJugador,
   token,
+  opcionesJugadoresLocal,
+  opcionesJugadoresVisitante,
 }) => {
   const handleCambiarEstadisticaLocal = useCallback<CambiarEstadisticaHandler>(
     (equipoId, index, campo, delta) => {
@@ -72,6 +78,7 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
         }
         onAsignarJugador={(index, jugadorId) => handleAsignarJugador('local', index, jugadorId)}
         token={token}
+        opcionesJugadores={opcionesJugadoresLocal}
       />
       <ListaJugadores
         equipoNombre={equipoVisitante.nombre}
@@ -82,6 +89,7 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
         }
         onAsignarJugador={(index, jugadorId) => handleAsignarJugador('visitante', index, jugadorId)}
         token={token}
+        opcionesJugadores={opcionesJugadoresVisitante}
       />
     </div>
   );

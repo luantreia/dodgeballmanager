@@ -3,15 +3,18 @@ import CompetenciaCard from '../../../shared/components/CompetenciaCard';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getParticipaciones, solicitarInscripcion } from '../services/equipoCompetenciaService';
 import type { EquipoCompetencia } from '../../../types';
+import { useToast } from '../../../shared/components/Toast/ToastProvider';
+import { Input, Textarea } from '../../../shared/components/ui';
 
 const CompetenciasPage = () => {
+  const { addToast } = useToast();
   const { equipoSeleccionado } = useEquipo();
   const [participaciones, setParticipaciones] = useState<EquipoCompetencia[]>([]);
   const [loading, setLoading] = useState(false);
   const [inscripcionLoading, setInscripcionLoading] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const [competenciaId, setCompetenciaId] = useState('');
-  const [feedback, setFeedback] = useState<string | null>(null);
+  
 
   useEffect(() => {
     const equipoId = equipoSeleccionado?.id;
@@ -28,11 +31,10 @@ const CompetenciasPage = () => {
         const data = await getParticipaciones({ equipoId });
         if (isCancelled) return;
         setParticipaciones(data);
-        setFeedback(null);
       } catch (error) {
         console.error(error);
         if (!isCancelled) {
-          setFeedback('No pudimos cargar las competencias del equipo.');
+          addToast({ type: 'error', title: 'Error', message: 'No pudimos cargar las competencias del equipo.' });
         }
       } finally {
         if (!isCancelled) {
@@ -65,13 +67,13 @@ const CompetenciasPage = () => {
         competenciaId,
         mensaje: mensaje || undefined,
       });
-      setFeedback('Solicitud enviada correctamente.');
+      addToast({ type: 'success', title: 'Solicitud enviada', message: 'La inscripción fue enviada correctamente' });
       setCompetenciaId('');
       setMensaje('');
       await refresh();
     } catch (error) {
       console.error(error);
-      setFeedback('No pudimos enviar la solicitud.');
+      addToast({ type: 'error', title: 'Error de inscripción', message: 'No pudimos enviar la solicitud' });
     } finally {
       setInscripcionLoading(false);
     }
@@ -103,36 +105,28 @@ const CompetenciasPage = () => {
 
         <form className="mt-4 grid gap-4 md:grid-cols-2" onSubmit={handleInscripcion}>
           <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-slate-700" htmlFor="competenciaId">
-              ID de competencia
-            </label>
-            <input
+            <Input
               id="competenciaId"
-              type="text"
+              label="ID de competencia"
               value={competenciaId}
-              onChange={(event) => setCompetenciaId(event.target.value)}
+              onChange={(event) => setCompetenciaId((event.target as HTMLInputElement).value)}
               required
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               placeholder="competencia_123"
             />
           </div>
 
           <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-slate-700" htmlFor="mensaje">
-              Mensaje opcional
-            </label>
-            <textarea
+            <Textarea
               id="mensaje"
+              label="Mensaje opcional"
               value={mensaje}
               rows={3}
-              onChange={(event) => setMensaje(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              onChange={(event) => setMensaje((event.target as HTMLTextAreaElement).value)}
               placeholder="Contanos por qué querés sumarte"
             />
           </div>
 
-          <div className="md:col-span-2 flex items-center justify-between">
-            {feedback ? <span className="text-sm text-slate-500">{feedback}</span> : null}
+          <div className="md:col-span-2 flex items-center justify-end">
             <button
               type="submit"
               disabled={inscripcionLoading}

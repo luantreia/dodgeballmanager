@@ -10,6 +10,7 @@ type PartidoQuery = {
 type PartidoUpdatePayload = {
   estado?: Partido['estado'] | BackendPartido['estado'];
   escenario?: Partido['escenario'];
+  ubicacion?: string;
   fecha?: string;
   hora?: string;
   nombrePartido?: string;
@@ -35,7 +36,7 @@ type PartidoCreatePayload = {
 type AlineacionPayload = {
   jugadores: Array<{
     jugadorId: string;
-    rol: 'titular' | 'suplente' | 'staff';
+    rol: 'jugador' | 'entrenador';
   }>;
 };
 
@@ -160,7 +161,7 @@ const mapEquipoNombre = (equipo?: BackendEquipoRef | string): { id: string; nomb
   return { id: equipo._id, nombre: equipo.nombre ?? 'Equipo' };
 };
 
-const mapEstadoPartido = (estado?: BackendPartido['estado']): Partido['estado'] => {
+export const mapEstadoPartido = (estado?: BackendPartido['estado']): Partido['estado'] => {
   switch (estado) {
     case 'programado':
       return 'pendiente';
@@ -175,6 +176,26 @@ const mapEstadoPartido = (estado?: BackendPartido['estado']): Partido['estado'] 
   }
 };
 
+export const mapEstadoPartidoToBackend = (
+  estado?: Partido['estado'] | BackendPartido['estado'],
+): BackendPartido['estado'] => {
+  switch (estado) {
+    case 'pendiente':
+    case 'programado':
+    case undefined:
+      return 'programado';
+    case 'confirmado':
+    case 'en_juego':
+      return 'en_juego';
+    case 'finalizado':
+      return 'finalizado';
+    case 'cancelado':
+      return 'cancelado';
+    default:
+      return 'programado';
+  }
+};
+
 const mapPartido = (partido: BackendPartido, contextoEquipoId?: string): Partido => {
   const competencia = mapCompetencia(partido.competencia);
   const local = mapEquipoNombre(partido.equipoLocal);
@@ -184,6 +205,10 @@ const mapPartido = (partido: BackendPartido, contextoEquipoId?: string): Partido
   const esVisitante = contextoEquipoId && visitante && visitante.id === contextoEquipoId;
 
   const estado = mapEstadoPartido(partido.estado);
+
+  const fechaOriginal = partido.fecha;
+  const [fechaISO, horaISO] = fechaOriginal.includes('T') ? fechaOriginal.split('T') : [fechaOriginal, undefined];
+  const hora = horaISO ? horaISO.replace('Z', '').slice(0, 5) : undefined;
 
   let rivalNombre = visitante?.nombre ?? local?.nombre ?? partido.nombrePartido ?? 'Rival';
   if (esLocal && visitante?.nombre) {
@@ -209,7 +234,8 @@ const mapPartido = (partido: BackendPartido, contextoEquipoId?: string): Partido
 
   const mapped: Partido = {
     id: partido._id,
-    fecha: partido.fecha,
+    fecha: fechaISO,
+    hora,
     rival: rivalNombre,
     estado,
     escenario: partido.ubicacion,
@@ -266,9 +292,21 @@ export const actualizarPartido = async (
   payload: PartidoUpdatePayload,
   equipoId?: string
 ): Promise<Partido> => {
+  const body: Record<string, unknown> = { ...payload };
+
+  if (payload.estado !== undefined) {
+    body.estado = mapEstadoPartidoToBackend(payload.estado);
+  }
+
+  if (payload.escenario !== undefined && payload.ubicacion === undefined) {
+    body.ubicacion = payload.escenario;
+  }
+
+  delete body.escenario;
+
   const partido = await authFetch<BackendPartido>(`/partidos/${partidoId}`, {
-    method: 'PATCH',
-    body: payload,
+    method: 'PUT',
+    body,
   });
 
   return mapPartido(partido, equipoId);
@@ -361,3 +399,59 @@ export const actualizarModoVisualizacionPartido = (
   });
 
 export const editarPartido = actualizarPartido;
+
+// --- Estadisticas Jugador Set ---
+export type EstadisticasJugadorSet = {
+  _id: string;
+  set: string;
+  jugadorPartido: string;
+  jugador: string;
+  equipo: string;
+  throws: number;
+  hits: number;
+  outs: number;
+  catches: number;
+};
+
+export const obtenerEstadisticasJugadorSet = (query: {
+  set?: string;
+  jugadorPartido?: string;
+  jugador?: string;
+  equipo?: string;
+}) => {
+  const params = new URLSearchParams();
+  if (query.set) params.set('set', query.set);
+  if (query.jugadorPartido) params.set('jugadorPartido', query.jugadorPartido);
+  if (query.jugador) params.set('jugador', query.jugador);
+  if (query.equipo) params.set('equipo', query.equipo);
+  return authFetch<EstadisticasJugadorSet[]>(`/estadisticas/jugador-set?${params.toString()}`);
+};
+
+export const crearEstadisticaJugadorSet = (payload: {
+  set: string;
+  jugadorPartido: string;
+  jugador: string;
+  equipo: string;
+  throws?: number;
+  hits?: number;
+  outs?: number;
+  catches?: number;
+}) =>
+  authFetch<EstadisticasJugadorSet>(`/estadisticas/jugador-set`, {
+    method: 'POST',
+    body: payload,
+  });
+
+export const actualizarEstadisticaJugadorSet = (
+  id: string,
+  payload: Partial<Pick<EstadisticasJugadorSet, 'throws' | 'hits' | 'outs' | 'catches'>>,
+) =>
+  authFetch<EstadisticasJugadorSet>(`/estadisticas/jugador-set/${id}`, {
+    method: 'PUT',
+    body: payload,
+  });
+
+export const eliminarEstadisticaJugadorSet = (id: string) =>
+  authFetch<{ mensaje: string }>(`/estadisticas/jugador-set/${id}`, {
+    method: 'DELETE',
+  });

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent, FC } from 'react';
-import SelectDropdown from '../../../shared/components/ui/FormComponents/SelectDropdown';
+import SelectDropdown from '../../../../shared/components/ui/FormComponents/SelectDropdown';
 
 export type EstadisticasJugador = {
   throws: number;

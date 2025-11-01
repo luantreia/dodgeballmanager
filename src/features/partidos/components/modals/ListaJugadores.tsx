@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FC } from 'react';
 import JugadorEstadisticasCard, {
   type EstadisticasJugador,
-} from '../../../estadisticas/components/JugadorEstadisticasCard';
+} from '../common/JugadorEstadisticasCard';
 import { getJugadoresEquipo } from '../../../jugadores/services/jugadorEquipoService';
 
 export type EstadisticaJugadorEntrada = {
@@ -17,6 +17,7 @@ export type ListaJugadoresProps = {
   onAsignarJugador: (index: number, jugadorId: string) => void;
   onCambiarEstadistica: (index: number, campo: keyof EstadisticasJugador, delta: number) => void;
   token: string;
+  opcionesJugadores?: Array<{ value: string; label: string }>;
 };
 
 export const ListaJugadores: FC<ListaJugadoresProps> = ({
@@ -26,6 +27,7 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
   onAsignarJugador,
   onCambiarEstadistica,
   token,
+  opcionesJugadores,
 }) => {
   type JugadorRelacion = {
     id: string;
@@ -41,6 +43,11 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
     const cargarJugadores = async () => {
       try {
         setLoading(true);
+        if (opcionesJugadores && opcionesJugadores.length > 0) {
+          if (!isMounted) return;
+          setRelaciones([]);
+          return;
+        }
         const jugadores = await getJugadoresEquipo({ equipoId });
         if (!isMounted) return;
         setRelaciones(
@@ -65,18 +72,16 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [equipoId, token]);
+  }, [equipoId, token, opcionesJugadores]);
 
-  const opcionesSelect = useMemo(
-    () =>
-      relaciones
-        .map((rel) => ({
-          value: rel.id,
-          label: rel.nombre ?? 'Sin nombre',
-        }))
-        .filter((opt) => Boolean(opt.value)),
-    [relaciones],
-  );
+  const opcionesSelect = useMemo(() => {
+    if (opcionesJugadores && opcionesJugadores.length > 0) {
+      return opcionesJugadores.filter((opt) => Boolean(opt.value));
+    }
+    return relaciones
+      .map((rel) => ({ value: rel.id, label: rel.nombre ?? 'Sin nombre' }))
+      .filter((opt) => Boolean(opt.value));
+  }, [opcionesJugadores, relaciones]);
 
   const obtenerJugadoresSeleccionados = (excluirIndex: number) =>
     estadisticasJugador

@@ -15,26 +15,28 @@ interface PartidoConSets {
 interface SeccionEstadisticasSetASetProps {
   partido: PartidoConSets;
   onAbrirCaptura?: (numeroSet?: number) => void;
+  onAbrirGestionSets?: () => void;
 }
 
-export const SeccionEstadisticasSetASet: FC<SeccionEstadisticasSetASetProps> = ({ partido, onAbrirCaptura }) => {
+export const SeccionEstadisticasSetASet: FC<SeccionEstadisticasSetASetProps> = ({ partido, onAbrirCaptura, onAbrirGestionSets }) => {
   const [setsExpandidos, setSetsExpandidos] = useState<Record<string, boolean>>({});
 
   return (
     <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <div className="min-w-0">
           <h4 className="text-lg font-semibold text-purple-800">🎯 Estadísticas Set a Set</h4>
           <p className="text-sm text-purple-700">Análisis detallado de cada set individual del partido</p>
         </div>
 
-        {onAbrirCaptura && (
+        {onAbrirGestionSets && (
           <button
             type="button"
-            className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-white bg-purple-600 rounded hover:bg-purple-700 transition-colors"
-            onClick={() => onAbrirCaptura(partido.sets?.[0]?.numeroSet)}
+            className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm font-semibold text-white bg-purple-600 rounded hover:bg-purple-700 transition-colors self-start sm:self-auto"
+            onClick={() => onAbrirGestionSets()}
+            title="Gestionar sets"
           >
-            <span>Capturar estadísticas</span>
+            <span>Gestionar sets</span>
           </button>
         )}
       </div>
@@ -47,7 +49,7 @@ export const SeccionEstadisticasSetASet: FC<SeccionEstadisticasSetASetProps> = (
               <div key={set._id} className="bg-white rounded border">
                 {/* Header del set */}
                 <div
-                  className="flex justify-between items-center gap-4 p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4 p-3 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => setSetsExpandidos(prev => ({
                     ...prev,
                     [set._id]: !prev[set._id]

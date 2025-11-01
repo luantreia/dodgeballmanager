@@ -24,8 +24,10 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const TOKEN_STORAGE_KEY = 'overtime_token';
+const REFRESH_TOKEN_STORAGE_KEY = 'overtime_refresh_token';
 
 const getStoredToken = () => localStorage.getItem(TOKEN_STORAGE_KEY);
+const getStoredRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
 
 const setStoredToken = (token: string | null) => {
   if (token) {
@@ -33,6 +35,14 @@ const setStoredToken = (token: string | null) => {
     return;
   }
   localStorage.removeItem(TOKEN_STORAGE_KEY);
+};
+
+const setStoredRefreshToken = (token: string | null) => {
+  if (token) {
+    localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token);
+    return;
+  }
+  localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
 };
 
 type AuthProviderProps = {
@@ -44,6 +54,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(() => getStoredToken());
+  const [refreshToken, setRefreshToken] = useState<string | null>(() => getStoredRefreshToken());
 
   const handleProfileLoad = useCallback(async () => {
     try {
@@ -55,7 +66,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.error(err);
       setUser(null);
       setStoredToken(null);
+      setStoredRefreshToken(null);
       setToken(null);
+      setRefreshToken(null);
     } finally {
       setLoading(false);
     }
@@ -72,9 +85,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { accessToken, user } = await loginRequest({ email, password });
+      const { accessToken, refreshToken: rt, user } = await loginRequest({ email, password });
       setStoredToken(accessToken);
+      setStoredRefreshToken(rt);
       setToken(accessToken);
+      setRefreshToken(rt ?? null);
       setUser(user);
       setError(null);
     } catch (err) {
@@ -82,7 +97,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setError('Credenciales inválidas o servicio no disponible');
       setUser(null);
       setStoredToken(null);
+      setStoredRefreshToken(null);
       setToken(null);
+      setRefreshToken(null);
       throw err;
     } finally {
       setLoading(false);
@@ -91,8 +108,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = useCallback(() => {
     setStoredToken(null);
+    setStoredRefreshToken(null);
     setUser(null);
     setToken(null);
+    setRefreshToken(null);
   }, []);
 
   const refreshProfile = useCallback(async () => {

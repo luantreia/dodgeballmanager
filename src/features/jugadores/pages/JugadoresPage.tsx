@@ -11,8 +11,12 @@ import {
 import { buscarJugadoresDisponibles, type JugadorOpcion } from '../services/jugadorEquipoOpcionesService';
 import { crearSolicitudEdicion } from '../services/solicitudesEdicionService';
 import type { Jugador, SolicitudJugador, ContratoJugadorResumen } from '../../../types';
+import ModalBase from '../../../shared/components/ModalBase/ModalBase';
+import { useToast } from '../../../shared/components/Toast/ToastProvider';
+import { Select, Input } from '../../../shared/components/ui';
 
 const JugadoresPage = () => {
+  const { addToast } = useToast();
   const { equipoSeleccionado } = useEquipo();
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
   const [solicitudes, setSolicitudes] = useState<SolicitudJugador[]>([]);
@@ -62,6 +66,7 @@ const JugadoresPage = () => {
         console.error(err);
         if (!isCancelled) {
           setError('No pudimos cargar la lista de jugadores.');
+          addToast({ type: 'error', title: 'Error', message: 'No pudimos cargar la lista de jugadores.' });
         }
       } finally {
         if (!isCancelled) {
@@ -88,13 +93,25 @@ const JugadoresPage = () => {
   };
 
   const handleAceptarSolicitud = async (solicitudId: string) => {
-    await actualizarEstadoJugador(solicitudId, { estado: 'aceptado' });
-    await refreshData();
+    try {
+      await actualizarEstadoJugador(solicitudId, { estado: 'aceptado' });
+      await refreshData();
+      addToast({ type: 'success', title: 'Solicitud aceptada', message: 'El jugador fue agregado al equipo' });
+    } catch (err) {
+      console.error(err);
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos aceptar la solicitud' });
+    }
   };
 
   const handleRechazarSolicitud = async (solicitudId: string) => {
-    await actualizarEstadoJugador(solicitudId, { estado: 'rechazado' });
-    await refreshData();
+    try {
+      await actualizarEstadoJugador(solicitudId, { estado: 'rechazado' });
+      await refreshData();
+      addToast({ type: 'success', title: 'Solicitud rechazada', message: 'Se rechazó la solicitud del jugador' });
+    } catch (err) {
+      console.error(err);
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos rechazar la solicitud' });
+    }
   };
 
   const jugadoresPorContrato = useMemo(() => {
@@ -173,10 +190,12 @@ const JugadoresPage = () => {
         datosPropuestos: cambios,
       });
       setEditSuccess('Solicitud enviada para revisión.');
+      addToast({ type: 'success', title: 'Solicitud enviada', message: 'Se envió la solicitud de edición del contrato' });
       await refreshData();
     } catch (err) {
       console.error(err);
       setEditError('No pudimos crear la solicitud. Intenta nuevamente.');
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos crear la solicitud de edición' });
     } finally {
       setEditLoading(false);
     }
@@ -193,6 +212,7 @@ const JugadoresPage = () => {
     } catch (err) {
       console.error(err);
       setContratosError('No pudimos cargar los contratos inactivos. Intenta nuevamente.');
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos cargar los contratos inactivos' });
       setShowContratosModal(true);
     } finally {
       setContratosLoading(false);
@@ -210,6 +230,7 @@ const JugadoresPage = () => {
 
     if (!inviteSeleccionado) {
       setInviteError('Seleccioná un jugador antes de enviar la invitación.');
+      addToast({ type: 'info', title: 'Falta seleccionar jugador', message: 'Elegí un jugador para invitar' });
       return;
     }
 
@@ -228,9 +249,11 @@ const JugadoresPage = () => {
       setOpcionesJugadores([]);
       setInviteFechaInicio('');
       setInviteFechaFin('');
+      addToast({ type: 'success', title: 'Invitación enviada', message: 'El jugador fue invitado correctamente' });
     } catch (err) {
       console.error(err);
       setInviteError('No pudimos enviar la invitación. Confirmá que el jugador no tenga una solicitud activa.');
+      addToast({ type: 'error', title: 'Error al invitar', message: 'No se pudo enviar la invitación' });
     } finally {
       setInviteLoading(false);
     }
@@ -291,16 +314,12 @@ const JugadoresPage = () => {
 
         <form className="mt-4 space-y-3" onSubmit={handleInvite}>
           <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="jugador-search">
-              Buscar jugador por nombre
-            </label>
-            <input
+            <Input
               id="jugador-search"
-              type="text"
+              label="Buscar jugador por nombre"
               value={inviteQuery}
-              onChange={(event) => setInviteQuery(event.target.value)}
+              onChange={(event) => setInviteQuery((event.target as HTMLInputElement).value)}
               placeholder="Ej. Juan Pérez"
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
             {opcionesJugadores.length ? (
               <ul className="mt-2 max-h-48 overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -335,27 +354,21 @@ const JugadoresPage = () => {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="fecha-inicio-invitacion">
-                Fecha de inicio (opcional)
-              </label>
-              <input
+              <Input
                 id="fecha-inicio-invitacion"
+                label="Fecha de inicio (opcional)"
                 type="date"
                 value={inviteFechaInicio}
-                onChange={(event) => setInviteFechaInicio(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                onChange={(event) => setInviteFechaInicio((event.target as HTMLInputElement).value)}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="fecha-fin-invitacion">
-                Fecha de finalización (opcional)
-              </label>
-              <input
+              <Input
                 id="fecha-fin-invitacion"
+                label="Fecha de finalización (opcional)"
                 type="date"
                 value={inviteFechaFin}
-                onChange={(event) => setInviteFechaFin(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                onChange={(event) => setInviteFechaFin((event.target as HTMLInputElement).value)}
               />
             </div>
           </div>
@@ -392,137 +405,116 @@ const JugadoresPage = () => {
       )}
 
       {editingContratoId ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-slate-900">Editar fechas del contrato</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Ingresá las fechas y enviaremos una solicitud de edición para que sea aprobada.
-            </p>
+        <ModalBase isOpen onClose={handleCloseModal} title="Editar fechas del contrato" size="md">
+          <p className="mt-1 text-sm text-slate-500">
+            Ingresá las fechas y enviaremos una solicitud de edición para que sea aprobada.
+          </p>
 
-            <form className="mt-5 space-y-4" onSubmit={handleGuardarEdicion}>
-              <div>
-                <label htmlFor="rol" className="block text-sm font-medium text-slate-700">
-                  Rol en el equipo
-                </label>
-                <select
-                  id="rol"
-                  name="rol"
-                  value={editForm.rol}
-                  onChange={handleEditFormChange}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                >
-                  <option value="jugador">Jugador</option>
-                  <option value="entrenador">Entrenador</option>
-                </select>
-              </div>
+          <form className="mt-5 space-y-4" onSubmit={handleGuardarEdicion}>
+            <Select
+              id="rol"
+              name="rol"
+              label="Rol en el equipo"
+              value={editForm.rol}
+              onChange={handleEditFormChange as any}
+              options={[
+                { value: 'jugador', label: 'Jugador' },
+                { value: 'entrenador', label: 'Entrenador' },
+              ]}
+            />
 
-              <div>
-                <label htmlFor="fechaInicio" className="block text-sm font-medium text-slate-700">
-                  Fecha de inicio
-                </label>
-                <input
-                  id="fechaInicio"
-                  name="fechaInicio"
-                  type="date"
-                  value={editForm.fechaInicio}
-                  onChange={handleEditFormChange}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                />
-              </div>
+            <div>
+              <label htmlFor="fechaInicio" className="block text-sm font-medium text-slate-700">
+                Fecha de inicio
+              </label>
+              <input
+                id="fechaInicio"
+                name="fechaInicio"
+                type="date"
+                value={editForm.fechaInicio}
+                onChange={handleEditFormChange}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+            </div>
 
-              <div>
-                <label htmlFor="fechaFin" className="block text-sm font-medium text-slate-700">
-                  Fecha de finalización
-                </label>
-                <input
-                  id="fechaFin"
-                  name="fechaFin"
-                  type="date"
-                  value={editForm.fechaFin}
-                  onChange={handleEditFormChange}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                />
-              </div>
+            <div>
+              <label htmlFor="fechaFin" className="block text-sm font-medium text-slate-700">
+                Fecha de finalización
+              </label>
+              <input
+                id="fechaFin"
+                name="fechaFin"
+                type="date"
+                value={editForm.fechaFin}
+                onChange={handleEditFormChange}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+            </div>
 
-              {editError ? <p className="text-sm text-rose-600">{editError}</p> : null}
-              {editSuccess ? <p className="text-sm text-emerald-600">{editSuccess}</p> : null}
+            {editError ? <p className="text-sm text-rose-600">{editError}</p> : null}
+            {editSuccess ? <p className="text-sm text-emerald-600">{editSuccess}</p> : null}
 
-              <div className="flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:border-slate-300 hover:text-slate-900"
-                >
-                  Cerrar
-                </button>
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-400"
-                >
-                  {editLoading ? 'Enviando…' : 'Enviar solicitud'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-
-      {showContratosModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">Contratos no activos</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Contratos marcados como baja, rechazados o pendientes para este equipo.
-                </p>
-              </div>
+            <div className="flex items-center justify-end gap-3">
               <button
                 type="button"
-                onClick={handleCloseContratosModal}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                onClick={handleCloseModal}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:border-slate-300 hover:text-slate-900"
               >
                 Cerrar
               </button>
+              <button
+                type="submit"
+                disabled={editLoading}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-400"
+              >
+                {editLoading ? 'Enviando…' : 'Enviar solicitud'}
+              </button>
             </div>
+          </form>
+        </ModalBase>
+      ) : null}
 
-            {contratosLoading ? (
-              <p className="mt-4 text-sm text-slate-500">Cargando contratos…</p>
-            ) : contratosError ? (
-              <p className="mt-4 text-sm text-rose-600">{contratosError}</p>
-            ) : contratosNoActivos.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">No hay contratos no activos registrados.</p>
-            ) : (
-              <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="bg-slate-50 text-slate-500">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Jugador</th>
-                      <th className="px-4 py-2 text-left">Rol</th>
-                      <th className="px-4 py-2 text-left">Estado</th>
-                      <th className="px-4 py-2 text-left">Origen</th>
-                      <th className="px-4 py-2 text-left">Inicio</th>
-                      <th className="px-4 py-2 text-left">Fin</th>
+      {showContratosModal ? (
+        <ModalBase isOpen onClose={handleCloseContratosModal} title="Contratos no activos" size="xl">
+          <p className="mt-1 text-sm text-slate-500">
+            Contratos marcados como baja, rechazados o pendientes para este equipo.
+          </p>
+
+          {contratosLoading ? (
+            <p className="mt-4 text-sm text-slate-500">Cargando contratos…</p>
+          ) : contratosError ? (
+            <p className="mt-4 text-sm text-rose-600">{contratosError}</p>
+          ) : contratosNoActivos.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500">No hay contratos no activos registrados.</p>
+          ) : (
+            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr>
+                    <th className="px-4 py-2 text-left">Jugador</th>
+                    <th className="px-4 py-2 text-left">Rol</th>
+                    <th className="px-4 py-2 text-left">Estado</th>
+                    <th className="px-4 py-2 text-left">Origen</th>
+                    <th className="px-4 py-2 text-left">Inicio</th>
+                    <th className="px-4 py-2 text-left">Fin</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                  {contratosNoActivos.map((contrato) => (
+                    <tr key={contrato.id}>
+                      <td className="px-4 py-2 font-medium text-slate-900">{contrato.jugadorNombre}</td>
+                      <td className="px-4 py-2">{contrato.rol ?? '—'}</td>
+                      <td className="px-4 py-2 capitalize">{contrato.estado}</td>
+                      <td className="px-4 py-2 capitalize">{contrato.origen ?? '—'}</td>
+                      <td className="px-4 py-2">{contrato.fechaInicio ? contrato.fechaInicio.slice(0, 10) : '—'}</td>
+                      <td className="px-4 py-2">{contrato.fechaFin ? contrato.fechaFin.slice(0, 10) : '—'}</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                    {contratosNoActivos.map((contrato) => (
-                      <tr key={contrato.id}>
-                        <td className="px-4 py-2 font-medium text-slate-900">{contrato.jugadorNombre}</td>
-                        <td className="px-4 py-2">{contrato.rol ?? '—'}</td>
-                        <td className="px-4 py-2 capitalize">{contrato.estado}</td>
-                        <td className="px-4 py-2 capitalize">{contrato.origen ?? '—'}</td>
-                        <td className="px-4 py-2">{contrato.fechaInicio ? contrato.fechaInicio.slice(0, 10) : '—'}</td>
-                        <td className="px-4 py-2">{contrato.fechaFin ? contrato.fechaFin.slice(0, 10) : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </ModalBase>
       ) : null}
     </div>
   );

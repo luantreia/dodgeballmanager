@@ -6,6 +6,7 @@ import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './app/providers/AuthContext';
 import { EquipoProvider } from './app/providers/EquipoContext';
+import { ToastProvider } from './shared/components/Toast/ToastProvider';
 
 const container = document.getElementById('root');
 
@@ -17,11 +18,13 @@ const root = ReactDOM.createRoot(container);
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <EquipoProvider>
-          <App />
-        </EquipoProvider>
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <EquipoProvider>
+            <App />
+          </EquipoProvider>
+        </AuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

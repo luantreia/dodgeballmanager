@@ -1,8 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getEstadisticasJugadorSet, type EstadisticaJugadorSetDetalle } from '../../estadisticas/services/estadisticasService';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  getEstadisticasJugadorSet,
+  getJugadoresPartido,
+  crearEstadisticaJugadorSet,
+  actualizarEstadisticaJugadorSet,
+  buscarEstadisticaJugadorSet,
+  type EstadisticaJugadorSetDetalle,
+} from '../../estadisticas/services/estadisticasService';
+import { obtenerSetsDePartido } from '../services/partidoService';
 import type { SetPartido } from '../services/partidoService';
+import { useToast } from '../../../shared/components/Toast/ToastProvider';
 
 export type JugadorSet = {
+  estadisticaId?: string;
   jugadorId?: string;
   jugadorPartidoId?: string;
   equipoId?: string;
@@ -63,6 +73,7 @@ const buildJugadoresDesdeDetalle = (detalle: EstadisticaJugadorSetDetalle | unde
       : undefined;
 
   return {
+    estadisticaId: detalle?._id,
     jugadorId: jugadorPartidoId,
     jugadorPartidoId,
     equipoId,
@@ -76,6 +87,7 @@ const buildJugadoresDesdeDetalle = (detalle: EstadisticaJugadorSetDetalle | unde
 };
 
 const mergeJugador = (jugador: JugadorSet | undefined): JugadorSet => ({
+  estadisticaId: jugador?.estadisticaId,
   jugadorId: jugador?.jugadorId,
   jugadorPartidoId: jugador?.jugadorPartidoId,
   equipoId: jugador?.equipoId,
@@ -114,14 +126,88 @@ export const useModalSetEstadisticas = ({
   refrescarPartidoSeleccionado,
   actualizarSetDePartido,
 }: UseModalSetEstadisticasParams): UseModalSetEstadisticasReturn => {
+  const { addToast } = useToast();
   const [serviciosCargados, setServiciosCargados] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [jugadoresPorSet, setJugadoresPorSet] = useState<JugadoresPorSet>({});
   const [mostrarConfirmacionManual] = useState(false);
   const [estadisticasManualesDetectadas] = useState(false);
   const [setDataPendiente] = useState<null>(null);
+  const [mapVersion, setMapVersion] = useState(0);
+  const mapaSetNumeroIdRef = useRef<Record<number, string>>({});
+  const [mapJpToJugador, setMapJpToJugador] = useState<Record<string, string>>({});
+  const existingByJpRef = useRef<Record<string, string>>({});
 
   const setKey = numeroSetSeleccionado || 'sin-set';
+
+  const registrarSetsEnMapa = useCallback((sets: Array<Pick<SetPartido, '_id' | 'numeroSet'>>) => {
+    if (!sets.length) return;
+
+    let cambio = false;
+    const mapaActual = mapaSetNumeroIdRef.current;
+
+    sets.forEach((set) => {
+      if (set._id && mapaActual[set.numeroSet] !== set._id) {
+        mapaActual[set.numeroSet] = set._id;
+        cambio = true;
+      }
+    });
+
+    if (cambio) {
+      setMapVersion((prev) => prev + 1);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelado = false;
+
+    const cargarSets = async (): Promise<void> => {
+      try {
+        const sets = await obtenerSetsDePartido(partidoId);
+        if (cancelado) return;
+
+        registrarSetsEnMapa(sets);
+      } catch (error) {
+        console.warn('No se pudieron cargar los sets del partido:', error);
+      }
+    };
+
+    void cargarSets();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [partidoId]);
+
+  useEffect(() => {
+    let cancelado = false;
+    const cargarJugadores = async (): Promise<void> => {
+      try {
+        const data = await getJugadoresPartido(partidoId);
+        if (cancelado) return;
+        const mapa: Record<string, string> = {};
+        data.forEach((jp) => {
+          const jpId = jp._id;
+          const jugadorId = typeof jp.jugador === 'string' ? jp.jugador : jp.jugador?._id;
+          if (jpId && jugadorId) {
+            mapa[jpId] = jugadorId;
+          }
+        });
+        setMapJpToJugador(mapa);
+      } catch (e) {
+        // noop
+      }
+    };
+    void cargarJugadores();
+    return () => {
+      cancelado = true;
+    };
+  }, [partidoId]);
+
+  useEffect(() => {
+    if (!setsLocales.length) return;
+    registrarSetsEnMapa(setsLocales);
+  }, [registrarSetsEnMapa, setsLocales]);
 
   useEffect(() => {
     let cancelado = false;
@@ -134,8 +220,25 @@ export const useModalSetEstadisticas = ({
         return;
       }
 
+      const setIdLocal = typeof estadisticasSet?._id === 'string' ? estadisticasSet._id : undefined;
+      const mapaActual = mapaSetNumeroIdRef.current;
+      const setId = mapaActual[numeroSet] ?? setIdLocal;
+
+      if (setIdLocal && mapaActual[numeroSet] !== setIdLocal) {
+        mapaActual[numeroSet] = setIdLocal;
+        setMapVersion((prev) => prev + 1);
+      }
+
+      if (!setId) {
+        setJugadoresPorSet({ [setKey]: construirMapaInicial(estadisticasSet) });
+        setServiciosCargados(true);
+        return;
+      }
+
+      setServiciosCargados(false);
+
       try {
-        const data = await getEstadisticasJugadorSet(numeroSet.toString());
+        const data = await getEstadisticasJugadorSet(setId);
         if (cancelado) return;
 
         const agrupado = data.reduce<Record<string, JugadorSet[]>>((acc, detalle) => {
@@ -145,6 +248,19 @@ export const useModalSetEstadisticas = ({
           acc[jugador.equipoId].push(mergeJugador(jugador));
           return acc;
         }, {});
+
+        const mapExistentes: Record<string, string> = {};
+        data.forEach((detalle) => {
+          const jpId = typeof detalle?.jugadorPartido === 'object'
+            ? detalle.jugadorPartido?._id
+            : typeof detalle?.jugadorPartido === 'string'
+              ? detalle.jugadorPartido
+              : undefined;
+          if (jpId && detalle?._id) {
+            mapExistentes[jpId] = detalle._id;
+          }
+        });
+        existingByJpRef.current = mapExistentes;
 
         const fallback = Object.keys(agrupado).length > 0 ? agrupado : construirMapaInicial(estadisticasSet);
 
@@ -164,7 +280,7 @@ export const useModalSetEstadisticas = ({
     return () => {
       cancelado = true;
     };
-  }, [estadisticasSet, numeroSetSeleccionado, partidoId, setKey]);
+  }, [estadisticasSet, numeroSetSeleccionado, partidoId, setKey, mapVersion]);
 
   const equiposDelSet = useMemo<Record<string, JugadorSet[]>>(() => jugadoresPorSet[setKey] ?? {}, [jugadoresPorSet, setKey]);
 
@@ -226,11 +342,47 @@ export const useModalSetEstadisticas = ({
 
     if (!setAnterior) return;
 
-    const mapaAnterior = construirMapaInicial(setAnterior);
-    setJugadoresPorSet((prev) => ({
-      ...prev,
-      [setKey]: mapaAnterior,
-    }));
+    const setAnteriorId = typeof setAnterior._id === 'string'
+      ? setAnterior._id
+      : mapaSetNumeroIdRef.current[setAnterior.numeroSet];
+
+    if (setAnteriorId) {
+      void (async () => {
+        try {
+          const data = await getEstadisticasJugadorSet(setAnteriorId);
+          const agrupado = data.reduce<Record<string, JugadorSet[]>>((acc, detalle) => {
+            const jugador = buildJugadoresDesdeDetalle(detalle);
+            if (!jugador.equipoId) return acc;
+            if (!acc[jugador.equipoId]) acc[jugador.equipoId] = [];
+            acc[jugador.equipoId].push(
+              mergeJugador({
+                ...jugador,
+                estadisticaId: undefined,
+                estadisticas: { ...ESTADISTICAS_BASE },
+              }),
+            );
+            return acc;
+          }, {});
+
+          setJugadoresPorSet((prev) => ({
+            ...prev,
+            [setKey]: agrupado,
+          }));
+        } catch {
+          const mapaAnterior = construirMapaInicial(setAnterior);
+          setJugadoresPorSet((prev) => ({
+            ...prev,
+            [setKey]: mapaAnterior,
+          }));
+        }
+      })();
+    } else {
+      const mapaAnterior = construirMapaInicial(setAnterior);
+      setJugadoresPorSet((prev) => ({
+        ...prev,
+        [setKey]: mapaAnterior,
+      }));
+    }
   }, [numeroSetSeleccionado, setKey, setsLocales]);
 
   const guardar = useCallback(async () => {
@@ -240,31 +392,68 @@ export const useModalSetEstadisticas = ({
     setGuardando(true);
 
     try {
-      const payloadJugadores = Object.entries(jugadoresPorSet[setKey] ?? {}).flatMap(([equipoId, jugadores]) =>
-        jugadores.map((jugador) => ({
-          equipo: equipoId,
-          jugadorPartido: jugador.jugadorPartidoId ?? jugador.jugadorId,
-          ...ESTADISTICAS_BASE,
-          ...jugador.estadisticas,
-        })),
-      );
-
-      if (actualizarSetDePartido) {
-        await actualizarSetDePartido(numeroSet, {
-          estadisticas: payloadJugadores as unknown as SetPartido['estadisticas'],
-        });
+      const setIdLocal = typeof estadisticasSet?._id === 'string' ? estadisticasSet._id : undefined;
+      const setId = mapaSetNumeroIdRef.current[numeroSet] ?? setIdLocal;
+      if (!setId) {
+        addToast({ type: 'error', title: 'Error', message: 'No se pudo identificar el set' });
+        return;
       }
 
-      actualizarSetSeleccionado({ estadisticas: payloadJugadores });
+      const current = jugadoresPorSet[setKey] ?? {};
+      const byJp: Record<string, { id?: string; equipoId: string; stats: Record<string, number> }> = {};
 
+      Object.entries(current).forEach(([equipoId, jugadores]) => {
+        (jugadores ?? []).forEach((jugador) => {
+          const jpId = jugador.jugadorPartidoId ?? jugador.jugadorId;
+          if (!jpId) return;
+          const stats = { ...ESTADISTICAS_BASE, ...jugador.estadisticas } as Record<string, number>;
+          const existingId = jugador.estadisticaId || existingByJpRef.current[jpId];
+          byJp[jpId] = { id: existingId, equipoId, stats };
+        });
+      });
+
+      for (const [jpId, item] of Object.entries(byJp)) {
+        const jugadorId = mapJpToJugador[jpId];
+        let statId = item.id;
+
+        if (!statId) {
+          const existentes = await buscarEstadisticaJugadorSet(setId, jpId);
+          if (Array.isArray(existentes) && existentes.length > 0 && existentes[0]?._id) {
+            statId = existentes[0]._id as unknown as string;
+            existingByJpRef.current[jpId] = statId;
+          }
+        }
+
+        if (statId) {
+          await actualizarEstadisticaJugadorSet(statId, {
+            throws: item.stats.throws,
+            hits: item.stats.hits,
+            outs: item.stats.outs,
+            catches: item.stats.catches,
+          });
+        } else if (jugadorId) {
+          await crearEstadisticaJugadorSet({
+            set: setId,
+            jugadorPartido: jpId,
+            jugador: jugadorId,
+            equipo: item.equipoId,
+            throws: item.stats.throws,
+            hits: item.stats.hits,
+            outs: item.stats.outs,
+            catches: item.stats.catches,
+          });
+        }
+      }
+
+      setMapVersion((prev) => prev + 1);
       await Promise.resolve(refrescarPartidoSeleccionado());
     } catch (error) {
       console.error('Error al guardar estadísticas del set:', error);
-      alert(`Error al guardar el set: ${(error as Error).message}`);
+      addToast({ type: 'error', title: 'Error al guardar set', message: (error as Error).message });
     } finally {
       setGuardando(false);
     }
-  }, [actualizarSetDePartido, actualizarSetSeleccionado, jugadoresPorSet, numeroSetSeleccionado, refrescarPartidoSeleccionado, setKey]);
+  }, [addToast, estadisticasSet, jugadoresPorSet, numeroSetSeleccionado, refrescarPartidoSeleccionado, setKey, mapJpToJugador]);
 
   const confirmarRecalculo = useCallback(() => {
     console.info('Confirmar recalculo de estadísticas manuales');

@@ -8,6 +8,7 @@ import {
   type JugadorSimple,
   type EquipoReferencia,
 } from '../services/partidoService';
+import { useToast } from '../../../shared/components/Toast/ToastProvider';
 
 type PartidoEquipo = string | { _id?: string; nombre?: string } | null | undefined;
 
@@ -52,6 +53,7 @@ export const useAsignacionJugadores = (
   setAsignandoJugadores: Dispatch<SetStateAction<boolean>>,
   onCargarDatos: () => Promise<void> | void,
 ): UseAsignacionJugadoresReturn => {
+  const { addToast } = useToast();
 
   // Efecto para inicializar la selección de jugadores cuando se muestra la asignación
   useEffect(() => {
@@ -193,7 +195,7 @@ export const useAsignacionJugadores = (
         equipoLocalId ? actualizarEstadisticasEquipoPartido(partido._id, equipoLocalId) : Promise.resolve(),
         equipoVisitanteId ? actualizarEstadisticasEquipoPartido(partido._id, equipoVisitanteId) : Promise.resolve(),
       ]);
-      alert(`✅ Asignación actualizada correctamente`);
+      addToast({ type: 'success', title: 'Asignación actualizada', message: 'Se actualizó la asignación de jugadores' });
 
       // Recargar datos después de la asignación
       await onCargarDatos();
@@ -201,7 +203,7 @@ export const useAsignacionJugadores = (
     } catch (error) {
       console.error('Error asignando jugadores:', error);
       const message = error instanceof Error ? error.message : String(error);
-      alert('Error al actualizar asignación: ' + message);
+      addToast({ type: 'error', title: 'Error al actualizar asignación', message });
     } finally {
       setAsignandoJugadores(false);
     }

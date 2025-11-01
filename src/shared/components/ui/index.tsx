@@ -11,3 +11,4 @@ export { default as Table } from './Table/Table';
 export { default as Modal } from './Modal/Modal';
 export { default as FilterControls } from './Filter/FilterControls';
 export { default as ErrorBoundary } from './Error/ErrorBoundary';
+export { default as Textarea } from './Textarea/Textarea';

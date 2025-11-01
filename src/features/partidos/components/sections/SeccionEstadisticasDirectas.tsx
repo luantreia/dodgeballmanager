@@ -1,6 +1,11 @@
 import { useState, useEffect, type FC } from 'react';
 import type { PartidoDetallado } from '../../services/partidoService';
 import type { EstadisticaManualBackend } from '../../hooks/useEstadisticasModal';
+import {
+  getResumenEstadisticasJugadorPartido,
+  getEstadisticasJugadorPartido,
+  getEstadisticasJugadorSetPorPartido,
+} from '../../../estadisticas/services/estadisticasService';
 
 type EstadisticaAutomatica = EstadisticaManualBackend & {
   jugadorPartido?: EstadisticaManualBackend['jugadorPartido'] | string;
@@ -35,43 +40,27 @@ export const SeccionEstadisticasDirectas: FC<SeccionEstadisticasDirectasProps> =
         setCargando(true);
         console.log('🔍 Buscando estadísticas automáticas para partido:', partidoId);
 
-        // Intentar cargar estadísticas automáticas agregadas primero
-        const responseAgregadas = await fetch(
-          `https://overtime-ddyl.onrender.com/api/estadisticas/jugador-partido/resumen-partido/${partidoId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        if (responseAgregadas.ok) {
-          const dataAgregadas: { jugadores?: EstadisticaAutomatica[] } = await responseAgregadas.json();
-          const jugadores = Array.isArray(dataAgregadas.jugadores) ? dataAgregadas.jugadores : [];
+        // Intentar cargar estadísticas automáticas agregadas primero (servicio)
+        const resumen = await getResumenEstadisticasJugadorPartido(partidoId);
+        const jugadores = Array.isArray(resumen?.jugadores) ? (resumen.jugadores as EstadisticaAutomatica[]) : [];
+        if (jugadores.length > 0) {
           console.log('📊 Estadísticas automáticas agregadas encontradas:', jugadores.length);
           setEstadisticasAutomaticas(jugadores);
-        } else {
-          console.log('⚠️ No hay estadísticas agregadas, buscando individuales...');
-
-          // Si no hay agregadas, intentar cargar individuales
-          const responseIndividuales = await fetch(
-            `https://overtime-ddyl.onrender.com/api/estadisticas/jugador-partido?partido=${partidoId}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-
-          if (responseIndividuales.ok) {
-            const dataIndividuales: EstadisticaAutomatica[] = await responseIndividuales.json();
-            console.log('📊 Estadísticas automáticas individuales encontradas:', dataIndividuales.length);
-
-            if ((dataIndividuales ?? []).length === 0) {
-              console.log('⚠️ No hay estadísticas individuales, intentando crearlas desde sets...');
-
-              // Si no hay estadísticas individuales, intentar crearlas desde las estadísticas por set
-              await crearEstadisticasDesdeSets();
-            } else {
-              setEstadisticasAutomaticas(Array.isArray(dataIndividuales) ? dataIndividuales : []);
-            }
-          } else {
-            console.log('⚠️ No se encontraron estadísticas, intentando crearlas desde sets...');
-            await crearEstadisticasDesdeSets();
-          }
+          return;
         }
+
+        console.log('⚠️ No hay estadísticas agregadas, buscando individuales...');
+
+        // Si no hay agregadas, intentar cargar individuales (servicio)
+        const individuales = await getEstadisticasJugadorPartido(partidoId);
+        if ((individuales ?? []).length > 0) {
+          console.log('📊 Estadísticas automáticas individuales encontradas:', individuales.length);
+          setEstadisticasAutomaticas(individuales as EstadisticaAutomatica[]);
+          return;
+        }
+
+        console.log('⚠️ No se encontraron estadísticas, intentando crearlas desde sets...');
+        await crearEstadisticasDesdeSets();
       } catch (error) {
         console.error('Error cargando estadísticas automáticas:', error);
         setEstadisticasAutomaticas([]);
@@ -84,54 +73,44 @@ export const SeccionEstadisticasDirectas: FC<SeccionEstadisticasDirectasProps> =
       try {
         console.log('🔧 Intentando crear estadísticas desde datos de sets...');
 
-        // Buscar estadísticas por set para este partido
-        const responseSets = await fetch(
-          `https://overtime-ddyl.onrender.com/api/estadisticas/jugador-set?partido=${partidoId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        // Buscar estadísticas por set para este partido (servicio)
+        const dataSets = await getEstadisticasJugadorSetPorPartido(partidoId);
+        console.log('📈 Estadísticas por set encontradas:', (dataSets ?? []).length);
 
-        if (responseSets.ok) {
-          const dataSets: EstadisticaAutomatica[] = await responseSets.json();
-          console.log('📈 Estadísticas por set encontradas:', dataSets.length);
+        if ((dataSets ?? []).length > 0) {
+          // Agrupar por jugador y crear estadísticas agregadas
+          const statsPorJugador: Record<string, EstadisticaAutomatica> = {};
 
-          if ((dataSets ?? []).length > 0) {
-            // Agrupar por jugador y crear estadísticas agregadas
-            const statsPorJugador: Record<string, EstadisticaAutomatica> = {};
+          (dataSets as EstadisticaAutomatica[]).forEach(stat => {
+            const jugadorPartidoValue = stat?.jugadorPartido;
+            const jugadorId = typeof jugadorPartidoValue === 'string'
+              ? jugadorPartidoValue
+              : jugadorPartidoValue?._id;
+            if (!jugadorId) return;
 
-            dataSets.forEach(stat => {
-              const jugadorPartidoValue = stat?.jugadorPartido;
-              const jugadorId = typeof jugadorPartidoValue === 'string'
-                ? jugadorPartidoValue
-                : jugadorPartidoValue?._id;
-              if (!jugadorId) return;
+            if (!statsPorJugador[jugadorId]) {
+              statsPorJugador[jugadorId] = {
+                _id: stat._id,
+                jugadorPartido: stat.jugadorPartido,
+                throws: 0,
+                hits: 0,
+                outs: 0,
+                catches: 0,
+                tipoCaptura: 'automatico'
+              };
+            }
 
-              if (!statsPorJugador[jugadorId]) {
-                statsPorJugador[jugadorId] = {
-                  _id: stat._id,
-                  jugadorPartido: stat.jugadorPartido,
-                  throws: 0,
-                  hits: 0,
-                  outs: 0,
-                  catches: 0,
-                  tipoCaptura: 'automatico'
-                };
-              }
+            statsPorJugador[jugadorId].throws = (statsPorJugador[jugadorId].throws ?? 0) + (stat.throws ?? 0);
+            statsPorJugador[jugadorId].hits = (statsPorJugador[jugadorId].hits ?? 0) + (stat.hits ?? 0);
+            statsPorJugador[jugadorId].outs = (statsPorJugador[jugadorId].outs ?? 0) + (stat.outs ?? 0);
+            statsPorJugador[jugadorId].catches = (statsPorJugador[jugadorId].catches ?? 0) + (stat.catches ?? 0);
+          });
 
-              statsPorJugador[jugadorId].throws = (statsPorJugador[jugadorId].throws ?? 0) + (stat.throws ?? 0);
-              statsPorJugador[jugadorId].hits = (statsPorJugador[jugadorId].hits ?? 0) + (stat.hits ?? 0);
-              statsPorJugador[jugadorId].outs = (statsPorJugador[jugadorId].outs ?? 0) + (stat.outs ?? 0);
-              statsPorJugador[jugadorId].catches = (statsPorJugador[jugadorId].catches ?? 0) + (stat.catches ?? 0);
-            });
-
-            const estadisticasAgregadas = Object.values(statsPorJugador);
-            console.log('✅ Estadísticas agregadas creadas desde sets:', estadisticasAgregadas.length);
-            setEstadisticasAutomaticas(estadisticasAgregadas);
-          } else {
-            console.log('⚠️ No hay estadísticas por set para este partido');
-            setEstadisticasAutomaticas([]);
-          }
+          const estadisticasAgregadas = Object.values(statsPorJugador);
+          console.log('✅ Estadísticas agregadas creadas desde sets:', estadisticasAgregadas.length);
+          setEstadisticasAutomaticas(estadisticasAgregadas);
         } else {
-          console.log('⚠️ Error consultando estadísticas por set');
+          console.log('⚠️ No hay estadísticas por set para este partido');
           setEstadisticasAutomaticas([]);
         }
       } catch (error) {

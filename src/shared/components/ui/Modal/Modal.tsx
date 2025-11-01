@@ -1,5 +1,5 @@
 // src/components/ui/Modal/Modal.tsx
-import { useEffect } from 'react';
+import { useEffect, useRef, useId } from 'react';
 import { createPortal } from 'react-dom';
 import type { HTMLAttributes, MouseEvent, ReactNode } from 'react';
 
@@ -37,6 +37,8 @@ const Modal = ({
   bodyClassName = 'px-6 py-4',
   ...props
 }: ModalProps) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const titleId = useId();
   useEffect(() => {
     if (!isOpen) return;
 
@@ -54,6 +56,42 @@ const Modal = ({
       document.body.style.overflow = 'unset';
     };
   }, [isOpen, closeOnEscape, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const node = containerRef.current;
+    if (!node) return;
+    // Focus primer elemento focuseable o el contenedor
+    const focusable = node.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    (focusable ?? node).focus?.();
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const focusables = node.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled'));
+      if (list.length === 0) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey) {
+        if (active === first || !node.contains(active)) {
+          last.focus();
+          e.preventDefault();
+        }
+      } else {
+        if (active === last) {
+          first.focus();
+          e.preventDefault();
+        }
+      }
+    };
+    node.addEventListener('keydown', handleTab);
+    return () => node.removeEventListener('keydown', handleTab);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -94,16 +132,25 @@ const Modal = ({
 
   return createPortal(
     <div className={overlayClasses} onClick={handleBackdropClick}>
-      <div className={modalClasses} {...props}>
+      <div
+        className={modalClasses}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? `modal-${titleId}-title` : undefined}
+        aria-describedby={subtitle ? `modal-${titleId}-subtitle` : undefined}
+        tabIndex={-1}
+        ref={containerRef}
+        {...props}
+      >
         {(title || subtitle) && (
           <div className={headerClasses}>
             {title && (
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 id={`modal-${titleId}-title`} className="text-lg font-semibold text-gray-900 dark:text-white">
                 {title}
               </h3>
             )}
             {subtitle && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              <p id={`modal-${titleId}-subtitle`} className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 {subtitle}
               </p>
             )}

@@ -58,7 +58,7 @@ const ModalBase: React.FC<ModalBaseProps> = ({
     .join(' ');
 
   const mergedHeaderClassName = [
-    'mb-6 border-b border-slate-200/70 pb-4 dark:border-slate-700/60',
+    'mb-0.5 sm:mb-1 border-b border-slate-200/70 pb-1 sm:pb-2 dark:border-slate-700/60',
     headerClassName,
   ]
     .filter(Boolean)
@@ -66,7 +66,7 @@ const ModalBase: React.FC<ModalBaseProps> = ({
 
   const mergedContentClassName = [
     'flex-1',
-    scrollable ? 'overflow-y-auto pr-1 custom-scrollbar' : '',
+    scrollable ? 'overflow-y-auto pr-0.5 sm:pr-1 custom-scrollbar' : '',
     'scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700',
     contentClassName,
   ]
@@ -74,7 +74,7 @@ const ModalBase: React.FC<ModalBaseProps> = ({
     .join(' ');
 
   const mergedFooterClassName = [
-    'mt-6 border-t border-slate-200/70 pt-4 dark:border-slate-700/60',
+    'mt-2 sm:mt-4 border-t border-slate-200/70 pt-2 sm:pt-4 dark:border-slate-700/60',
     footerClassName,
   ]
     .filter(Boolean)
@@ -91,8 +91,6 @@ const ModalBase: React.FC<ModalBaseProps> = ({
       overlayClassName={overlayClassName}
       closeOnBackdrop={closeOnBackdrop}
       closeOnEscape={closeOnEscape}
-      title={title}
-      subtitle={subtitle}
     >
       {(title || subtitle) && (
         <div className={mergedHeaderClassName}>

@@ -11,6 +11,7 @@ import {
   type EstadisticaJugadorPartidoPayload,
   type EstadisticaManualJugador,
 } from '../../estadisticas/services/estadisticasService';
+import { useToast } from '../../../shared/components/Toast/ToastProvider';
 
 export type TipoAutocompletado = 'automatico' | 'manual-previo' | null;
 
@@ -214,6 +215,7 @@ const preSeleccionarPosiciones = (
 };
 
 export const useEstadisticasModal = (partidoId: string, _token: string): UseEstadisticasModalReturn => {
+  const { addToast } = useToast();
   const [jugadores, setJugadores] = useState<JugadorBackend[]>([]);
   const [estadisticas, setEstadisticas] = useState<EstadisticasMap>({});
   const [loading, setLoading] = useState<boolean>(true);
@@ -317,7 +319,7 @@ export const useEstadisticasModal = (partidoId: string, _token: string): UseEsta
       setMostrarAsignacion(false);
     } catch (error) {
       console.error('Error cargando datos:', error);
-      alert(`Error al cargar los datos: ${(error as Error).message}`);
+      addToast({ type: 'error', title: 'Error al cargar datos', message: (error as Error).message });
     } finally {
       setLoading(false);
     }
@@ -384,12 +386,11 @@ export const useEstadisticasModal = (partidoId: string, _token: string): UseEsta
       }
 
       await Promise.all(actualizacionesEquipo);
-
-      alert('Estadísticas guardadas correctamente');
+      addToast({ type: 'success', title: 'Guardado', message: 'Estadísticas guardadas correctamente' });
       return true;
     } catch (error) {
       console.error('Error guardando estadísticas:', error);
-      alert(`Error al guardar las estadísticas: ${(error as Error).message}`);
+      addToast({ type: 'error', title: 'Error al guardar', message: (error as Error).message });
       return false;
     } finally {
       setGuardando(false);

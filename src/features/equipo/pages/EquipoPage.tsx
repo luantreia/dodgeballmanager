@@ -3,13 +3,16 @@ import EquipoCard from '../../../shared/components/EquipoCard/EquipoCard';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { actualizarEquipo, getEquipo } from '../services/equipoService';
 import type { Equipo } from '../../../types';
+import { useToast } from '../../../shared/components/Toast/ToastProvider';
+import { Input, Textarea } from '../../../shared/components/ui';
 
 const EquipoPage = () => {
+  const { addToast } = useToast();
   const { equipoSeleccionado, recargarEquipos } = useEquipo();
   const [detalleEquipo, setDetalleEquipo] = useState<Equipo | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -41,7 +44,7 @@ const EquipoPage = () => {
       } catch (error) {
         console.error(error);
         if (!isCancelled) {
-          setFeedback('No pudimos cargar los datos del equipo.');
+          addToast({ type: 'error', title: 'Error', message: 'No pudimos cargar los datos del equipo.' });
         }
       } finally {
         if (!isCancelled) {
@@ -69,11 +72,11 @@ const EquipoPage = () => {
     try {
       setSaving(true);
       await actualizarEquipo(equipoSeleccionado.id, formData);
-      setFeedback('Datos actualizados correctamente.');
+      addToast({ type: 'success', title: 'Guardado', message: 'Datos del equipo actualizados' });
       await recargarEquipos();
     } catch (error) {
       console.error(error);
-      setFeedback('No pudimos guardar los cambios. Intenta nuevamente.');
+      addToast({ type: 'error', title: 'Error al guardar', message: 'No pudimos guardar los cambios' });
     } finally {
       setSaving(false);
     }
@@ -108,54 +111,38 @@ const EquipoPage = () => {
         </p>
 
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="nombre">
-              Nombre del equipo
-            </label>
-            <input
-              id="nombre"
-              name="nombre"
-              type="text"
-              required
-              value={formData.nombre}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              placeholder="Overtime Tigers"
-            />
-          </div>
+          <Input
+            id="nombre"
+            name="nombre"
+            label="Nombre del equipo"
+            type="text"
+            required
+            value={formData.nombre}
+            onChange={handleChange as any}
+            placeholder="Overtime Tigers"
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="descripcion">
-              Descripción
-            </label>
-            <textarea
-              id="descripcion"
-              name="descripcion"
-              rows={3}
-              value={formData.descripcion}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              placeholder="Resumen del equipo, logros o estilo de juego"
-            />
-          </div>
+          <Textarea
+            id="descripcion"
+            name="descripcion"
+            label="Descripción"
+            rows={3}
+            value={formData.descripcion}
+            onChange={handleChange as any}
+            placeholder="Resumen del equipo, logros o estilo de juego"
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="logoUrl">
-              URL del logo
-            </label>
-            <input
-              id="logoUrl"
-              name="logoUrl"
-              type="url"
-              value={formData.logoUrl}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              placeholder="https://..."
-            />
-          </div>
+          <Input
+            id="logoUrl"
+            name="logoUrl"
+            label="URL del logo"
+            type="url"
+            value={formData.logoUrl}
+            onChange={handleChange as any}
+            placeholder="https://..."
+          />
 
-          <div className="flex items-center justify-between">
-            {feedback ? <span className="text-sm text-slate-500">{feedback}</span> : null}
+          <div className="flex items-center justify-end">
             <button
               type="submit"
               disabled={saving}
