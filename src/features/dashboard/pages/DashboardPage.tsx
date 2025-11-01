@@ -12,6 +12,7 @@ import type {
   SolicitudJugador,
 } from '../../../types';
 import { formatNumber } from '../../../utils/formatNumber';
+import { SeccionEstadisticasGlobales } from '../../estadisticas/components/SeccionEstadisticasGlobales';
 
 const DashboardPage = () => {
   const { equipoSeleccionado, loading: loadingEquipo } = useEquipo();
@@ -222,6 +223,11 @@ const DashboardPage = () => {
           </div>
         </section>
       ) : null}
+
+      {/* Estadísticas globales del equipo (acumulado de todos los partidos) */}
+      <section>
+        <SeccionEstadisticasGlobales equipoId={equipoSeleccionado.id} />
+      </section>
     </div>
   );
 };

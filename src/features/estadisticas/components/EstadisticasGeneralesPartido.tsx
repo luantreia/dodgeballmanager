@@ -108,7 +108,7 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
             equipos: []
           };
         } else {
-          // Convertir el formato de sets a formato de jugadores para compatibilidad
+          // Convertir el formato de sets a formato de jugadores y luego AGREGAR por jugadorPartido
           const jugadoresFormateados: JugadorEstadistica[] = [];
           const equiposMap = new Map<string, EstadisticaManualEquipo & { jugadores?: number }>();
 
@@ -165,6 +165,34 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
             });
           });
 
+          // AGREGAR por jugadorPartido
+          const agregadosMap = new Map<string, JugadorEstadistica>();
+          jugadoresFormateados.forEach((j) => {
+            const jp = j.jugadorPartido as any;
+            const jpId = typeof jp === 'string' ? jp : jp?._id;
+            if (!jpId) return;
+
+            const existente = agregadosMap.get(jpId);
+            if (!existente) {
+              // Usar el primer registro como base
+              agregadosMap.set(jpId, {
+                _id: jpId,
+                jugadorPartido: j.jugadorPartido,
+                throws: j.throws ?? 0,
+                hits: j.hits ?? 0,
+                outs: j.outs ?? 0,
+                catches: j.catches ?? 0,
+                tipoCaptura: 'automatica',
+              });
+            } else {
+              existente.throws = (existente.throws ?? 0) + (j.throws ?? 0);
+              existente.hits = (existente.hits ?? 0) + (j.hits ?? 0);
+              existente.outs = (existente.outs ?? 0) + (j.outs ?? 0);
+              existente.catches = (existente.catches ?? 0) + (j.catches ?? 0);
+            }
+          });
+          const jugadoresAgregados: JugadorEstadistica[] = Array.from(agregadosMap.values());
+
           // Calcular estadísticas por equipo agregando las estadísticas de sets
           const equiposCalculados: EstadisticaManualEquipo[] = Array.from(equiposMap.values()).map(
             (equipo) => ({
@@ -179,13 +207,13 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
           console.log('📈 Datos de sets procesados:', {
             sets: sets.length,
             estadisticasTotales: jugadoresFormateados.length,
-            estadisticasFiltradas: jugadoresFormateados.length,
+            jugadoresUnicos: jugadoresAgregados.length,
             equiposCalculados: equiposCalculados.length,
             equiposData: equiposCalculados.map(e => ({ nombre: e.nombre, throws: e.throws, hits: e.hits }))
           });
 
           data = {
-            jugadores: jugadoresFormateados,
+            jugadores: jugadoresAgregados,
             equipos: equiposCalculados, // Ahora sí calculamos las estadísticas de equipos
             setsInfo: sets // Información adicional de sets
           };

@@ -125,8 +125,48 @@ export interface ResumenEstadisticasManual {
   tipo?: string;
 }
 
-export const getResumenEstadisticasAutomaticas = (partidoId: string) =>
-  authFetch<ResumenEstadisticasAutomaticas>(`/estadisticas/jugador-set/resumen-partido/${partidoId}`);
+type SetPartidoResumen = {
+  _id: string;
+  numeroSet: number;
+  estadoSet?: string;
+  ganadorSet?: string;
+};
+
+export const getResumenEstadisticasAutomaticas = async (partidoId: string) => {
+  // 1) Obtener los sets del partido
+  const sets = await authFetch<SetPartidoResumen[]>(`/set-partido?partido=${partidoId}`);
+
+  // 2) Para cada set, obtener las estadísticas de jugador-set directamente
+  const setsConEstadisticas = await Promise.all(
+    (sets || [])
+      .sort((a, b) => (a.numeroSet || 0) - (b.numeroSet || 0))
+      .map(async (set) => {
+        const stats = await authFetch<EstadisticaJugadorSetDetalle[]>(`/estadisticas/jugador-set?set=${set._id}`);
+        // Mapear al tipo resumido esperado por la UI
+        const estadisticas = (stats || []).map((s) => ({
+          _id: s._id,
+          jugadorPartido: s.jugadorPartido,
+          throws: s.throws ?? 0,
+          hits: s.hits ?? 0,
+          outs: s.outs ?? 0,
+          catches: s.catches ?? 0,
+        })) as EstadisticaJugadorSetResumen[];
+
+        return {
+          _id: set._id,
+          numeroSet: set.numeroSet,
+          estadoSet: set.estadoSet,
+          ganadorSet: set.ganadorSet,
+          estadisticas,
+        } as EstadisticaSetResumen;
+      })
+  );
+
+  const payload: ResumenEstadisticasAutomaticas = {
+    sets: setsConEstadisticas,
+  };
+  return payload;
+};
 
 export const getResumenEstadisticasManual = (partidoId: string) =>
   authFetch<ResumenEstadisticasManual>(`/estadisticas/jugador-partido-manual/resumen-partido/${partidoId}`);
