@@ -32,10 +32,10 @@ const App = () => {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 font-bold text-white shadow shadow-brand-500/40">
-              OT
+              DT
             </span>
             <div>
-              <p className="text-sm font-semibold text-slate-900">Overtime Manager</p>
+              <p className="text-sm font-semibold text-slate-900">Overtime DT</p>
               <p className="text-xs text-slate-500">Panel de entrenadores</p>
             </div>
           </div>
@@ -152,7 +152,7 @@ const App = () => {
       <footer className="border-t border-slate-200 bg-white/60 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 text-xs text-slate-500">
           <span>© {new Date().getFullYear()} Overtime Dodgeball</span>
-          <span>Gestión diaria para managers y staff</span>
+          <span>Gestión diaria para Directores Tecnicos, entrenadores y staff</span>
         </div>
       </footer>
     </div>
