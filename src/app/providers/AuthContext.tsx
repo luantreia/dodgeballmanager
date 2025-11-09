@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(() => getStoredToken());
-  const [refreshToken, setRefreshToken] = useState<string | null>(() => getStoredRefreshToken());
+  const [, setRefreshToken] = useState<string | null>(() => getStoredRefreshToken());
 
   const handleProfileLoad = useCallback(async () => {
     try {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { obtenerSolicitudesEdicion, actualizarSolicitudEdicion, cancelarSolicitudEdicion } from '../services/solicitudesEdicionService';
 import { getUsuarioById } from '../../auth/services/usersService';
 import type { SolicitudEdicion, Usuario } from '../../../types';
@@ -20,8 +20,6 @@ interface DatosEliminarJugadorEquipo {
   contratoId: string;
 }
 
-type DatosSolicitud = DatosCrearJugadorEquipo | DatosEliminarJugadorEquipo;
-
 interface Props {
   equipoId: string;
 }
@@ -36,11 +34,7 @@ const EquipoSolicitudesEdicion: React.FC<Props> = ({ equipoId }) => {
   const { user } = useAuth();
   const { addToast } = useToast();
 
-  useEffect(() => {
-    cargarSolicitudes();
-  }, [equipoId]);
-
-  const cargarSolicitudes = async () => {
+  const cargarSolicitudes = useCallback(async () => {
     try {
       setLoading(true);
       // Cargar todas las solicitudes pendientes
@@ -108,7 +102,11 @@ const EquipoSolicitudesEdicion: React.FC<Props> = ({ equipoId }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [equipoId]);
+
+  useEffect(() => {
+    cargarSolicitudes();
+  }, [cargarSolicitudes]);
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
