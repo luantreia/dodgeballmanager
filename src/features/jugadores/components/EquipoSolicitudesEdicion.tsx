@@ -16,10 +16,6 @@ interface DatosCrearJugadorEquipo {
   rol?: string;
 }
 
-interface DatosEliminarJugadorEquipo {
-  contratoId: string;
-}
-
 interface Props {
   equipoId: string;
 }
