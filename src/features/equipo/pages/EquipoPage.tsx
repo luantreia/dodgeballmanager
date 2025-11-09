@@ -5,12 +5,10 @@ import { actualizarEquipo, getEquipo } from '../services/equipoService';
 import type { Equipo } from '../../../types';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { Input, Textarea } from '../../../shared/components/ui';
-import { useAuth } from '../../../app/providers/AuthContext';
 
 const EquipoPage = () => {
   const { addToast } = useToast();
   const { equipoSeleccionado, recargarEquipos } = useEquipo();
-  const { user } = useAuth();
   const [detalleEquipo, setDetalleEquipo] = useState<Equipo | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -61,7 +59,7 @@ const EquipoPage = () => {
     return () => {
       isCancelled = true;
     };
-  }, [equipoSeleccionado?.id]);
+  }, [equipoSeleccionado?.id, addToast]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;

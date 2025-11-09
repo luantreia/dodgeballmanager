@@ -72,7 +72,7 @@ const EstadisticasPage = () => {
     return () => {
       isCancelled = true;
     };
-  }, [equipoSeleccionado?.id]);
+  }, [equipoSeleccionado?.id, addToast]);
 
   const cards = useMemo(() => {
     if (!resumen) return [];

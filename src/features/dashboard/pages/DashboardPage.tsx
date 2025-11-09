@@ -5,18 +5,17 @@ import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getPartidos } from '../../partidos/services/partidoService';
 // Ranking reusable section
 import { SeccionTop5estadisticasDirectas } from '../../estadisticas/components/sections/SeccionTop5estadisticasDirectas';
-import type { EstadisticaEquipoResumen, EstadisticaJugador, Partido } from '../../../types';
+import type { EstadisticaEquipoResumen, Partido } from '../../../types';
 import { formatNumber } from '../../../utils/formatNumber';
 import { Link } from 'react-router-dom';
 import { obtenerSolicitudesEdicion } from '../../jugadores/services/solicitudesEdicionService';
- 
+
 
 const DashboardPage = () => {
   const { equipoSeleccionado, loading: loadingEquipo } = useEquipo();
   const [proximosPartidos, setProximosPartidos] = useState<Partido[]>([]);
   const [notificacionesPendientes, setNotificacionesPendientes] = useState<number>(0);
   const [resumenEquipo, setResumenEquipo] = useState<EstadisticaEquipoResumen | null>(null);
-  const [rankingJugadores, setRankingJugadores] = useState<EstadisticaJugador[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +25,6 @@ const DashboardPage = () => {
       setProximosPartidos([]);
       setNotificacionesPendientes(0);
       setResumenEquipo(null);
-      setRankingJugadores([]);
       return;
     }
 

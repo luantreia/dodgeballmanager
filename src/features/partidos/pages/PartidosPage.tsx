@@ -1,13 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import PartidoCard from '../../../shared/components/PartidoCard/PartidoCard';
 import { useEquipo } from '../../../app/providers/EquipoContext';
-import {
-  actualizarPartido,
-  getAlineacion,
-  getPartido,
-  getPartidos,
-} from '../services/partidoService';
-import type { JugadorPartido, Partido } from '../../../types';
+import { getPartido, getPartidos } from '../services/partidoService';
+import type { Partido } from '../../../types';
 import { ModalPartidoAdmin } from '../components';
 import { useToken } from '../../../app/providers/AuthContext';
 import { ModalCrearPartido } from '../components/modals/ModalCrearPartidoAmistoso';
@@ -19,12 +14,9 @@ const PartidosPage = () => {
   const token = useToken();
   const { equipoSeleccionado } = useEquipo();
   const { addToast } = useToast();
-  const [seleccionado, setSeleccionado] = useState<Partido | null>(null);
   const [proximos, setProximos] = useState<Partido[]>([]);
   const [recientes, setRecientes] = useState<Partido[]>([]);
-  const [alineacion, setAlineacion] = useState<JugadorPartido[]>([]);
   const [loading, setLoading] = useState(false);
-  const [detalleLoading, setDetalleLoading] = useState(false);
   const [showCrearModal, setShowCrearModal] = useState(false);
   const [modalAdminAbierto, setModalAdminAbierto] = useState(false);
   const [partidoAdminId, setPartidoAdminId] = useState<string | null>(null);
@@ -73,14 +65,13 @@ const PartidosPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [equipoSeleccionado?.id]);
+  }, [equipoSeleccionado?.id, addToast]);
 
   useEffect(() => {
     const equipoId = equipoSeleccionado?.id;
     if (!equipoId) {
       setProximos([]);
       setRecientes([]);
-      setSeleccionado(null);
       return;
     }
 
@@ -97,20 +88,12 @@ const PartidosPage = () => {
 
   const handleSeleccionar = async (partidoId: string) => {
     try {
-      setDetalleLoading(true);
-      const [detalle, jugadores] = await Promise.all([
-        getPartido(partidoId),
-        getAlineacion(partidoId),
-      ]);
-      setSeleccionado(detalle);
-      setAlineacion(jugadores);
+      await getPartido(partidoId);
       setPartidoAdminId(partidoId);
       setModalAdminAbierto(true);
     } catch (error) {
       console.error(error);
       addToast({ type: 'error', title: 'Error', message: 'No pudimos cargar el detalle del partido' });
-    } finally {
-      setDetalleLoading(false);
     }
   };
 
@@ -134,9 +117,7 @@ const PartidosPage = () => {
     setPartidoInfoId(null);
   };
 
-  const handleAlineacionActualizada = (jugadores: JugadorPartido[]) => {
-    setAlineacion(jugadores);
-  };
+  // onSaved no-op: actualizará vista dentro del modal
 
   if (!equipoSeleccionado) {
     return (
@@ -179,7 +160,6 @@ const PartidosPage = () => {
             void refreshPartidos();
           }}
           equipoId={equipoSeleccionado?.id}
-          onAlineacionActualizada={handleAlineacionActualizada}
         />
       ) : null}
 
@@ -188,8 +168,7 @@ const PartidosPage = () => {
         equipoId={equipoSeleccionado?.id}
         isOpen={alineacionModalAbierto && Boolean(partidoAlineacionId)}
         onClose={handleCerrarAlineacion}
-        onSaved={(jugadores) => {
-          handleAlineacionActualizada(jugadores);
+        onSaved={() => {
           handleCerrarAlineacion();
         }}
       />

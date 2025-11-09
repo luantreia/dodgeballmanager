@@ -48,7 +48,7 @@ const CompetenciasPage = () => {
     return () => {
       isCancelled = true;
     };
-  }, [equipoSeleccionado?.id]);
+  }, [equipoSeleccionado?.id, addToast]);
 
   const refresh = async () => {
     if (!equipoSeleccionado) return;

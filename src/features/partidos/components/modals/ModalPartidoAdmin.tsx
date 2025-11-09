@@ -11,22 +11,15 @@ import ModalGestionSets from './ModalGestionSets';
 import {
   getPartidoDetallado,
   obtenerSetsDePartido,
-  editarPartido,
   eliminarPartido,
-  recalcularMarcadorPartido,
   actualizarModoVisualizacionPartido,
   actualizarModoEstadisticasPartido,
-  crearSetPartido,
-  actualizarSetPartido,
-  eliminarSetPartido,
   extractEquipoId,
   type PartidoDetallado,
-  type SetPartido,
 } from '../../services/partidoService';
 import type { EstadisticaManualBackend } from '../../hooks/useEstadisticasModal';
 
-import type { Competencia, JugadorPartido } from '../../../../types';
-import { getParticipaciones as getCompetencias } from '../../../competencias/services/equipoCompetenciaService';
+import type { JugadorPartido } from '../../../../types';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 
@@ -58,10 +51,8 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
   const [partido, setPartido] = useState<PartidoDetallado | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [modoEdicion, setModoEdicion] = useState<boolean>(false);
   const [datosEdicion, setDatosEdicion] = useState<DatosEdicionState | null>(null);
   const [vistaEstadisticas, setVistaEstadisticas] = useState<VistaEstadisticas>('generales');
-  const [competencias, setCompetencias] = useState<Competencia[]>([]);
   const [capturaSetAbierta, setCapturaSetAbierta] = useState<boolean>(false);
   const [numeroSetEnCaptura, setNumeroSetEnCaptura] = useState<number | null>(null);
   const [gestionSetsAbierta, setGestionSetsAbierta] = useState<boolean>(false);
@@ -116,7 +107,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
     } finally {
       setLoading(false);
     }
-  }, [partidoId]);
+  }, [partidoId, addToast]);
 
   const abrirCapturaSet = useCallback((numeroSet?: number) => {
     setNumeroSetEnCaptura(numeroSet ?? null);
@@ -151,10 +142,6 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
     return extractEquipoId(partido.equipoLocal) ?? extractEquipoId(partido.equipoVisitante);
   }, [equipoId, partido]);
 
-  const handleGestionarAlineacion = useCallback(() => {
-    setAlineacionModalAbierta(true);
-  }, []);
-
   const handleCerrarAlineacion = useCallback(() => {
     setAlineacionModalAbierta(false);
   }, []);
@@ -164,126 +151,12 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
     await cargarPartido();
   }, [cargarPartido, onAlineacionActualizada]);
 
-  // Cargar competencias
-  const cargarCompetencias = useCallback(async () => {
-    try {
-      if (!equipoContextoId) {
-        setCompetencias([]);
-        return;
-      }
-      const participaciones = await getCompetencias({ equipoId: equipoContextoId });
-      const competencias = Array.isArray(participaciones)
-        ? participaciones
-            .map(p => p.competencia)
-            .filter((c): c is Competencia => Boolean(c?.id))
-        : [];
-      setCompetencias(competencias);
-    } catch (err) {
-      console.error('Error al cargar competencias:', err);
-    }
-  }, [equipoContextoId]);
-
-  const actualizarSetsLocales = useCallback((sets: SetPartido[]) => {
-    setPartido(prev => (prev ? { ...prev, sets } : prev));
-  }, []);
-
-  const agregarSetAPartido = useCallback(async (_: string, data: { numeroSet: number; ganadorSet: string; estadoSet: string }) => {
-    const nuevoSet = await crearSetPartido(partidoId, data);
-    setPartido(prev => {
-      if (!prev) return prev;
-      const setsPrevios = prev.sets ?? [];
-      return {
-        ...prev,
-        sets: [...setsPrevios, nuevoSet],
-      };
-    });
-    return nuevoSet;
-  }, [partidoId]);
-
-  const actualizarSetDePartido = useCallback(async (numeroSet: number, cambios: Partial<SetPartido>) => {
-    const setObjetivo = partido?.sets?.find(set => set.numeroSet === numeroSet);
-    const setId = setObjetivo?._id;
-    if (!setId) return null;
-
-    const actualizado = await actualizarSetPartido(setId, cambios);
-    setPartido(prev => {
-      if (!prev) return prev;
-      const setsPrevios = prev.sets ?? [];
-      const setsActualizados = setsPrevios.map(set =>
-        set._id === actualizado._id ? { ...set, ...actualizado } : set,
-      );
-      return {
-        ...prev,
-        sets: setsActualizados,
-      };
-    });
-
-    return actualizado;
-  }, [partido?.sets]);
-
-  const eliminarSetDePartido = useCallback(async (numeroSet: number, setId?: string) => {
-    const setObjetivo = partido?.sets?.find(set => set.numeroSet === numeroSet);
-    const targetId = setId ?? setObjetivo?._id;
-    if (!targetId) return false;
-
-    await eliminarSetPartido(targetId);
-
-    setPartido(prev => {
-      if (!prev) return prev;
-      const setsPrevios = prev.sets ?? [];
-      return {
-        ...prev,
-        sets: setsPrevios.filter(set => set._id !== targetId),
-      };
-    });
-
-    return true;
-  }, [partido?.sets]);
-
   // Efectos
   useEffect(() => {
     cargarPartido();
-    cargarCompetencias();
-  }, [cargarPartido, cargarCompetencias]);
+  }, [cargarPartido]);
 
   // Handlers
-  const handleGuardarEdicion = async () => {
-    if (!datosEdicion) return;
-
-    try {
-      const { fecha, ...rest } = datosEdicion;
-      const payload = {
-        ...rest,
-        fecha: fecha ? new Date(fecha).toISOString() : undefined,
-      };
-
-      await editarPartido(partidoId, payload);
-      await cargarPartido();
-      setModoEdicion(false);
-      addToast({ type: 'success', title: 'Guardado', message: 'Se actualizaron los datos del partido' });
-    } catch (err) {
-      setError('Error al guardar los cambios. Por favor, intente nuevamente.');
-      console.error('Error al guardar partido:', err);
-      addToast({ type: 'error', title: 'Error', message: 'No pudimos guardar los cambios del partido' });
-    }
-  };
-
-  const handleRecalcularMarcador = async () => {
-    try {
-      const partidoActualizado = await recalcularMarcadorPartido(partidoId);
-      setPartido(prev => prev ? { ...prev, ...partidoActualizado } : null);
-      setDatosEdicion(prev => prev ? {
-        ...prev,
-        marcadorLocal: partidoActualizado.marcadorLocal || 0,
-        marcadorVisitante: partidoActualizado.marcadorVisitante || 0,
-      } : null);
-      addToast({ type: 'success', title: 'Marcador actualizado', message: 'Marcador recalculado desde sets' });
-    } catch (err) {
-      setError('Error al recalcular el marcador.');
-      console.error('Error al recalcular marcador:', err);
-      addToast({ type: 'error', title: 'Error', message: 'No pudimos recalcular el marcador' });
-    }
-  };
 
   const handleEliminarPartido = async () => {
     setConfirmEliminarAbierto(true);

@@ -52,10 +52,6 @@ const ModalCapturaSetEstadisticas = ({
   const [mapJpToStatId, setMapJpToStatId] = useState<Record<string, string>>({});
 
   const setsOrdenados = useMemo(() => [...sets].sort((a, b) => a.numeroSet - b.numeroSet), [sets]);
-  const setActual = useMemo(
-    () => setsOrdenados.find((s) => String(s.numeroSet) === numeroSetSeleccionado),
-    [setsOrdenados, numeroSetSeleccionado],
-  );
 
   const cargarSets = useCallback(async () => {
     try {

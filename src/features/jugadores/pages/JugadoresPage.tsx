@@ -61,7 +61,7 @@ const JugadoresPage = () => {
     return () => {
       isCancelled = true;
     };
-  }, [equipoSeleccionado?.id]);
+  }, [equipoSeleccionado?.id, addToast]);
 
   const refreshData = async () => {
     if (!equipoSeleccionado) return;

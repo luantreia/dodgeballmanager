@@ -148,7 +148,7 @@ export const ModalAlineacionPartido = ({
     return () => {
       isActive = false;
     };
-  }, [equipoId, isOpen, partidoId]);
+  }, [equipoId, isOpen, partidoId, addToast]);
 
   const handleChangeRol = (jugadorId: string, rol: RolAlineacion) => {
     setRolesPorJugador((prev) => ({

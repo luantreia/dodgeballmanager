@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
@@ -29,7 +29,7 @@ const ModalGestionSets = ({ partidoId, isOpen, onClose, onAbrirCaptura }: ModalG
 
   const numerosExistentes = useMemo(() => sets.map(s => s.numeroSet).sort((a,b) => a-b), [sets]);
 
-  const cargar = async () => {
+  const cargar = useCallback(async () => {
     try {
       setLoading(true);
       const data = await obtenerSetsDePartido(partidoId);
@@ -40,12 +40,12 @@ const ModalGestionSets = ({ partidoId, isOpen, onClose, onAbrirCaptura }: ModalG
     } finally {
       setLoading(false);
     }
-  };
+  }, [partidoId, addToast]);
 
   useEffect(() => {
     if (!isOpen) return;
     void cargar();
-  }, [isOpen, partidoId]);
+  }, [isOpen, cargar]);
 
   const crearSet = async () => {
     try {
