@@ -5,14 +5,16 @@ import { actualizarEquipo, getEquipo } from '../services/equipoService';
 import type { Equipo } from '../../../types';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { Input, Textarea } from '../../../shared/components/ui';
+import { useAuth } from '../../../app/providers/AuthContext';
 
 const EquipoPage = () => {
   const { addToast } = useToast();
   const { equipoSeleccionado, recargarEquipos } = useEquipo();
+  const { user } = useAuth();
   const [detalleEquipo, setDetalleEquipo] = useState<Equipo | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+  // Invitaciones movidas a JugadoresPage
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -41,6 +43,7 @@ const EquipoPage = () => {
           descripcion: equipo.descripcion ?? '',
           logoUrl: equipo.logoUrl ?? '',
         });
+        // gestión de invitaciones movida a JugadoresPage
       } catch (error) {
         console.error(error);
         if (!isCancelled) {
@@ -82,6 +85,8 @@ const EquipoPage = () => {
     }
   };
 
+  // Flujo de invitar jugador movido a JugadoresPage
+
   if (!equipoSeleccionado) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center">
@@ -103,6 +108,8 @@ const EquipoPage = () => {
       </header>
 
       {detalleEquipo ? <EquipoCard equipo={detalleEquipo} /> : null}
+
+      {/* Invitaciones movidas a JugadoresPage */}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
         <h2 className="text-lg font-semibold text-slate-900">Detalles del equipo</h2>
@@ -154,7 +161,11 @@ const EquipoPage = () => {
         </form>
       </section>
 
+      {/* Las solicitudes ahora se gestionan desde la sección de jugadores */}
+
       {loading ? <p className="text-sm text-slate-500">Actualizando información…</p> : null}
+
+      {/* Modal de invitación movido a JugadoresPage */}
     </div>
   );
 };

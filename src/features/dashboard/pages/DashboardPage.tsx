@@ -5,20 +5,16 @@ import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getPartidos } from '../../partidos/services/partidoService';
 // Ranking reusable section
 import { SeccionTop5estadisticasDirectas } from '../../estadisticas/components/sections/SeccionTop5estadisticasDirectas';
-import { getSolicitudesJugadores } from '../../jugadores/services/jugadorEquipoService';
-import type {
-  EstadisticaEquipoResumen,
-  EstadisticaJugador,
-  Partido,
-  SolicitudJugador,
-} from '../../../types';
+import type { EstadisticaEquipoResumen, EstadisticaJugador, Partido } from '../../../types';
 import { formatNumber } from '../../../utils/formatNumber';
+import { Link } from 'react-router-dom';
+import { obtenerSolicitudesEdicion } from '../../jugadores/services/solicitudesEdicionService';
  
 
 const DashboardPage = () => {
   const { equipoSeleccionado, loading: loadingEquipo } = useEquipo();
   const [proximosPartidos, setProximosPartidos] = useState<Partido[]>([]);
-  const [solicitudesPendientes, setSolicitudesPendientes] = useState<SolicitudJugador[]>([]);
+  const [notificacionesPendientes, setNotificacionesPendientes] = useState<number>(0);
   const [resumenEquipo, setResumenEquipo] = useState<EstadisticaEquipoResumen | null>(null);
   const [rankingJugadores, setRankingJugadores] = useState<EstadisticaJugador[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,7 +24,7 @@ const DashboardPage = () => {
     const equipoId = equipoSeleccionado?.id;
     if (!equipoId) {
       setProximosPartidos([]);
-      setSolicitudesPendientes([]);
+      setNotificacionesPendientes(0);
       setResumenEquipo(null);
       setRankingJugadores([]);
       return;
@@ -39,9 +35,9 @@ const DashboardPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [partidos, solicitudes] = await Promise.all([
+        const [partidos, solicitudesPend] = await Promise.all([
           getPartidos({ equipoId, estado: 'pendiente' }),
-          getSolicitudesJugadores(equipoId),
+          obtenerSolicitudesEdicion({ estado: 'pendiente' }),
         ]);
 
         if (isCancelled) return;
@@ -50,7 +46,8 @@ const DashboardPage = () => {
           .sort((a, b) => new Date(a.fecha as any).getTime() - new Date(b.fecha as any).getTime())
           .slice(0, 5);
         setProximosPartidos(partidosOrdenados);
-        setSolicitudesPendientes(solicitudes);
+        const count = solicitudesPend.filter((s) => s.tipo === 'jugador-equipo-crear' && (s.datosPropuestos as any)?.equipoId === equipoId).length;
+        setNotificacionesPendientes(count);
         setError(null);
       } catch (err) {
         console.error(err);
@@ -117,7 +114,7 @@ const DashboardPage = () => {
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-slate-900">Hola, {equipoSeleccionado.nombre}</h1>
         <p className="text-sm text-slate-500">
-          Gestión rápida del equipo: próximos partidos, solicitudes y rendimiento actual.
+          Gestión rápida del equipo: próximos partidos, notificaciones y rendimiento actual.
         </p>
       </header>
 
@@ -130,10 +127,15 @@ const DashboardPage = () => {
           <EstadisticaCard key={card.titulo} {...card} />
         ))}
         <EstadisticaCard
-          titulo="Solicitudes pendientes"
-          valor={solicitudesPendientes.length}
-          descripcion="Jugadores y competencias aguardando tu respuesta."
+          titulo="Notificaciones"
+          valor={notificacionesPendientes}
+          descripcion="Solicitudes pendientes para el equipo."
         />
+        <div className="flex items-center">
+          <Link to="/notificaciones" className="ml-auto text-sm font-medium text-brand-700 hover:underline">
+            Ver notificaciones →
+          </Link>
+        </div>
       </section>
 
         <div className="flex flex-col gap-4 ">
@@ -168,38 +170,7 @@ const DashboardPage = () => {
         
       </section>
 
-      {solicitudesPendientes.length ? (
-        <section>
-          <header className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Solicitudes pendientes</h2>
-            <span className="text-xs uppercase tracking-wide text-slate-400">
-              {solicitudesPendientes.length} en espera
-            </span>
-          </header>
-          <div className="space-y-3">
-            {solicitudesPendientes.map((solicitud) => (
-              <div
-                key={solicitud.id}
-                className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm shadow-sm"
-              >
-                <div className="flex-1">
-                  <p className="font-semibold text-slate-900">{solicitud.jugador.nombre}</p>
-                  <p className="text-xs text-amber-700">Estado: {solicitud.estado}</p>
-                  {solicitud.mensaje ? (
-                    <p className="mt-1 text-xs text-amber-800">“{solicitud.mensaje}”</p>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-700"
-                >
-                  Revisar
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {/* Vista detallada de solicitudes removida: usar página de Notificaciones */}
     </div>
   );
 };

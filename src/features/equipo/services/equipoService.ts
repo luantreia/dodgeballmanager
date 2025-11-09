@@ -7,14 +7,22 @@ export type UpdateEquipoPayload = {
   descripcion?: string;
 };
 
-type BackendEquipo = {
+export type BackendEquipo = {
   _id: string;
   nombre: string;
   escudo?: string;
   descripcion?: string;
   administradores?: string[];
+  creadoPor?: string;
 };
 
+export interface EquipoOpcion {
+ id: string;
+ nombre: string;
+ escudo?: string;
+ tipo?: string;
+ pais?: string;
+}
 const mapEquipo = (equipo: BackendEquipo): Equipo => ({
   id: equipo._id,
   nombre: equipo.nombre,
@@ -39,23 +47,12 @@ export const getEquipo = async (equipoId: string): Promise<Equipo> => {
   return mapEquipo(equipo);
 };
 
-export const buscarEquipos = async (query: string): Promise<Array<{ id: string; nombre: string; logoUrl?: string }>> => {
-  const params = new URLSearchParams();
-  if (query) params.set('q', query);
-
-  const equipos = await authFetch<Array<{ _id: string; nombre: string; escudo?: string }>>(
-    `/equipos?${params.toString()}`
-  );
-
-  return equipos.map((item) => ({ id: item._id, nombre: item.nombre, logoUrl: item.escudo }));
-};
-
-export interface EquipoOpcion {
+export interface JugadorOpcion {
   id: string;
   nombre: string;
-  escudo?: string;
-  tipo?: string;
-  pais?: string;
+  alias?: string;
+  foto?: string;
+  nacionalidad?: string;
 }
 
 export const obtenerOpcionesEquipos = async (query: string, excluirId?: string): Promise<EquipoOpcion[]> => {
@@ -66,14 +63,38 @@ export const obtenerOpcionesEquipos = async (query: string, excluirId?: string):
   const data = await authFetch<Array<{ _id: string; nombre: string; escudo?: string; tipo?: string; pais?: string }>>(
     `/equipos?${params.toString()}`
   );
+  return data.map((item) => ({ id: item._id, nombre: item.nombre, escudo: item.escudo, tipo: item.tipo, pais: item.pais }));
+};
+
+// Nota: flujo de jugador removido en esta app; opciones para jugador no se exponen aquí.
+
+export const obtenerOpcionesJugadoresParaEquipo = async (
+  equipoId: string,
+  query?: string
+): Promise<JugadorOpcion[]> => {
+  const params = new URLSearchParams();
+  params.set('equipo', equipoId);
+  if (query) params.set('q', query);
+
+  const data = await authFetch<Array<{ _id: string; nombre: string; alias?: string; foto?: string; nacionalidad?: string }>>(
+    `/jugador-equipo/opciones?${params.toString()}`
+  );
 
   return data.map((item) => ({
     id: item._id,
     nombre: item.nombre,
-    escudo: item.escudo,
-    tipo: item.tipo,
-    pais: item.pais,
+    alias: item.alias,
+    foto: item.foto,
+    nacionalidad: item.nacionalidad,
   }));
+};
+
+export const getEquipoAdministradoresIds = async (equipoId: string): Promise<string[]> => {
+  const eq = await authFetch<BackendEquipo>(`/equipos/${equipoId}`);
+  const ids = new Set<string>();
+  if (eq.creadoPor) ids.add(String(eq.creadoPor));
+  (eq.administradores || []).forEach((id) => ids.add(String(id)));
+  return Array.from(ids);
 };
 
 export const actualizarEquipo = async (

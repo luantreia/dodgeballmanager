@@ -86,8 +86,25 @@ export const authFetch = async <TResponse>(
   }
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || 'Error al comunicarse con el servidor');
+    let message = 'Error al comunicarse con el servidor';
+    let details: any = null;
+    try {
+      const ct = response.headers.get('Content-Type') || '';
+      if (ct.includes('application/json')) {
+        details = await response.json();
+        message = (details && (details.message || details.error)) || message;
+      } else {
+        const text = await response.text();
+        message = text || message;
+      }
+    } catch (_) {
+      // ignore parse errors
+    }
+    const err: any = new Error(message);
+    err.status = response.status;
+    err.statusText = response.statusText;
+    if (details) err.details = details;
+    throw err;
   }
 
   if (response.status === 204) {
