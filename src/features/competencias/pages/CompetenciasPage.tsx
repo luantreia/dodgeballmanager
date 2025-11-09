@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import CompetenciaCard from '../../../shared/components/CompetenciaCard';
 import { useEquipo } from '../../../app/providers/EquipoContext';
-import { getParticipaciones, solicitarInscripcion } from '../services/equipoCompetenciaService';
+import { getParticipaciones } from '../services/equipoCompetenciaService';
 import type { EquipoCompetencia } from '../../../types';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { Input, Textarea } from '../../../shared/components/ui';
+import { opcionesTemporadasParaEquipo, crearSolicitudParticipacionTemporada, type TemporadaOpcion } from '../services/participacionTemporadaService';
 
 const CompetenciasPage = () => {
   const { addToast } = useToast();
@@ -13,7 +14,9 @@ const CompetenciasPage = () => {
   const [loading, setLoading] = useState(false);
   const [inscripcionLoading, setInscripcionLoading] = useState(false);
   const [mensaje, setMensaje] = useState('');
-  const [competenciaId, setCompetenciaId] = useState('');
+  const [tempSearch, setTempSearch] = useState('');
+  const [tempOptions, setTempOptions] = useState<TemporadaOpcion[]>([]);
+  const [temporadaSeleccionada, setTemporadaSeleccionada] = useState<TemporadaOpcion | null>(null);
   
 
   useEffect(() => {
@@ -58,17 +61,14 @@ const CompetenciasPage = () => {
 
   const handleInscripcion = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!equipoSeleccionado || !competenciaId) return;
+    if (!equipoSeleccionado || !temporadaSeleccionada?._id) return;
 
     try {
       setInscripcionLoading(true);
-      await solicitarInscripcion({
-        equipoId: equipoSeleccionado.id,
-        competenciaId,
-        mensaje: mensaje || undefined,
-      });
+      await crearSolicitudParticipacionTemporada(temporadaSeleccionada._id, equipoSeleccionado.id);
       addToast({ type: 'success', title: 'Solicitud enviada', message: 'La inscripción fue enviada correctamente' });
-      setCompetenciaId('');
+      setTemporadaSeleccionada(null);
+      setTempSearch('');
       setMensaje('');
       await refresh();
     } catch (error) {
@@ -77,6 +77,15 @@ const CompetenciasPage = () => {
     } finally {
       setInscripcionLoading(false);
     }
+  };
+
+  const buscarTemporadas = async (q: string) => {
+    setTempSearch(q);
+    setTemporadaSeleccionada(null);
+    if (!equipoSeleccionado) return;
+    if (!q || q.trim().length < 2) { setTempOptions([]); return; }
+    const opts = await opcionesTemporadasParaEquipo(equipoSeleccionado.id, q.trim());
+    setTempOptions(opts);
   };
 
   if (!equipoSeleccionado) {
@@ -105,14 +114,30 @@ const CompetenciasPage = () => {
 
         <form className="mt-4 grid gap-4 md:grid-cols-2" onSubmit={handleInscripcion}>
           <div className="md:col-span-1">
-            <Input
-              id="competenciaId"
-              label="ID de competencia"
-              value={competenciaId}
-              onChange={(event) => setCompetenciaId((event.target as HTMLInputElement).value)}
-              required
-              placeholder="competencia_123"
+            <label className="mb-1 block text-sm font-medium text-slate-700">Buscar temporada</label>
+            <input
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+              placeholder="Nombre de la temporada"
+              value={tempSearch}
+              onChange={(e) => { void buscarTemporadas((e.target as HTMLInputElement).value); }}
             />
+            {tempOptions.length > 0 ? (
+              <div className="mt-1 max-h-48 overflow-auto rounded-md border border-slate-200 bg-white">
+                {tempOptions.map((opt) => (
+                  <button
+                    key={opt._id}
+                    type="button"
+                    className="block w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50"
+                    onClick={() => { setTemporadaSeleccionada(opt); setTempSearch(opt.nombre || ''); setTempOptions([]); }}
+                  >
+                    {opt.nombre}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {temporadaSeleccionada ? (
+              <p className="mt-1 text-xs text-slate-600">Seleccionada: {temporadaSeleccionada.nombre}</p>
+            ) : null}
           </div>
 
           <div className="md:col-span-1">

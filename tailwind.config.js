@@ -30,6 +30,7 @@ module.exports = {
         card: '0 10px 25px -15px rgba(15, 23, 42, 0.35)',
       },
     },
+    screens: { xs: '440px', sm: '640px', md: '768px', lg: '1024px', xl: '1280px', '2xl': '1536px' }
   },
   plugins: [formsPlugin, typographyPlugin],
 };

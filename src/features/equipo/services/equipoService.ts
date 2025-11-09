@@ -38,8 +38,13 @@ const mapEquipo = (equipo: BackendEquipo): Equipo => ({
 });
 
 export const getEquiposDelUsuario = async (): Promise<Equipo[]> => {
-  const equipos = await authFetch<BackendEquipo[]>('/equipos');
-  return equipos.map(mapEquipo);
+  const equipos = await authFetch<BackendEquipo>("/equipos/admin").catch(async () => {
+    // fallback a todos si el endpoint no existe
+    const all = await authFetch<BackendEquipo[]>("/equipos");
+    return all as unknown as BackendEquipo;
+  });
+  const list = Array.isArray(equipos) ? equipos : [equipos];
+  return list.map(mapEquipo);
 };
 
 export const getEquipo = async (equipoId: string): Promise<Equipo> => {

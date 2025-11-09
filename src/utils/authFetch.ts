@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL ?? 'https://overtime-ddyl.onrender.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL ?? '/api';
 
 const ACCESS_TOKEN_KEY = 'overtime_token';
 const REFRESH_TOKEN_KEY = 'overtime_refresh_token';
@@ -29,7 +29,12 @@ export const authFetch = async <TResponse>(
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
 
   const fetchHeaders = new Headers(headers);
-  if (!(body instanceof FormData)) {
+  if (
+    body !== undefined &&
+    !(body instanceof FormData) &&
+    !(body instanceof URLSearchParams) &&
+    !(body instanceof Blob)
+  ) {
     fetchHeaders.set('Content-Type', 'application/json');
   }
 

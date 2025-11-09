@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { getEquiposDelUsuario } from '../../features/equipo/services/equipoService';
 import type { Equipo } from '../../types';
+import { useToast } from '../../shared/components/Toast/ToastProvider';
 
 type EquipoContextValue = {
   equipos: Equipo[];
@@ -25,6 +26,7 @@ export const EquipoProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<Equipo | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const { addToast } = useToast();
 
   const cargarEquipos = useCallback(async () => {
     try {
@@ -46,6 +48,7 @@ export const EquipoProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.error('Error cargando equipos', error);
       setEquipos([]);
       setEquipoSeleccionado(null);
+      addToast({ type: 'error', title: 'No se pudieron cargar los equipos', message: (error as any)?.message });
     } finally {
       setLoading(false);
     }

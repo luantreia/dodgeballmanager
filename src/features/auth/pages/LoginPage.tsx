@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthContext';
+import { useToast } from '../../../shared/components/Toast/ToastProvider';
 
 const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { addToast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,11 +19,15 @@ const LoginPage = () => {
     event.preventDefault();
     try {
       setLoading(true);
+      setError(null);
       await login(email, password);
+      addToast({ type: 'success', title: 'Sesión iniciada', message: 'Bienvenido/a' });
       navigate(from, { replace: true });
     } catch (err) {
       console.error(err);
-      setError('Credenciales inválidas o servicio no disponible.');
+      const message = (err as any)?.message || 'Credenciales inválidas o servicio no disponible.';
+      setError(message);
+      addToast({ type: 'error', title: 'No se pudo iniciar sesión', message });
     } finally {
       setLoading(false);
     }
