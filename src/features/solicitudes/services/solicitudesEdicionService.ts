@@ -33,15 +33,17 @@ export const getSolicitudesEdicion = async (
   if (filtros.limit) params.set('limit', filtros.limit.toString());
 
   try {
-    const response = await authFetch<{
-      solicitudes: ISolicitudEdicion[];
-      total: number;
-      page: number;
-      limit: number;
-      totalPages: number;
-    }>(`/solicitudes-edicion?${params.toString()}`);
-    
-    return response;
+    // La API actual devuelve un array simple. Adaptamos a una respuesta paginada en cliente.
+    const arr = await authFetch<ISolicitudEdicion[]>(`/solicitudes-edicion?${params.toString()}`);
+    const page = filtros.page ?? 1;
+    const limit = filtros.limit ?? arr.length;
+    return {
+      solicitudes: Array.isArray(arr) ? arr : [],
+      total: Array.isArray(arr) ? arr.length : 0,
+      page,
+      limit,
+      totalPages: 1,
+    };
   } catch (error: any) {
     if (error.status === 400) {
       throw new SolicitudValidationError(error.message, error.details);
@@ -232,21 +234,9 @@ export const contarSolicitudesPendientes = async (
     ...filtro,
     estado: 'pendiente',
   };
-  
-  const params = new URLSearchParams();
-  if (filtros.tipo) params.set('tipo', filtros.tipo);
-  if (filtros.estado) params.set('estado', filtros.estado);
-  if (filtros.creadoPor) params.set('creadoPor', filtros.creadoPor);
-  if (filtros.entidad) params.set('entidad', filtros.entidad);
-  params.set('limit', '0'); // Solo queremos el conteo
-
   try {
-    const response = await authFetch<{
-      solicitudes: ISolicitudEdicion[];
-      total: number;
-    }>(`/solicitudes-edicion?${params.toString()}`);
-    
-    return response.total;
+    const resp = await getSolicitudesEdicion(filtros);
+    return resp.solicitudes.length;
   } catch (error: any) {
     throw new Error(`Error al contar solicitudes pendientes: ${error.message}`);
   }
@@ -270,21 +260,21 @@ export const getSolicitudesEstadisticas = async (
   rechazadas: number;
   canceladas: number;
 }> => {
-  const params = new URLSearchParams();
-  if (filtro.tipo) params.set('tipo', filtro.tipo);
-  if (filtro.entidad) params.set('entidad', filtro.entidad);
-  if (filtro.creadoPor) params.set('creadoPor', filtro.creadoPor);
-
   try {
-    const response = await authFetch<{
-      total: number;
-      pendientes: number;
-      aceptadas: number;
-      rechazadas: number;
-      canceladas: number;
-    }>(`/solicitudes-edicion/estadisticas?${params.toString()}`);
-    
-    return response;
+    const resp = await getSolicitudesEdicion({
+      tipo: filtro.tipo as SolicitudEdicionTipo | undefined,
+      entidad: filtro.entidad,
+      creadoPor: filtro.creadoPor,
+    });
+    const solicitudes = resp.solicitudes || [];
+    const contar = (e: string) => solicitudes.filter(s => s.estado === (e as any)).length;
+    return {
+      total: solicitudes.length,
+      pendientes: contar('pendiente'),
+      aceptadas: contar('aceptado'),
+      rechazadas: contar('rechazado'),
+      canceladas: contar('cancelado'),
+    };
   } catch (error: any) {
     throw new Error(`Error al obtener estadísticas de solicitudes: ${error.message}`);
   }

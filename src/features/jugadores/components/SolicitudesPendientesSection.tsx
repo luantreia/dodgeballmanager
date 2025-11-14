@@ -27,6 +27,8 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
   const [adminsEquipo, setAdminsEquipo] = useState<string[]>([]);
   const [jugadorNombres, setJugadorNombres] = useState<Map<string, string>>(new Map());
   const [jugadorAdmins, setJugadorAdmins] = useState<Map<string, string[]>>(new Map());
+  const [contratoToEquipo, setContratoToEquipo] = useState<Map<string, string>>(new Map());
+  const [contratoToJugador, setContratoToJugador] = useState<Map<string, string>>(new Map());
   const { user } = useAuth();
   const { addToast } = useToast();
 
@@ -36,11 +38,33 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
       // Obtener todas las solicitudes pendientes
       const todasPendientes = await obtenerSolicitudesEdicion({ estado: 'pendiente' });
 
-      // Filtrar las que están relacionadas con este equipo (tipo jugador-equipo-crear)
+      // Obtener relaciones del equipo para mapear contratoId -> jugadorId/equipoId
+      const relacionesEquipo = await authFetch<Array<{ _id: string; jugador: string | { _id: string }; equipo: string | { _id: string } }>>(
+        `/jugador-equipo?equipo=${equipoId}`
+      );
+      const cte = new Map<string, string>();
+      const ctj = new Map<string, string>();
+      for (const r of relacionesEquipo) {
+        const contratoId = r._id;
+        const eqId = typeof r.equipo === 'string' ? r.equipo : (r.equipo?._id as string);
+        const jugId = typeof r.jugador === 'string' ? r.jugador : (r.jugador?._id as string);
+        if (contratoId) cte.set(contratoId, eqId);
+        if (contratoId && jugId) ctj.set(contratoId, jugId);
+      }
+      setContratoToEquipo(cte);
+      setContratoToJugador(ctj);
+
+      // Filtrar relacionadas con este equipo: crear y eliminar
       const relacionadas = todasPendientes.filter((solicitud: SolicitudEdicion) => {
         if (solicitud.tipo === 'jugador-equipo-crear') {
           const datos = solicitud.datosPropuestos as unknown as DatosCrearJugadorEquipo;
           return datos.equipoId === equipoId;
+        }
+        if (solicitud.tipo === 'jugador-equipo-eliminar') {
+          const contratoId = (solicitud.datosPropuestos as any)?.contratoId as string | undefined;
+          if (!contratoId) return false;
+          const eqId = contratoToEquipo.get(contratoId);
+          return eqId === equipoId;
         }
         return false;
       });
@@ -68,15 +92,17 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
         }
       }
 
-      // Cargar nombres de jugadores involucrados
-      const jugadorIds = Array.from(
-        new Set(
-          relacionadas
-            .filter((s) => s.tipo === 'jugador-equipo-crear')
-            .map((s) => (s.datosPropuestos as unknown as { jugadorId?: string }).jugadorId)
-            .filter((id): id is string => Boolean(id))
-        )
-      );
+      // Cargar nombres de jugadores involucrados (crear + eliminar)
+      const jugadorIds = Array.from(new Set([
+        ...relacionadas
+          .filter((s) => s.tipo === 'jugador-equipo-crear')
+          .map((s) => (s.datosPropuestos as unknown as { jugadorId?: string }).jugadorId)
+          .filter((id): id is string => Boolean(id)),
+        ...relacionadas
+          .filter((s) => s.tipo === 'jugador-equipo-eliminar')
+          .map((s) => contratoToJugador.get(((s.datosPropuestos as any)?.contratoId as string) || ''))
+          .filter((id): id is string => Boolean(id)),
+      ]));
 
       await Promise.all(
         jugadorIds.map(async (jid) => {
@@ -114,6 +140,16 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
   useEffect(() => {
     cargarSolicitudes();
   }, [cargarSolicitudes]);
+
+  const contratoJugadorResolver = useCallback((contratoId: string | undefined) => {
+    if (!contratoId) return undefined;
+    return contratoToJugador.get(contratoId);
+  }, [contratoToJugador]);
+
+  const contratoJugadorNombreResolver = useCallback((contratoId: string | undefined) => {
+    const jid = contratoId ? contratoToJugador.get(contratoId) : undefined;
+    return jid ? (jugadorNombres.get(jid) || `Jugador ${jid.slice(-6)}`) : '';
+  }, [contratoToJugador, jugadorNombres]);
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
@@ -221,32 +257,9 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
                   {' | '}
                   {(() => {
                     const fecha = (solicitud as any).fechaCreacion || (solicitud as any).createdAt;
-                    return fecha ? new Date(fecha).toLocaleString('es-AR') : 'Fecha no disponible';
+                    return fecha ? new Date(fecha).toLocaleString('es-AR') : '';
                   })()}
                 </div>
-
-                {solicitud.datosPropuestos && solicitud.tipo === 'jugador-equipo-crear' && (() => {
-                  const datos = solicitud.datosPropuestos as unknown as DatosCrearJugadorEquipo;
-                  return (
-                    <div className="mt-2 text-xs bg-amber-100/50 p-2 rounded border border-amber-200">
-                      <div className="font-medium text-slate-700">
-                        📋 {jugadorNombres.get(datos.jugadorId) || 'Cargando…'}
-                      </div>
-                      <div className="text-slate-600 mt-1">
-                        <div>Rol: <span className="font-medium">{datos.rol || 'jugador'}</span></div>
-                        {datos.fechaInicio && (
-                          <div>Desde: <span className="font-medium">{new Date(datos.fechaInicio).toLocaleDateString('es-AR')}</span></div>
-                        )}
-                        {datos.fechaFin && (
-                          <div>Hasta: <span className="font-medium">{new Date(datos.fechaFin).toLocaleDateString('es-AR')}</span></div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div className="flex flex-col items-end gap-2">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getEstadoColor(solicitud.estado)}`}>
                   {solicitud.estado}
                 </span>
@@ -256,7 +269,11 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
                   const usuarioIdStr = user?.id ? String(user.id) : '';
 
                   const datos = solicitud.datosPropuestos as any;
-                  const jugadorId = datos?.jugadorId as string | undefined;
+                  let jugadorId = datos?.jugadorId as string | undefined;
+                  if (!jugadorId && solicitud.tipo === 'jugador-equipo-eliminar') {
+                    const contratoId = datos?.contratoId as string | undefined;
+                    jugadorId = contratoJugadorResolver(contratoId);
+                  }
                   const adminsJugadorParaSolicitud = jugadorId ? jugadorAdmins.get(jugadorId) || [] : [];
 
                   const creadorEsEquipo = adminsEquipo.includes(creadorIdStr);
