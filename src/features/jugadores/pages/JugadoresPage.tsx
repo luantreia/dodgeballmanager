@@ -1,25 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
-import JugadorList from '../components/JugadorList';
+import { useEffect, useState } from 'react';
 import { useEquipo } from '../../../app/providers/EquipoContext';
-import {
-  getContratosNoActivos,
-  getJugadoresEquipo,
-} from '../services/jugadorEquipoService';
+import { getContratosNoActivos, getJugadoresEquipo } from '../services/jugadorEquipoService';
 import type { Jugador, ContratoJugadorResumen } from '../../../types';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import InvitarJugadorSection from '../components/InvitarJugadorSection';
-import ModalEditarContratoJugador from '../components/ModalEditarContratoJugador';
-import EquipoSolicitudesEdicion from '../components/EquipoSolicitudesEdicion';
+import SolicitudesPendientesSection from '../components/SolicitudesPendientesSection';
 import ModalBase from '../../../shared/components/ModalBase/ModalBase';
+import JugadoresListSection from '../components/JugadoresListSection';
 
 const JugadoresPage = () => {
   const { addToast } = useToast();
   const { equipoSeleccionado } = useEquipo();
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
-  // solicitudes pendientes ahora se gestionan en EquipoSolicitudesEdicion
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingContratoId, setEditingContratoId] = useState<string | null>(null);
   const [showContratosModal, setShowContratosModal] = useState(false);
   const [contratosNoActivos, setContratosNoActivos] = useState<ContratoJugadorResumen[]>([]);
   const [contratosLoading, setContratosLoading] = useState(false);
@@ -69,28 +63,6 @@ const JugadoresPage = () => {
     setJugadores(activos);
   };
 
-  // Aceptar/Rechazar solicitudes ahora se hace en EquipoSolicitudesEdicion
-
-  const jugadoresPorContrato = useMemo(() => {
-    const map = new Map<string, Jugador>();
-    jugadores.forEach((jugador) => {
-      if (jugador.contratoId) {
-        map.set(jugador.contratoId, jugador);
-      }
-    });
-    return map;
-  }, [jugadores]);
-
-  const handleEditarJugador = (contratoId: string) => {
-    const jugador = jugadoresPorContrato.get(contratoId);
-    if (!jugador) return;
-    setEditingContratoId(contratoId);
-  };
-
-  const handleCloseModal = () => {
-    setEditingContratoId(null);
-  };
-
   const handleVerContratosNoActivos = async () => {
     if (!equipoSeleccionado) return;
     try {
@@ -114,8 +86,6 @@ const JugadoresPage = () => {
     setContratosError(null);
   };
 
-  // Sección de invitación movida a componente (InvitarJugadorSection)
-
   if (!equipoSeleccionado) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center">
@@ -129,16 +99,15 @@ const JugadoresPage = () => {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col gap-2">
+      <header className="flex-1">
         <h1 className="text-2xl font-semibold text-slate-900">Gestión de jugadores</h1>
         <p className="text-sm text-slate-500">
-          Aprueba solicitudes, envía invitaciones y actualiza contratos.
+          Edita contratos activos, invita jugadores y gestiona solicitudes.
         </p>
       </header>
 
-      {/* Solicitudes del equipo gestionadas desde la sección de jugadores */}
       {equipoSeleccionado ? (
-        <EquipoSolicitudesEdicion equipoId={equipoSeleccionado.id} />
+        <SolicitudesPendientesSection equipoId={equipoSeleccionado.id} onRefresh={refreshData} />
       ) : null}
 
       <InvitarJugadorSection equipoId={equipoSeleccionado.id} onSuccess={refreshData} />
@@ -150,33 +119,13 @@ const JugadoresPage = () => {
       {loading ? (
         <p className="text-sm text-slate-500">Cargando jugadores…</p>
       ) : (
-        <JugadorList
+        <JugadoresListSection
           jugadores={jugadores}
-          onEditarJugador={handleEditarJugador}
+          equipoId={equipoSeleccionado.id}
           onVerContratosNoActivos={handleVerContratosNoActivos}
+          onSolicitudSuccess={refreshData}
         />
       )}
-
-      {editingContratoId ? (() => {
-        const contrato = jugadoresPorContrato.get(editingContratoId);
-        if (!contrato) return null;
-        const estadoB: 'baja' | 'aceptado' = contrato.estado === 'baja' ? 'baja' : 'aceptado';
-        const initial = {
-          fechaInicio: contrato.fechaInicio ? contrato.fechaInicio.slice(0, 10) : undefined,
-          fechaFin: contrato.fechaFin ? contrato.fechaFin.slice(0, 10) : undefined,
-          rol: contrato.rol ?? contrato.rolEnEquipo ?? 'jugador',
-          estadoBackend: estadoB,
-        };
-        return (
-          <ModalEditarContratoJugador
-            isOpen
-            onClose={handleCloseModal}
-            contratoId={editingContratoId}
-            initial={initial}
-            onSaved={refreshData}
-          />
-        );
-      })() : null}
 
       {showContratosModal ? (
         <ModalBase isOpen onClose={handleCloseContratosModal} title="Contratos no activos" size="xl">

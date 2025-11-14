@@ -1,6 +1,7 @@
 import React from 'react';
 import { useEquipo } from '../../../app/providers/EquipoContext';
-import EquipoSolicitudesEdicion from '../../jugadores/components/EquipoSolicitudesEdicion';
+import SolicitudesPendientesSection from '../../jugadores/components/SolicitudesPendientesSection';
+
 
 const NotificacionesPage = () => {
   const { equipoSeleccionado } = useEquipo();
@@ -20,7 +21,7 @@ const NotificacionesPage = () => {
         </p>
       ) : (
         <div className="space-y-8">
-          <EquipoSolicitudesEdicion equipoId={equipoSeleccionado.id} />
+            <SolicitudesPendientesSection equipoId={equipoSeleccionado.id} />
         </div>
       )}
     </div>

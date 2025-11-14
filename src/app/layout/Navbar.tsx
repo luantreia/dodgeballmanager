@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../providers/AuthContext';
 import TeamSelector from '../../features/equipo/components/TeamSelector';
+import { SolicitudNotification } from '../../shared/components';
 
 const links = [
   { to: '/dashboard', label: 'Dashboard' },
@@ -44,6 +45,7 @@ export default function Navbar() {
 
         <div className="hidden items-center gap-3 lg:flex">
           <TeamSelector />
+          <SolicitudNotification />
           {isAuthenticated ? (
             <button
               onClick={logout}
