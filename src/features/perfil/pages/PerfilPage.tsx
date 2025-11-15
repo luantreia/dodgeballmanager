@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { actualizarUsuario, cambiarPassword } from '../services/usuarioService';
 import { Input } from '../../../shared/components/ui';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
+import SolicitudModal from '../../../shared/components/SolicitudModal/SolicitudModal';
+import { SolicitudEdicionTipo } from '../../../types/solicitudesEdicion';
+import { authFetch } from '../../../utils/authFetch';
 
 const PerfilPage = () => {
   const { user, refreshProfile, logout } = useAuth();
@@ -16,6 +19,50 @@ const PerfilPage = () => {
   const [passwordNueva, setPasswordNueva] = useState('');
   const [passwordFeedback, setPasswordFeedback] = useState<string | null>(null);
   const [savingPassword, setSavingPassword] = useState(false);
+
+  const [isSolicitudOpen, setIsSolicitudOpen] = useState(false);
+  const [prefillTipo, setPrefillTipo] = useState<SolicitudEdicionTipo | undefined>(undefined);
+  const [prefillDatos, setPrefillDatos] = useState<Record<string, any>>({});
+  const [jugadoresCount, setJugadoresCount] = useState<number | null>(null);
+  const [equiposCount, setEquiposCount] = useState<number | null>(null);
+
+  const refreshCounts = async () => {
+    try {
+      const [jugadores, equipos] = await Promise.all([
+        authFetch<any[]>('/jugadores/admin'),
+        authFetch<any[]>('/equipos/admin'),
+      ]);
+      setJugadoresCount(Array.isArray(jugadores) ? jugadores.length : 0);
+      setEquiposCount(Array.isArray(equipos) ? equipos.length : 0);
+    } catch (_) {
+      setJugadoresCount(0);
+      setEquiposCount(0);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      void refreshCounts();
+    }
+  }, [user?.id]);
+
+  const openSolicitud = (tipo: SolicitudEdicionTipo) => {
+    setPrefillTipo(tipo);
+    if (tipo === 'usuario-crear-jugador') {
+      setPrefillDatos({ nombre: '', alias: '', fechaNacimiento: '', genero: '', nacionalidad: '' });
+    } else if (tipo === 'usuario-crear-equipo') {
+      setPrefillDatos({ nombre: '', tipo: 'club', pais: '', descripcion: '', sitioWeb: '' });
+    } else {
+      setPrefillDatos({});
+    }
+    setIsSolicitudOpen(true);
+  };
+
+  const handleCloseSolicitud = () => {
+    setIsSolicitudOpen(false);
+    setPrefillTipo(undefined);
+    setPrefillDatos({});
+  };
 
   const handlePerfilSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -150,6 +197,57 @@ const PerfilPage = () => {
           </div>
         </form>
       </section>
+
+      <section className="grid gap-6 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Mis Jugadores</h2>
+              <p className="mt-1 text-sm text-slate-500">Jugadores que administrás o creaste.</p>
+            </div>
+            <div className="text-right text-2xl font-bold text-slate-900">{jugadoresCount ?? '—'}</div>
+          </div>
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => openSolicitud('usuario-crear-jugador')}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+            >
+              Agregar jugador
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Mis Equipos</h2>
+              <p className="mt-1 text-sm text-slate-500">Equipos que administrás o creaste.</p>
+            </div>
+            <div className="text-right text-2xl font-bold text-slate-900">{equiposCount ?? '—'}</div>
+          </div>
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => openSolicitud('usuario-crear-equipo')}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+            >
+              Agregar equipo
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {isSolicitudOpen && (
+        <SolicitudModal
+          isOpen={isSolicitudOpen}
+          contexto={{ contexto: 'usuario', entidadId: undefined }}
+          onClose={handleCloseSolicitud}
+          onSuccess={refreshCounts}
+          prefillTipo={prefillTipo}
+          prefillDatos={prefillDatos}
+        />
+      )}
     </div>
   );
 };

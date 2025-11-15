@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { obtenerSolicitudesEdicion, actualizarSolicitudEdicion, cancelarSolicitudEdicion } from '../services/solicitudesEdicionService';
+import { getSolicitudesEdicion, actualizarSolicitudEdicion, cancelarSolicitudEdicion } from '../../solicitudes/services/solicitudesEdicionService';
 import { getUsuarioById } from '../../auth/services/usersService';
-import type { SolicitudEdicion, Usuario } from '../../../types';
+import type { Usuario } from '../../../types';
+import type { ISolicitudEdicion } from '../../../types/solicitudesEdicion';
 import { getEquipoAdministradoresIds } from '../../equipo/services/equipoService';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { authFetch } from '../../../utils/authFetch';
@@ -21,7 +22,7 @@ interface Props {
 }
 
 const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) => {
-  const [solicitudes, setSolicitudes] = useState<SolicitudEdicion[]>([]);
+  const [solicitudes, setSolicitudes] = useState<ISolicitudEdicion[]>([]);
   const [loading, setLoading] = useState(false);
   const [usuariosCreadores, setUsuariosCreadores] = useState<Map<string, Usuario>>(new Map());
   const [adminsEquipo, setAdminsEquipo] = useState<string[]>([]);
@@ -35,8 +36,9 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
   const cargarSolicitudes = useCallback(async () => {
     try {
       setLoading(true);
-      // Obtener todas las solicitudes pendientes
-      const todasPendientes = await obtenerSolicitudesEdicion({ estado: 'pendiente' });
+      // Obtener todas las solicitudes pendientes (servicio central)
+      const resp = await getSolicitudesEdicion({ estado: 'pendiente' });
+      const todasPendientes = resp.solicitudes;
 
       // Obtener relaciones del equipo para mapear contratoId -> jugadorId/equipoId
       const relacionesEquipo = await authFetch<Array<{ _id: string; jugador: string | { _id: string }; equipo: string | { _id: string } }>>(
@@ -54,14 +56,20 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
       setContratoToEquipo(cte);
       setContratoToJugador(ctj);
 
-      // Filtrar relacionadas con este equipo: crear y eliminar
-      const relacionadas = todasPendientes.filter((solicitud: SolicitudEdicion) => {
+      // Filtrar relacionadas con este equipo: crear, eliminar y editar
+      const relacionadas = todasPendientes.filter((solicitud: ISolicitudEdicion) => {
         if (solicitud.tipo === 'jugador-equipo-crear') {
           const datos = solicitud.datosPropuestos as unknown as DatosCrearJugadorEquipo;
           return datos.equipoId === equipoId;
         }
         if (solicitud.tipo === 'jugador-equipo-eliminar') {
           const contratoId = (solicitud.datosPropuestos as any)?.contratoId as string | undefined;
+          if (!contratoId) return false;
+          const eqId = contratoToEquipo.get(contratoId);
+          return eqId === equipoId;
+        }
+        if (solicitud.tipo === 'jugador-equipo-editar') {
+          const contratoId = solicitud.entidad as string | undefined;
           if (!contratoId) return false;
           const eqId = contratoToEquipo.get(contratoId);
           return eqId === equipoId;
@@ -80,7 +88,7 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
       }
 
       // Cargar usuarios creadores
-      const creadorIds = relacionadas.map((s: SolicitudEdicion) => s.creadoPor);
+      const creadorIds = relacionadas.map((s: ISolicitudEdicion) => s.creadoPor);
       const idsUnicos = Array.from(new Set(creadorIds));
 
       for (const creadorId of idsUnicos) {
@@ -92,7 +100,7 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
         }
       }
 
-      // Cargar nombres de jugadores involucrados (crear + eliminar)
+      // Cargar nombres de jugadores involucrados (crear + eliminar + editar)
       const jugadorIds = Array.from(new Set([
         ...relacionadas
           .filter((s) => s.tipo === 'jugador-equipo-crear')
@@ -101,6 +109,10 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
         ...relacionadas
           .filter((s) => s.tipo === 'jugador-equipo-eliminar')
           .map((s) => contratoToJugador.get(((s.datosPropuestos as any)?.contratoId as string) || ''))
+          .filter((id): id is string => Boolean(id)),
+        ...relacionadas
+          .filter((s) => s.tipo === 'jugador-equipo-editar')
+          .map((s) => (s.entidad ? contratoToJugador.get(String(s.entidad)) : undefined))
           .filter((id): id is string => Boolean(id)),
       ]));
 
@@ -170,6 +182,8 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
         return 'Solicitud de ingreso';
       case 'jugador-equipo-eliminar':
         return 'Solicitud de abandono';
+      case 'jugador-equipo-editar':
+        return 'Solicitud de edición de vínculo';
       default:
         return tipo;
     }
@@ -242,91 +256,148 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
         <p className="text-sm text-amber-700">No hay solicitudes pendientes.</p>
       ) : (
         <ul className="space-y-3">
-          {solicitudes.map((solicitud) => (
-            <li key={solicitud.id} className="flex items-start justify-between gap-4 border border-amber-200 rounded-lg bg-white p-3">
-              <div className="flex-1 text-sm">
-                <div className="font-semibold text-slate-900">{getTipoLabel(solicitud.tipo)}</div>
-                <div className="text-xs text-slate-500 mt-1">
-                  {(() => {
-                    const userCreador = usuariosCreadores.get(solicitud.creadoPor);
-                    if (userCreador) {
-                      return `${userCreador.nombre} (${userCreador.email})`;
-                    }
-                    return `Usuario ${solicitud.creadoPor.slice(-6)}`;
+          {solicitudes.map((sol) => {
+            const fecha = (sol as any).fechaCreacion || (sol as any).createdAt;
+            return (
+              <li key={sol._id} className="flex items-start justify-between gap-4 border border-amber-200 rounded-lg bg-white p-3">
+                <div className="flex-1 text-sm">
+                  <div className="font-semibold text-slate-900">{getTipoLabel(sol.tipo)}</div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    {(() => {
+                      const userCreador = usuariosCreadores.get(sol.creadoPor);
+                      if (userCreador) return `${userCreador.nombre} (${userCreador.email})`;
+                      return `Usuario ${sol.creadoPor.slice(-6)}`;
+                    })()}
+                    {' | '}
+                    {fecha ? new Date(fecha).toLocaleString('es-AR') : ''}
+                  </div>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getEstadoColor(sol.estado)}`}>
+                    {sol.estado}
+                  </span>
+
+                  {sol.datosPropuestos && sol.tipo === 'jugador-equipo-crear' && (() => {
+                    const d = sol.datosPropuestos as unknown as DatosCrearJugadorEquipo;
+                    return (
+                      <div className="mt-2 text-xs bg-amber-100/50 p-2 rounded border border-amber-200">
+                        <div className="font-medium text-slate-700">📋 {jugadorNombres.get(d.jugadorId) || 'Cargando…'}</div>
+                        <div className="text-slate-600 mt-1">
+                          <div>Rol: <span className="font-medium">{d.rol || 'jugador'}</span></div>
+                          {d.fechaInicio && (
+                            <div>Desde: <span className="font-medium">{new Date(d.fechaInicio).toLocaleDateString('es-AR')}</span></div>
+                          )}
+                          {d.fechaFin && (
+                            <div>Hasta: <span className="font-medium">{new Date(d.fechaFin).toLocaleDateString('es-AR')}</span></div>
+                          )}
+                        </div>
+                      </div>
+                    );
                   })()}
-                  {' | '}
+
+                  {sol.datosPropuestos && sol.tipo === 'jugador-equipo-eliminar' && (() => {
+                    const contratoId = (sol.datosPropuestos as any)?.contratoId as string | undefined;
+                    return (
+                      <div className="mt-2 text-xs bg-amber-100/50 p-2 rounded border border-amber-200">
+                        <div className="font-medium text-slate-700">📋 {contratoJugadorNombreResolver(contratoId) || 'Cargando…'}</div>
+                        <div className="text-slate-600 mt-1">
+                          <div>Contrato: <span className="font-medium">{contratoId || '—'}</span></div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {sol.tipo === 'jugador-equipo-editar' && (() => {
+                    const contratoId = (sol.entidad as string) || undefined;
+                    const d = (sol.datosPropuestos || {}) as any;
+                    return (
+                      <div className="mt-2 text-xs bg-amber-100/50 p-2 rounded border border-amber-200">
+                        <div className="font-medium text-slate-700">📋 {contratoJugadorNombreResolver(contratoId) || 'Cargando…'}</div>
+                        <div className="text-slate-600 mt-1 space-y-0.5">
+                          {d.rol && (<div>Rol: <span className="font-medium">{d.rol}</span></div>)}
+                          {(d.fechaInicio || d.desde) && (
+                            <div>Desde: <span className="font-medium">{new Date(d.fechaInicio || d.desde).toLocaleDateString('es-AR')}</span></div>
+                          )}
+                          {(d.fechaFin || d.hasta) && (
+                            <div>Hasta: <span className="font-medium">{new Date(d.fechaFin || d.hasta).toLocaleDateString('es-AR')}</span></div>
+                          )}
+                          {d.estado && (<div>Estado: <span className="font-medium">{d.estado}</span></div>)}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {(() => {
-                    const fecha = (solicitud as any).fechaCreacion || (solicitud as any).createdAt;
-                    return fecha ? new Date(fecha).toLocaleString('es-AR') : '';
+                    const creadorIdStr = String(sol.creadoPor);
+                    const usuarioIdStr = user?.id ? String(user.id) : '';
+
+                    const d = sol.datosPropuestos as any;
+                    let jugadorId = d?.jugadorId as string | undefined;
+                    if (!jugadorId && sol.tipo === 'jugador-equipo-eliminar') {
+                      const contratoId = d?.contratoId as string | undefined;
+                      jugadorId = contratoJugadorResolver(contratoId);
+                    }
+                    if (!jugadorId && sol.tipo === 'jugador-equipo-editar') {
+                      const contratoId = (sol.entidad as string) || undefined;
+                      jugadorId = contratoJugadorResolver(contratoId);
+                    }
+                    const adminsJugadorParaSolicitud = jugadorId ? (jugadorAdmins.get(jugadorId) || []) : [];
+
+                    const creadorEsEquipo = adminsEquipo.includes(creadorIdStr);
+                    const creadorEsJugador = adminsJugadorParaSolicitud.includes(creadorIdStr);
+                    const usuarioEsAdminEquipo = usuarioIdStr ? adminsEquipo.includes(usuarioIdStr) : false;
+                    const usuarioEsAdminJugador = usuarioIdStr ? adminsJugadorParaSolicitud.includes(usuarioIdStr) : false;
+                    const esCreador = Boolean(usuarioIdStr && creadorIdStr === usuarioIdStr);
+
+                    const esEliminarOEditar = sol.tipo === 'jugador-equipo-eliminar' || sol.tipo === 'jugador-equipo-editar';
+                    const puedeCancelar = esEliminarOEditar
+                      ? Boolean(esCreador || user?.rol === 'admin')
+                      : Boolean(esCreador || (creadorEsEquipo && usuarioEsAdminEquipo) || (creadorEsJugador && usuarioEsAdminJugador));
+
+                    let puedeAprobar = user?.rol === 'admin';
+                    if (!puedeAprobar) {
+                      if (esEliminarOEditar) {
+                        puedeAprobar = Boolean(usuarioEsAdminEquipo || usuarioEsAdminJugador);
+                      } else {
+                        if (creadorEsEquipo) puedeAprobar = usuarioEsAdminJugador;
+                        else if (creadorEsJugador) puedeAprobar = usuarioEsAdminEquipo;
+                        else puedeAprobar = usuarioEsAdminEquipo;
+                      }
+                    }
+
+                    return (
+                      <div className="flex gap-1 mt-2">
+                        {puedeCancelar ? (
+                          <button
+                            onClick={() => handleCancelar(sol._id)}
+                            className="text-xs bg-slate-500 hover:bg-slate-600 text-white px-2 py-1 rounded transition"
+                            title="Cancelar solicitud"
+                          >
+                            Cancelar
+                          </button>
+                        ) : puedeAprobar ? (
+                          <>
+                            <button
+                              onClick={() => handleAprobar(sol._id)}
+                              className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1 rounded transition"
+                              title="Aprobar solicitud"
+                            >
+                              ✓ Aprobar
+                            </button>
+                            <button
+                              onClick={() => handleRechazar(sol._id)}
+                              className="text-xs bg-rose-500 hover:bg-rose-600 text-white px-2 py-1 rounded transition"
+                              title="Rechazar solicitud"
+                            >
+                              ✕ Rechazar
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    );
                   })()}
                 </div>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getEstadoColor(solicitud.estado)}`}>
-                  {solicitud.estado}
-                </span>
-
-                {(() => {
-                  const creadorIdStr = String(solicitud.creadoPor);
-                  const usuarioIdStr = user?.id ? String(user.id) : '';
-
-                  const datos = solicitud.datosPropuestos as any;
-                  let jugadorId = datos?.jugadorId as string | undefined;
-                  if (!jugadorId && solicitud.tipo === 'jugador-equipo-eliminar') {
-                    const contratoId = datos?.contratoId as string | undefined;
-                    jugadorId = contratoJugadorResolver(contratoId);
-                  }
-                  const adminsJugadorParaSolicitud = jugadorId ? jugadorAdmins.get(jugadorId) || [] : [];
-
-                  const creadorEsEquipo = adminsEquipo.includes(creadorIdStr);
-                  const creadorEsJugador = adminsJugadorParaSolicitud.includes(creadorIdStr);
-                  const usuarioEsAdminEquipo = usuarioIdStr ? adminsEquipo.includes(usuarioIdStr) : false;
-                  const usuarioEsAdminJugador = usuarioIdStr ? adminsJugadorParaSolicitud.includes(usuarioIdStr) : false;
-                  const esCreador = usuarioIdStr && creadorIdStr === usuarioIdStr;
-
-                  const puedeCancelar = Boolean(
-                    esCreador || (creadorEsEquipo && usuarioEsAdminEquipo) || (creadorEsJugador && usuarioEsAdminJugador)
-                  );
-
-                  let puedeAprobar = user?.rol === 'admin';
-                  if (!puedeAprobar) {
-                    if (creadorEsEquipo) puedeAprobar = usuarioEsAdminJugador;
-                    else if (creadorEsJugador) puedeAprobar = usuarioEsAdminEquipo;
-                    else puedeAprobar = usuarioEsAdminEquipo;
-                  }
-
-                  return (
-                    <div className="flex gap-1">
-                      {puedeCancelar ? (
-                        <button
-                          onClick={() => handleCancelar(solicitud.id)}
-                          className="text-xs bg-slate-500 hover:bg-slate-600 text-white px-2 py-1 rounded transition"
-                          title="Cancelar solicitud"
-                        >
-                          Cancelar
-                        </button>
-                      ) : puedeAprobar ? (
-                        <>
-                          <button
-                            onClick={() => handleAprobar(solicitud.id)}
-                            className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1 rounded transition"
-                            title="Aprobar solicitud"
-                          >
-                            ✓ Aprobar
-                          </button>
-                          <button
-                            onClick={() => handleRechazar(solicitud.id)}
-                            className="text-xs bg-rose-500 hover:bg-rose-600 text-white px-2 py-1 rounded transition"
-                            title="Rechazar solicitud"
-                          >
-                            ✕ Rechazar
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                  );
-                })()}
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

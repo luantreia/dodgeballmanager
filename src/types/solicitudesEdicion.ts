@@ -9,7 +9,7 @@ export type SolicitudEdicionTipo =
   | 'estadisticasJugadorSet'
   | 'estadisticasEquipoPartido'
   | 'estadisticasEquipoSet'
-  | 'contratoJugadorEquipo'
+  | 'jugador-equipo-editar'
   | 'contratoEquipoCompetencia'
   | 'jugador-equipo-crear'
   | 'jugador-equipo-eliminar'

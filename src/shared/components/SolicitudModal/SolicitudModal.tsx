@@ -414,7 +414,7 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
         </div>
       );
 
-    case 'contratoJugadorEquipo':
+    case 'jugador-equipo-editar':
       return (
         <div className="space-y-4">
           <SelectField

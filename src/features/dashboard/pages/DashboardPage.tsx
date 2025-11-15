@@ -8,7 +8,7 @@ import { SeccionTop5estadisticasDirectas } from '../../estadisticas/components/s
 import type { EstadisticaEquipoResumen, Partido } from '../../../types';
 import { formatNumber } from '../../../utils/formatNumber';
 import { Link } from 'react-router-dom';
-import { obtenerSolicitudesEdicion } from '../../jugadores/services/solicitudesEdicionService';
+import { getSolicitudesEdicion } from '../../solicitudes/services/solicitudesEdicionService';
 
 
 const DashboardPage = () => {
@@ -33,9 +33,9 @@ const DashboardPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [partidos, solicitudesPend] = await Promise.all([
+        const [partidos, solicitudesResp] = await Promise.all([
           getPartidos({ equipoId, estado: 'pendiente' }),
-          obtenerSolicitudesEdicion({ estado: 'pendiente' }),
+          getSolicitudesEdicion({ estado: 'pendiente' }),
         ]);
 
         if (isCancelled) return;
@@ -44,7 +44,7 @@ const DashboardPage = () => {
           .sort((a, b) => new Date(a.fecha as any).getTime() - new Date(b.fecha as any).getTime())
           .slice(0, 5);
         setProximosPartidos(partidosOrdenados);
-        const count = solicitudesPend.filter((s) => s.tipo === 'jugador-equipo-crear' && (s.datosPropuestos as any)?.equipoId === equipoId).length;
+        const count = (solicitudesResp.solicitudes || []).filter((s) => s.tipo === 'jugador-equipo-crear' && (s.datosPropuestos as any)?.equipoId === equipoId).length;
         setNotificacionesPendientes(count);
         setError(null);
       } catch (err) {
