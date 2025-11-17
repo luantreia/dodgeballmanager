@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 import { login as loginRequest, getProfile } from '../../features/auth/services/authService';
-import type { Usuario } from '../../types';
+import type { Usuario } from '../../shared/utils/types/types';
 
 type AuthContextValue = {
   user: Usuario | null;

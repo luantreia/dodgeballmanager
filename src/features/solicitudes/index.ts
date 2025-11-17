@@ -1,3 +1,3 @@
 // Exportaciones del módulo de solicitudes de edición
 export * from './services/solicitudesEdicionService';
-export * from '../../types/solicitudesEdicion';
+export * from '../../shared/utils/types/solicitudesEdicion';

@@ -1,4 +1,4 @@
-import type { Jugador, SolicitudJugador } from '../../../types';
+import type { Jugador, SolicitudJugador } from '../../utils/types/types';
 
 export interface JugadorListProps {
   jugadores: Jugador[];

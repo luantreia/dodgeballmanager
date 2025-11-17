@@ -1,4 +1,4 @@
-import { authFetch } from '../../../utils/authFetch';
+import { authFetch } from '../../../shared/utils/authFetch';
 import type {
   ISolicitudEdicion,
   ISolicitudOpciones,
@@ -8,12 +8,12 @@ import type {
   ISolicitudActualizarPayload,
   ISolicitudesPaginadas,
   SolicitudEdicionTipo
-} from '../../../types/solicitudesEdicion';
+} from '../../../shared/utils/types/solicitudesEdicion';
 import {
   SolicitudValidationError,
   SolicitudPermissionError,
   SolicitudBusinessError
-} from '../../../types/solicitudesEdicion';
+} from '../../../shared/utils/types/solicitudesEdicion';
 
 /**
  * Obtiene todas las solicitudes de edición con filtros opcionales

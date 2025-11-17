@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import  ModalBase  from '../../../../shared/components/ModalBase/ModalBase';
 import { getAlineacion, guardarAlineacion, crearJugadorPartido, eliminarJugadorPartido, getPartidoDetallado } from '../../services/partidoService';
 import { getJugadoresEquipo } from '../../../jugadores/services/jugadorEquipoService';
-import type { Jugador, JugadorPartido } from '../../../../types';
+import type { Jugador, JugadorPartido } from '../../../../shared/utils/types/types';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 
 type RolAlineacion = 'jugador' | 'entrenador' | 'ninguno';

@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import EstadisticasGeneralesPartido from '../../../estadisticas/components/EstadisticasGeneralesPartido';
-import type { Partido } from '../../../../types';
+import type { Partido } from '../../../../shared/utils/types/types';
 
 type ModoEstadisticas = 'manual' | 'automatico';
 

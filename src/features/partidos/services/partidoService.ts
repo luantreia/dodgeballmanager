@@ -1,5 +1,5 @@
-import { authFetch } from '../../../utils/authFetch';
-import type { Partido, JugadorPartido, Competencia } from '../../../types';
+import { authFetch } from '../../../shared/utils/authFetch';
+import type { Partido, JugadorPartido, Competencia } from '../../../shared/utils/types/types';
 
 type PartidoQuery = {
   equipoId: string;

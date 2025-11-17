@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import CompetenciaCard from '../../../shared/components/CompetenciaCard';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getParticipaciones } from '../services/equipoCompetenciaService';
-import type { EquipoCompetencia } from '../../../types';
+import type { EquipoCompetencia } from '../../../shared/utils/types/types';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { Input, Textarea } from '../../../shared/components/ui';
 import { opcionesTemporadasParaEquipo, crearSolicitudParticipacionTemporada, type TemporadaOpcion } from '../services/participacionTemporadaService';

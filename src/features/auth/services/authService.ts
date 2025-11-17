@@ -1,5 +1,5 @@
-import { authFetch } from '../../../utils/authFetch';
-import type { RolUsuario, Usuario } from '../../../types';
+import { authFetch } from '../../../shared/utils/authFetch';
+import type { RolUsuario, Usuario } from '../../../shared/utils/types/types';
 
 type LoginPayload = {
   email: string;

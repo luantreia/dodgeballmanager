@@ -1,5 +1,5 @@
-import { authFetch } from '../../../utils/authFetch';
-import type { Usuario } from '../../../types';
+import { authFetch } from '../../../shared/utils/authFetch';
+import type { Usuario } from '../../../shared/utils/types/types';
 
 type UpdateUsuarioPayload = Partial<Pick<Usuario, 'nombre' | 'email'>>;
 

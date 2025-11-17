@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import EquipoCard from '../../../shared/components/EquipoCard/EquipoCard';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { actualizarEquipo, getEquipo } from '../services/equipoService';
-import type { Equipo } from '../../../types';
+import type { Equipo } from '../../../shared/utils/types/types';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { Input, Textarea } from '../../../shared/components/ui';
 

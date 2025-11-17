@@ -4,8 +4,8 @@ import { actualizarUsuario, cambiarPassword } from '../services/usuarioService';
 import { Input } from '../../../shared/components/ui';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import SolicitudModal from '../../../shared/components/SolicitudModal/SolicitudModal';
-import { SolicitudEdicionTipo } from '../../../types/solicitudesEdicion';
-import { authFetch } from '../../../utils/authFetch';
+import { SolicitudEdicionTipo } from '../../../shared/utils/types/solicitudesEdicion';
+import { authFetch } from '../../../shared/utils/authFetch';
 
 const PerfilPage = () => {
   const { user, refreshProfile, logout } = useAuth();

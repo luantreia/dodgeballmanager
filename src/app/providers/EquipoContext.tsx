@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react';
 import { getEquiposDelUsuario } from '../../features/equipo/services/equipoService';
-import type { Equipo } from '../../types';
+import type { Equipo } from '../../shared/utils/types/types';
 import { useToast } from '../../shared/components/Toast/ToastProvider';
 
 type EquipoContextValue = {

@@ -1,5 +1,5 @@
-import { authFetch } from '../../../utils/authFetch';
-import type { Notificacion } from '../../../types';
+import { authFetch } from '../../../shared/utils/authFetch';
+import type { Notificacion } from '../../../shared/utils/types/types';
 
 export const getNotificaciones = () => authFetch<Notificacion[]>('/notificaciones');
 

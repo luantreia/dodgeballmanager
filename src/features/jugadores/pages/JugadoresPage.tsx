@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getContratosNoActivos, getJugadoresEquipo } from '../services/jugadorEquipoService';
-import type { Jugador, ContratoJugadorResumen } from '../../../types';
+import type { Jugador, ContratoJugadorResumen } from '../../../shared/utils/types/types';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import InvitarJugadorSection from '../components/InvitarJugadorSection';
 import SolicitudesPendientesSection from '../components/SolicitudesPendientesSection';

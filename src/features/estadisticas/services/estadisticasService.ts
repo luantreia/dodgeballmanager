@@ -1,5 +1,5 @@
-import { authFetch } from '../../../utils/authFetch';
-import type { EstadisticaEquipoResumen, EstadisticaJugador } from '../../../types';
+import { authFetch } from '../../../shared/utils/authFetch';
+import type { EstadisticaEquipoResumen, EstadisticaJugador } from '../../../shared/utils/types/types';
 
 type EstadisticasEquipoResponse = {
   resumen: EstadisticaEquipoResumen;

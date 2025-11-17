@@ -2,7 +2,7 @@ import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/react/24/outline';
-import type { Equipo } from '../../../types';
+import type { Equipo } from '../../../shared/utils/types/types';
 
 const optionClassName = (active: boolean) =>
   `relative cursor-pointer select-none py-2 pl-10 pr-4 text-sm ${

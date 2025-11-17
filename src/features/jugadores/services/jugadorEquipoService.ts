@@ -1,5 +1,5 @@
-import { authFetch } from '../../../utils/authFetch';
-import type { Jugador, ContratoJugadorResumen } from '../../../types';
+import { authFetch } from '../../../shared/utils/authFetch';
+import type { Jugador, ContratoJugadorResumen } from '../../../shared/utils/types/types';
 
 type JugadorEquipoQuery = {
   equipoId: string;

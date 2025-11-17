@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { getSolicitudesEdicion, actualizarSolicitudEdicion } from '../../solicitudes/services/solicitudesEdicionService';
-import type { ISolicitudEdicion } from '../../../types/solicitudesEdicion';
+import type { ISolicitudEdicion } from '../../../shared/utils/types/solicitudesEdicion';
 
 const categoriaDeTipo = (tipo: string): string => {
   if (

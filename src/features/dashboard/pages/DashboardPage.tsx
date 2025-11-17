@@ -5,8 +5,8 @@ import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getPartidos } from '../../partidos/services/partidoService';
 // Ranking reusable section
 import { SeccionTop5estadisticasDirectas } from '../../estadisticas/components/sections/SeccionTop5estadisticasDirectas';
-import type { EstadisticaEquipoResumen, Partido } from '../../../types';
-import { formatNumber } from '../../../utils/formatNumber';
+import type { EstadisticaEquipoResumen, Partido } from '../../../shared/utils/types/types';
+import { formatNumber } from '../../../shared/utils/formatNumber';
 import { Link } from 'react-router-dom';
 import { getSolicitudesEdicion } from '../../solicitudes/services/solicitudesEdicionService';
 

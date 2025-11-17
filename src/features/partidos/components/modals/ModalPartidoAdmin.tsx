@@ -19,7 +19,7 @@ import {
 } from '../../services/partidoService';
 import type { EstadisticaManualBackend } from '../../hooks/useEstadisticasModal';
 
-import type { JugadorPartido } from '../../../../types';
+import type { JugadorPartido } from '../../../../shared/utils/types/types';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 

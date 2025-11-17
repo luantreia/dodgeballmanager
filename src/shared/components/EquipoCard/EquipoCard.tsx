@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { Equipo } from '../../../types';
+import type { Equipo } from '../../utils/types/types';
 
 export interface EquipoCardProps {
   equipo: Equipo;

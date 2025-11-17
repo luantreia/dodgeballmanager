@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import PartidoCard from '../../../shared/components/PartidoCard/PartidoCard';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getPartido, getPartidos } from '../services/partidoService';
-import type { Partido } from '../../../types';
+import type { Partido } from '../../../shared/utils/types/types';
 import { ModalPartidoAdmin } from '../components';
 import { useToken } from '../../../app/providers/AuthContext';
 import { ModalCrearPartido } from '../components/modals/ModalCrearPartidoAmistoso';

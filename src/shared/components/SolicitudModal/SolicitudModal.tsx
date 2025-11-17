@@ -6,7 +6,7 @@ import {
   ISolicitudOpciones,
   ISolicitudCrearPayload,
   SolicitudEdicionTipo,
-} from '../../../types/solicitudesEdicion';
+} from '../../utils/types/solicitudesEdicion';
 import ModalBase from '../ModalBase/ModalBase';
 
 interface SolicitudModalProps {

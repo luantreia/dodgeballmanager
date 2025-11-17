@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import type { Jugador } from '../../../types';
+import type { Jugador } from '../../../shared/utils/types/types';
 import SolicitudModal from '../../../shared/components/SolicitudModal/SolicitudModal';
 
 interface JugadoresListSectionProps {

@@ -7,7 +7,7 @@ import {
   extractEquipoId,
   type PartidoDetallado,
 } from '../../services/partidoService';
-import type { Competencia } from '../../../../types';
+import type { Competencia } from '../../../../shared/utils/types/types';
 import { getParticipaciones as getCompetencias } from '../../../competencias/services/equipoCompetenciaService';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 

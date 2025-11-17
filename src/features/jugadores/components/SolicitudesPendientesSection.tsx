@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { getSolicitudesEdicion, actualizarSolicitudEdicion, cancelarSolicitudEdicion } from '../../solicitudes/services/solicitudesEdicionService';
 import { getUsuarioById } from '../../auth/services/usersService';
-import type { Usuario } from '../../../types';
-import type { ISolicitudEdicion } from '../../../types/solicitudesEdicion';
+import type { Usuario } from '../../../shared/utils/types/types';
+import type { ISolicitudEdicion } from '../../../shared/utils/types/solicitudesEdicion';
 import { getEquipoAdministradoresIds } from '../../equipo/services/equipoService';
 import { useAuth } from '../../../app/providers/AuthContext';
-import { authFetch } from '../../../utils/authFetch';
+import { authFetch } from '../../../shared/utils/authFetch';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 
 interface DatosCrearJugadorEquipo {

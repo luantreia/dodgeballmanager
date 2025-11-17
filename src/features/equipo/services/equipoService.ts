@@ -1,5 +1,5 @@
-import { authFetch } from '../../../utils/authFetch';
-import type { Equipo } from '../../../types';
+import { authFetch } from '../../../shared/utils/authFetch';
+import type { Equipo } from '../../../shared/utils/types/types';
 
 export type UpdateEquipoPayload = {
   nombre?: string;
