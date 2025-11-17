@@ -125,7 +125,7 @@ const JugadoresListSection: React.FC<JugadoresListSectionProps> = ({
       {editingJugador ? (
         <SolicitudModal
           isOpen={!!editingContratoId}
-          contexto={{ contexto: 'equipo', entidadId: equipoId }}
+          contexto={{ contexto: 'equipo', entidadId: editingContratoId! }}
           onClose={handleCloseModal}
           onSuccess={handleModalSuccess}
           prefillTipo={'jugador-equipo-editar'}
