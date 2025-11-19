@@ -138,8 +138,8 @@ const JugadoresListSection: React.FC<JugadoresListSectionProps> = ({
             equipoNombre: (editingJugador as any).equipoNombre,
             rol: editingJugador.rol ?? editingJugador.rolEnEquipo ?? 'jugador',
             numeroCamiseta: editingJugador.numeroCamiseta ?? undefined,
-            desde: editingJugador.fechaInicio ? editingJugador.fechaInicio.slice(0, 10) : undefined,
-            hasta: editingJugador.fechaFin ? editingJugador.fechaFin.slice(0, 10) : undefined,
+            fechaInicio: editingJugador.fechaInicio ? editingJugador.fechaInicio.slice(0, 10) : undefined,
+            fechaFin: editingJugador.fechaFin ? editingJugador.fechaFin.slice(0, 10) : undefined,
             estado: editingJugador.estado ?? 'activo',
             foto: (editingJugador as any).foto,
           }}

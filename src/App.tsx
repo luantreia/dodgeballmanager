@@ -10,9 +10,11 @@ import PerfilPage from './features/perfil/pages/PerfilPage';
 import LoginPage from './features/auth/pages/LoginPage';
 import ProtectedRoute from './app/routes/ProtectedRoute';
 import Navbar from './app/layout/Navbar';
+import { FeatureFlagsProvider } from './shared/config/featureFlags';
 
 const App = () => {
   return (
+    <FeatureFlagsProvider>
     <div className="flex min-h-screen flex-col bg-slate-50">
       <Navbar />
 
@@ -94,6 +96,7 @@ const App = () => {
         </div>
       </footer>
     </div>
+    </FeatureFlagsProvider>
   );
 };
 

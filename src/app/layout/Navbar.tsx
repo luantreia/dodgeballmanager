@@ -5,6 +5,7 @@ import TeamSelector from '../../features/equipo/components/TeamSelector';
 import { SolicitudNotification } from '../../shared/components';
 import { getSolicitudesEdicion } from '../../features/solicitudes/services/solicitudesEdicionService';
 import { useEquipo } from '../providers/EquipoContext';
+// removed feature flag usage
 
 const links = [
   { to: '/dashboard', label: 'Dashboard' },
@@ -22,6 +23,7 @@ export default function Navbar() {
   const { equipoSeleccionado } = useEquipo();
   const [open, setOpen] = useState(false);
   const [pendientes, setPendientes] = useState<number>(0);
+  // feature flags removed
 
   useEffect(() => {
     let mounted = true;
