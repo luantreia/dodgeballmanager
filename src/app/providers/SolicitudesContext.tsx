@@ -2,14 +2,13 @@ import React, { useReducer, useContext, createContext, useEffect, useCallback, u
 import {
   ISolicitudEdicion,
   ISolicitudContexto,
-  ISolicitudOpciones,
   ISolicitudCrearPayload,
   ISolicitudActualizarPayload,
   ISolicitudFiltros,
   SolicitudEdicionEstado,
   ISolicitudesPaginadas,
-  ISolicitudLoadingState,
-} from '../../shared/utils/types/solicitudesEdicion';
+} from '../../shared/features/solicitudes/types/solicitudesEdicion';
+import { ISolicitudOpciones, ISolicitudLoadingState } from '../../shared/utils/types/solicitudesEdicion';
 import {
   getSolicitudesEdicion,
   getSolicitudEdicionById,

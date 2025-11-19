@@ -1,2 +1,3 @@
 // Barrel de tipos para facilitar imports
-export * from './solicitudesEdicion';
+export * from '../shared/utils/types/types';
+export * from '../shared/utils/types/solicitudesEdicion';
