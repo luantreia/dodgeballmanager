@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { getSolicitudesEdicion, actualizarSolicitudEdicion, cancelarSolicitudEdicion } from '../../solicitudes/services/solicitudesEdicionService';
+import { getSolicitudesEdicion, actualizarSolicitudEdicion, cancelarSolicitudEdicion } from '../../../shared/features/solicitudes';
 import { getUsuarioById } from '../../auth/services/usersService';
 import type { Usuario } from '../../../shared/utils/types/types';
-import type { ISolicitudEdicion } from '../../../shared/utils/types/solicitudesEdicion';
+import type { ISolicitudEdicion } from '../../../shared/features/solicitudes/types/solicitudesEdicion';
 import { getEquipoAdministradoresIds } from '../../equipo/services/equipoService';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { authFetch } from '../../../shared/utils/authFetch';

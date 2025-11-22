@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../providers/AuthContext';
 import TeamSelector from '../../features/equipo/components/TeamSelector';
 import { SolicitudNotification } from '../../shared/components';
-import { getSolicitudesEdicion } from '../../features/solicitudes/services/solicitudesEdicionService';
+import { getSolicitudesEdicion } from '../../shared/features/solicitudes';
 import { useEquipo } from '../providers/EquipoContext';
 // removed feature flag usage
 

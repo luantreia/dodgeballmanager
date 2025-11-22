@@ -7,6 +7,7 @@ import type {
   ISolicitudCrearPayload,
   ISolicitudActualizarPayload,
   ISolicitudesPaginadas,
+  ISolicitudAprobadores,
   SolicitudEdicionTipo
 } from '../types/solicitudesEdicion';
 import {
@@ -29,20 +30,13 @@ export const getSolicitudesEdicion = async (
   if (filtros.estado) params.set('estado', filtros.estado);
   if (filtros.creadoPor) params.set('creadoPor', filtros.creadoPor);
   if (filtros.entidad) params.set('entidad', filtros.entidad);
+  if (filtros.scope) params.set('scope', filtros.scope);
   if (filtros.page) params.set('page', filtros.page.toString());
   if (filtros.limit) params.set('limit', filtros.limit.toString());
 
   try {
-    const arr = await authFetch<ISolicitudEdicion[]>(`/solicitudes-edicion?${params.toString()}`);
-    const page = filtros.page ?? 1;
-    const limit = filtros.limit ?? arr.length;
-    return {
-      solicitudes: Array.isArray(arr) ? arr : [],
-      total: Array.isArray(arr) ? arr.length : 0,
-      page,
-      limit,
-      totalPages: 1,
-    };
+    const response = await authFetch<ISolicitudesPaginadas>(`/solicitudes-edicion?${params.toString()}`);
+    return response;
   } catch (error: any) {
     if (error.status === 400) {
       throw new SolicitudValidationError(error.message, error.details);
@@ -276,6 +270,22 @@ export const getSolicitudesEstadisticas = async (
     };
   } catch (error: any) {
     throw new Error(`Error al obtener estadísticas de solicitudes: ${error.message}`);
+  }
+};
+
+/**
+ * Obtiene los usuarios que pueden aprobar una solicitud específica
+ * @param id ID de la solicitud
+ * @returns Lista de aprobadores agrupados por tipo
+ */
+export const getSolicitudAprobadores = async (id: string): Promise<ISolicitudAprobadores> => {
+  try {
+    return await authFetch<ISolicitudAprobadores>(`/solicitudes-edicion/${id}/aprobadores`);
+  } catch (error: any) {
+    if (error.status === 404) {
+      throw new Error('Solicitud no encontrada');
+    }
+    throw new Error(`Error al obtener aprobadores: ${error.message}`);
   }
 };
 

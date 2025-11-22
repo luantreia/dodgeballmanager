@@ -7,5 +7,5 @@ export * from './services/solicitudesEdicionService';
 // Re-export all components
 export * from './components';
 
-// Re-export all pages
-export * from './pages';
+// Re-export context
+export * from './context/SolicitudesContext';

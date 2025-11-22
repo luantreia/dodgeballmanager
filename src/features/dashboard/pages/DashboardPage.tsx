@@ -8,7 +8,7 @@ import { SeccionTop5estadisticasDirectas } from '../../estadisticas/components/s
 import type { EstadisticaEquipoResumen, Partido } from '../../../shared/utils/types/types';
 import { formatNumber } from '../../../shared/utils/formatNumber';
 import { Link } from 'react-router-dom';
-import { getSolicitudesEdicion } from '../../solicitudes/services/solicitudesEdicionService';
+import { getSolicitudesEdicion } from '../../../shared/features/solicitudes';
 
 
 const DashboardPage = () => {

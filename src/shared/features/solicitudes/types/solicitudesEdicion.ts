@@ -1,4 +1,4 @@
-export type SolicitudEdicionEstado = 'pendiente' | 'aceptado' | 'rechazado' | 'cancelado';
+﻿export type SolicitudEdicionEstado = 'pendiente' | 'aceptado' | 'rechazado' | 'cancelado';
 
 export type SolicitudEdicionTipo =
   //pagina partido
@@ -73,8 +73,19 @@ export interface ISolicitudFiltros {
   estado?: SolicitudEdicionEstado;
   creadoPor?: string;
   entidad?: string;
+  // Alcance lógico de las solicitudes solicitadas.
+  // 'mine': solo las creadas por el usuario.
+  // 'related': creadas por el usuario o donde el usuario puede aprobar.
+  // 'aprobables': solo aquellas donde el usuario es aprobador potencial.
+  scope?: 'mine' | 'related' | 'aprobables';
   page?: number;
   limit?: number;
+}
+
+export interface ISolicitudLoadingState {
+  loading: boolean;
+  error?: string | null;
+  success?: boolean;
 }
 
 export interface ISolicitudesPaginadas {
@@ -83,6 +94,15 @@ export interface ISolicitudesPaginadas {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+export interface ISolicitudAprobadores {
+  aprobadores: {
+    administradores: string[];
+    organizacion: string[];
+    global: string[];
+  };
+  puedeAprobar: boolean;
 }
 
 export interface ISolicitudCrearPayload {
