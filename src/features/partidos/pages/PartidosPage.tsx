@@ -3,7 +3,7 @@ import PartidoCard from '../../../shared/components/PartidoCard/PartidoCard';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getPartido, getPartidos } from '../services/partidoService';
 import type { Partido } from '../../../shared/utils/types/types';
-import { ModalPartidoAdmin } from '../components';
+import { ModalPartidoAdmin, ModalSolicitudEditarPartido } from '../components';
 import { useToken } from '../../../app/providers/AuthContext';
 import { ModalCrearPartido } from '../components/modals/ModalCrearPartidoAmistoso';
 import ModalAlineacionPartido from '../components/modals/ModalAlineacionPartido';
@@ -24,6 +24,8 @@ const PartidosPage = () => {
   const [partidoAlineacionId, setPartidoAlineacionId] = useState<string | null>(null);
   const [infoModalAbierto, setInfoModalAbierto] = useState(false);
   const [partidoInfoId, setPartidoInfoId] = useState<string | null>(null);
+  const [solicitudModalAbierto, setSolicitudModalAbierto] = useState(false);
+  const [partidoSolicitudId, setPartidoSolicitudId] = useState<string | null>(null);
 
   const refreshPartidos = useCallback(async () => {
     const equipoId = equipoSeleccionado?.id;
@@ -117,6 +119,16 @@ const PartidosPage = () => {
     setPartidoInfoId(null);
   };
 
+  const handleAbrirSolicitud = (partidoId: string) => {
+    setPartidoSolicitudId(partidoId);
+    setSolicitudModalAbierto(true);
+  };
+
+  const handleCerrarSolicitud = () => {
+    setSolicitudModalAbierto(false);
+    setPartidoSolicitudId(null);
+  };
+
   // onSaved no-op: actualizará vista dentro del modal
 
   if (!equipoSeleccionado) {
@@ -179,6 +191,12 @@ const PartidosPage = () => {
         onClose={handleCerrarInformacion}
       />
 
+      <ModalSolicitudEditarPartido
+        isOpen={solicitudModalAbierto && Boolean(partidoSolicitudId)}
+        partidoId={partidoSolicitudId ?? ''}
+        onClose={handleCerrarSolicitud}
+      />
+
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <header className="flex items-center justify-between">
@@ -212,6 +230,13 @@ const PartidosPage = () => {
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                       >
                         🖊️ Datos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAbrirSolicitud(partido.id)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
+                      >
+                        ✉️ Solicitar
                       </button>
                       <button
                         type="button"
@@ -265,6 +290,13 @@ const PartidosPage = () => {
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                       >
                         🖊️ Datos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAbrirSolicitud(partido.id)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
+                      >
+                        ✉️ Solicitar
                       </button>
                       <button
                         type="button"

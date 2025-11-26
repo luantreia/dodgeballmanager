@@ -8,11 +8,13 @@ export type SolicitudEdicionTipo =
   | 'estadisticasJugadorSet'
   | 'estadisticasEquipoPartido'
   | 'estadisticasEquipoSet'
+  | 'editarPartidoCompetencia'
   //pagina jugador
   | 'jugador-equipo-crear'
   | 'jugador-equipo-eliminar'
   | 'jugador-equipo-editar'
   | 'contratoEquipoCompetencia'
+  | 'solicitarEstadisticasJugador'
   //pagina competencias
   | 'participacion-temporada-crear'
   | 'participacion-temporada-actualizar'
