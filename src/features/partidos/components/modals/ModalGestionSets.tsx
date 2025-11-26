@@ -10,17 +10,20 @@ import {
   type SetPartido,
 } from '../../services/partidoService';
 
+import { crearSolicitudEdicion } from '../../../../shared/features/solicitudes/services/solicitudesEdicionService';
+
 type ModalGestionSetsProps = {
   partidoId: string;
   isOpen: boolean;
   onClose: () => void;
   onAbrirCaptura?: (numeroSet: number) => void;
+  esCompetencia?: boolean;
 };
 
 const estados = ['pendiente', 'en_juego', 'finalizado'] as const;
 const ganadores = ['local', 'visitante', 'pendiente'] as const;
 
-const ModalGestionSets = ({ partidoId, isOpen, onClose, onAbrirCaptura }: ModalGestionSetsProps) => {
+const ModalGestionSets = ({ partidoId, isOpen, onClose, onAbrirCaptura, esCompetencia }: ModalGestionSetsProps) => {
   const { addToast } = useToast();
   const [sets, setSets] = useState<SetPartido[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,6 +58,23 @@ const ModalGestionSets = ({ partidoId, isOpen, onClose, onAbrirCaptura }: ModalG
         if (numerosExistentes[i] === numero) numero++;
         else break;
       }
+
+      if (esCompetencia) {
+        await crearSolicitudEdicion({
+          tipo: 'resultadoSet',
+          entidad: partidoId,
+          datosPropuestos: {
+            accion: 'crear',
+            numeroSet: numero,
+            estadoSet: 'en_juego',
+            ganadorSet: 'pendiente'
+          }
+        });
+        addToast({ type: 'success', title: 'Solicitud enviada', message: 'Se solicitó la creación del set' });
+        onClose();
+        return;
+      }
+
       const creado = await crearSetPartido(partidoId, { numeroSet: numero, estadoSet: 'en_juego', ganadorSet: 'pendiente' });
       setSets(prev => [...prev, creado].sort((a,b) => a.numeroSet - b.numeroSet));
       addToast({ type: 'success', title: 'Set creado', message: `Se creó el set #${creado.numeroSet}` });
@@ -66,6 +86,21 @@ const ModalGestionSets = ({ partidoId, isOpen, onClose, onAbrirCaptura }: ModalG
 
   const actualizarCampo = async (setItem: SetPartido, cambios: Partial<SetPartido>) => {
     try {
+      if (esCompetencia) {
+        await crearSolicitudEdicion({
+          tipo: 'resultadoSet',
+          entidad: partidoId,
+          datosPropuestos: {
+            accion: 'actualizar',
+            setId: setItem._id,
+            numeroSet: setItem.numeroSet,
+            ...cambios
+          }
+        });
+        addToast({ type: 'success', title: 'Solicitud enviada', message: 'Se solicitó la actualización del set' });
+        return;
+      }
+
       setSavingId(setItem._id);
       const actualizado = await actualizarSetPartido(setItem._id, cambios);
       setSets(prev => prev.map(s => s._id === actualizado._id ? actualizado : s));
@@ -92,12 +127,29 @@ const ModalGestionSets = ({ partidoId, isOpen, onClose, onAbrirCaptura }: ModalG
     const { setId, numero } = confirmEliminar;
     if (!setId) return;
     try {
+      if (esCompetencia) {
+        await crearSolicitudEdicion({
+          tipo: 'resultadoSet',
+          entidad: partidoId,
+          datosPropuestos: {
+            accion: 'eliminar',
+            setId: setId,
+            numeroSet: numero
+          }
+        });
+        addToast({ type: 'success', title: 'Solicitud enviada', message: 'Se solicitó la eliminación del set' });
+        setConfirmEliminar({ open: false });
+        onClose();
+        return;
+      }
+
       await eliminarSetPartido(setId);
       setSets(prev => prev.filter(s => s._id !== setId));
       addToast({ type: 'success', title: 'Eliminado', message: `Set #${numero} eliminado` });
     } catch (err) {
       console.error(err);
       addToast({ type: 'error', title: 'Error', message: 'No pudimos eliminar el set' });
+
     } finally {
       setConfirmEliminar({ open: false });
     }

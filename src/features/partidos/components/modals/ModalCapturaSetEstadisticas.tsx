@@ -14,6 +14,8 @@ import {
   actualizarEstadisticaJugadorSet,
 } from '../../services/partidoService';
 
+import { crearSolicitudEdicion } from '../../../../shared/features/solicitudes/services/solicitudesEdicionService';
+
 type ModalCapturaSetEstadisticasProps = {
   partido: PartidoDetallado | null;
   partidoId: string;
@@ -22,6 +24,7 @@ type ModalCapturaSetEstadisticasProps = {
   onClose: () => void;
   numeroSetInicial?: number | null;
   onRefresh?: () => Promise<void> | void;
+  esCompetencia?: boolean;
 };
 
 const ESTADISTICAS_INICIALES = { throws: 0, hits: 0, outs: 0, catches: 0 } as const;
@@ -34,6 +37,7 @@ const ModalCapturaSetEstadisticas = ({
   onClose,
   numeroSetInicial = null,
   onRefresh,
+  esCompetencia,
 }: ModalCapturaSetEstadisticasProps) => {
   const { addToast } = useToast();
   const [sets, setSets] = useState<SetPartido[]>([]);
@@ -233,6 +237,43 @@ const ModalCapturaSetEstadisticas = ({
       if (!setId) return;
       const localId = extractEquipoId(partido?.equipoLocal) ?? '';
       const visitId = extractEquipoId(partido?.equipoVisitante) ?? '';
+
+      if (esCompetencia) {
+        // Enviar solicitud en lugar de guardar directamente
+        const estadisticasLocal = rowsLocal
+          .filter(r => r.jugadorId && r.jugadorPartidoId)
+          .map(r => ({
+            jugadorId: r.jugadorId,
+            jugadorPartidoId: r.jugadorPartidoId,
+            estadisticas: r.estadisticas
+          }));
+
+        const estadisticasVisitante = rowsVisitante
+          .filter(r => r.jugadorId && r.jugadorPartidoId)
+          .map(r => ({
+            jugadorId: r.jugadorId,
+            jugadorPartidoId: r.jugadorPartidoId,
+            estadisticas: r.estadisticas
+          }));
+
+        await crearSolicitudEdicion({
+          tipo: 'estadisticasJugadorSet',
+          entidad: partidoId,
+          datosPropuestos: {
+            setId,
+            numeroSet: numeroSetSeleccionado,
+            localId,
+            visitId,
+            estadisticasLocal,
+            estadisticasVisitante
+          }
+        });
+        
+        addToast({ type: 'success', title: 'Solicitud enviada', message: 'Se solicitó la actualización de estadísticas' });
+        onClose();
+        return;
+      }
+
       const process = async (rows: Row[], equipoId: string) => {
         for (const r of rows) {
           if (!r?.jugadorId || !r?.jugadorPartidoId) continue;

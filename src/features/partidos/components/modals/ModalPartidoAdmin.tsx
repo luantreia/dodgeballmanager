@@ -22,6 +22,7 @@ import type { EstadisticaManualBackend } from '../../hooks/useEstadisticasModal'
 import type { JugadorPartido } from '../../../../shared/utils/types/types';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
+import { crearSolicitudEdicion } from '../../../../shared/features/solicitudes/services/solicitudesEdicionService';
 
 type ModalPartidoAdminProps = {
   partidoId: string;
@@ -311,6 +312,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
           onClose={cerrarCapturaSet}
           numeroSetInicial={numeroSetEnCaptura}
           onRefresh={cargarPartido}
+          esCompetencia={!!partido?.competencia}
         />
       )}
 
@@ -324,6 +326,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
             setGestionSetsAbierta(false);
             setCapturaSetAbierta(true);
           }}
+          esCompetencia={!!partido?.competencia}
         />
       )}
 
