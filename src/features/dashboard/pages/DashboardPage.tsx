@@ -9,6 +9,7 @@ import type { EstadisticaEquipoResumen, Partido } from '../../../shared/utils/ty
 import { formatNumber } from '../../../shared/utils/formatNumber';
 import { Link } from 'react-router-dom';
 import { getSolicitudesEdicion } from '../../../shared/features/solicitudes';
+import { getEstadisticasEquipo } from '../../estadisticas/services/estadisticasService';
 
 
 const DashboardPage = () => {
@@ -33,9 +34,10 @@ const DashboardPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [partidos, solicitudesResp] = await Promise.all([
+        const [partidos, solicitudesResp, stats] = await Promise.all([
           getPartidos({ equipoId, estado: 'pendiente' }),
           getSolicitudesEdicion({ estado: 'pendiente' }),
+          getEstadisticasEquipo(equipoId),
         ]);
 
         if (isCancelled) return;
@@ -46,6 +48,7 @@ const DashboardPage = () => {
         setProximosPartidos(partidosOrdenados);
         const count = (solicitudesResp.solicitudes || []).filter((s) => s.tipo === 'jugador-equipo-crear' && (s.datosPropuestos as any)?.equipoId === equipoId).length;
         setNotificacionesPendientes(count);
+        setResumenEquipo(stats.resumen);
         setError(null);
       } catch (err) {
         console.error(err);
