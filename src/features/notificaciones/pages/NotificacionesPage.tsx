@@ -87,6 +87,8 @@ export default function NotificacionesPage() {
   const [rechazoEdit, setRechazoEdit] = useState<{ id: string; motivo: string } | null>(null);
   const [openSolicitud, setOpenSolicitud] = useState<null | SolicitudEdicion>(null);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
+  const [puedeAprobarBySolicitud, setPuedeAprobarBySolicitud] = useState<Record<string, boolean>>({});
+  const [loadingAprobadoresBySolicitud, setLoadingAprobadoresBySolicitud] = useState<Record<string, boolean>>({});
 
   // Filtros de UI
   const [fEstado, setFEstado] = useState<SolicitudEdicionEstado | 'todos'>(
@@ -165,6 +167,57 @@ export default function NotificacionesPage() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const totalPages = Math.max(1, Math.ceil(filtradas.length / pageSize));
+  const paginated = useMemo(
+    () => filtradas.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize),
+    [filtradas, page, pageSize]
+  );
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const cargarAprobadores = async () => {
+      const pendientes = paginated.filter((s) => s.estado === 'pendiente');
+      const faltantes = pendientes.filter((s) => typeof puedeAprobarBySolicitud[s._id] === 'undefined');
+      if (!faltantes.length) return;
+
+      setLoadingAprobadoresBySolicitud((prev) => {
+        const next = { ...prev };
+        faltantes.forEach((s) => { next[s._id] = true; });
+        return next;
+      });
+
+      const resultados = await Promise.all(
+        faltantes.map(async (s) => {
+          try {
+            const res: any = await getSolicitudAprobadores(s._id);
+            return { id: s._id, puedeAprobar: Boolean(res?.puedeAprobar) };
+          } catch {
+            return { id: s._id, puedeAprobar: false };
+          }
+        })
+      );
+
+      if (isCancelled) return;
+
+      setPuedeAprobarBySolicitud((prev) => {
+        const next = { ...prev };
+        resultados.forEach((r) => { next[r.id] = r.puedeAprobar; });
+        return next;
+      });
+
+      setLoadingAprobadoresBySolicitud((prev) => {
+        const next = { ...prev };
+        faltantes.forEach((s) => { next[s._id] = false; });
+        return next;
+      });
+    };
+
+    void cargarAprobadores();
+    return () => {
+      isCancelled = true;
+    };
+  }, [paginated, puedeAprobarBySolicitud]);
+
   useEffect(() => { setPage(1); }, [fCategoria, q, fEstado, fMostrarSoloMias, fEntidad]);
 
   const manejarAprobar = async (s: SolicitudEdicion) => {
@@ -208,13 +261,13 @@ export default function NotificacionesPage() {
 
   const categorias = useMemo(() => {
     const grupos: Record<string, SolicitudEdicion[]> = {};
-    for (const s of filtradas) {
+    for (const s of paginated) {
       const cat = categoriaDeTipo(s.tipo);
       if (!grupos[cat]) grupos[cat] = [];
       grupos[cat].push(s);
     }
     return grupos;
-  }, [filtradas]);
+  }, [paginated]);
 
   return (
     <>
@@ -294,7 +347,7 @@ export default function NotificacionesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize).map((s) => (
+                  {items.map((s) => (
                     <React.Fragment key={s._id}>
                       <tr className="border-t border-slate-100">
                         <td className="px-3 py-2 font-medium text-slate-900">
@@ -309,7 +362,13 @@ export default function NotificacionesPage() {
                         <td className="px-3 py-2 text-slate-600">{new Date(s.createdAt).toLocaleString()}</td>
                         <td className="px-3 py-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <AprobarButton solicitud={s} accionando={accionando} onAprobar={() => void manejarAprobar(s)} />
+                            <AprobarButton
+                              solicitud={s}
+                              accionando={accionando}
+                              puedeAprobar={puedeAprobarBySolicitud[s._id]}
+                              loadingAprobadores={Boolean(loadingAprobadoresBySolicitud[s._id])}
+                              onAprobar={() => void manejarAprobar(s)}
+                            />
                             <button
                               onClick={() => handleOpenEditar(s)}
                               className="rounded border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
@@ -387,29 +446,15 @@ export default function NotificacionesPage() {
   );
 }
 
-interface AprobarButtonProps { solicitud: SolicitudEdicion; accionando: string | null; onAprobar: () => void; }
-const AprobarButton: React.FC<AprobarButtonProps> = ({ solicitud, accionando, onAprobar }) => {
+interface AprobarButtonProps {
+  solicitud: SolicitudEdicion;
+  accionando: string | null;
+  puedeAprobar?: boolean;
+  loadingAprobadores: boolean;
+  onAprobar: () => void;
+}
+const AprobarButton: React.FC<AprobarButtonProps> = ({ solicitud, accionando, puedeAprobar, loadingAprobadores, onAprobar }) => {
   const { addToast } = useToast();
-  const [puedeAprobar, setPuedeAprobar] = useState<boolean | null>(null);
-  const [loadingAprobadores, setLoadingAprobadores] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    const cargar = async () => {
-      if (solicitud.estado !== 'pendiente') return;
-      setLoadingAprobadores(true);
-      try {
-        const res: any = await getSolicitudAprobadores(solicitud._id);
-        setPuedeAprobar(res?.puedeAprobar ?? false);
-      } catch {
-        if (mounted) setPuedeAprobar(false);
-      } finally {
-        if (mounted) setLoadingAprobadores(false);
-      }
-    };
-    cargar();
-    return () => { mounted = false; };
-  }, [solicitud._id, solicitud.estado]);
 
   const handleClick = () => {
     if (!puedeAprobar) {
@@ -423,8 +468,8 @@ const AprobarButton: React.FC<AprobarButtonProps> = ({ solicitud, accionando, on
     <button
       disabled={accionando === solicitud._id || solicitud.estado !== 'pendiente' || loadingAprobadores}
       onClick={handleClick}
-      className={`rounded px-3 py-1 text-xs font-semibold text-white disabled:cursor-not-allowed ${puedeAprobar === false ? 'bg-slate-400' : 'bg-emerald-600 hover:bg-emerald-700'}`}
-      title={puedeAprobar === false ? 'No podes aprobar' : 'Aprobar solicitud'}
+      className={`rounded px-3 py-1 text-xs font-semibold text-white disabled:cursor-not-allowed ${puedeAprobar === false || typeof puedeAprobar === 'undefined' ? 'bg-slate-400' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+      title={puedeAprobar === false || typeof puedeAprobar === 'undefined' ? 'No podes aprobar' : 'Aprobar solicitud'}
     >
       {loadingAprobadores ? '...' : 'Aprobar'}
     </button>

@@ -51,7 +51,9 @@ const LoginPage = () => {
             </label>
             <input
               id="email"
+              name="email"
               type="email"
+              autoComplete="username"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
@@ -66,7 +68,9 @@ const LoginPage = () => {
             </label>
             <input
               id="password"
+              name="password"
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required

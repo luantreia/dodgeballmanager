@@ -42,7 +42,14 @@ const DashboardPage = () => {
 
         if (isCancelled) return;
 
-        const partidosOrdenados = [...partidos]
+        const ahora = Date.now();
+        const limiteSieteDias = ahora + (7 * 24 * 60 * 60 * 1000);
+        const proximosSieteDias = partidos.filter((partido) => {
+          const t = new Date(partido.fecha as any).getTime();
+          return Number.isFinite(t) && t >= ahora && t <= limiteSieteDias;
+        });
+
+        const partidosOrdenados = [...proximosSieteDias]
           .sort((a, b) => new Date(a.fecha as any).getTime() - new Date(b.fecha as any).getTime())
           .slice(0, 5);
         setProximosPartidos(partidosOrdenados);
