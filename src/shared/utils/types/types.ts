@@ -133,13 +133,25 @@ export interface EquipoCompetencia {
 // TIPOS DE PARTIDOS
 // ========================================
 
-export type EstadoPartido = 'pendiente' | 'confirmado' | 'finalizado' | 'cancelado';
+export type EstadoPartido = 'pendiente' | 'confirmado' | 'en_juego' | 'finalizado' | 'cancelado';
 
 export interface Partido {
   id: string;
   fecha: string;
   hora?: string;
-  rival: string;
+  rival?: string;
+  equipoLocal?: {
+    _id: string;
+    nombre: string;
+    escudo?: string;
+  };
+  equipoVisitante?: {
+    _id: string;
+    nombre: string;
+    escudo?: string;
+  };
+  marcadorLocal?: number;
+  marcadorVisitante?: number;
   estado: EstadoPartido;
   escenario?: string;
   competencia?: Competencia;

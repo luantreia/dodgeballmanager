@@ -1,6 +1,6 @@
 // API client for DT (coach) panel
 interface ApiConfig { baseUrl?: string; getToken?: () => string | null }
-const defaultConfig: ApiConfig = { baseUrl: process.env.REACT_APP_API_BASE || '/api', getToken: () => localStorage.getItem('auth_token') };
+const defaultConfig: ApiConfig = { baseUrl: process.env.REACT_APP_API_BASE || '/api', getToken: () => localStorage.getItem('overtime_token') };
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 async function request<T>(path: string, options: { method?: HttpMethod; body?: any; config?: ApiConfig } = {}): Promise<T> {
   const { method = 'GET', body, config = defaultConfig } = options;
