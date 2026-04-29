@@ -89,6 +89,11 @@ const PartidoCard = ({ partido, variante = 'proximo', actions, onClick }: Partid
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
             {partido.competencia?.nombre ?? 'Amistoso'}
           </span>
+          {(partido.temporada?.nombre || partido.fase?.nombre) ? (
+            <span className="text-[11px] text-slate-400">
+              {[partido.temporada?.nombre, partido.fase?.nombre].filter(Boolean).join(' · ')}
+            </span>
+          ) : null}
           <span className="text-xs text-slate-400 font-medium">
             {fechaTexto}
           </span>

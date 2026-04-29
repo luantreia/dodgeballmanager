@@ -3,8 +3,11 @@ import type { Partido, JugadorPartido, Competencia } from '../../../shared/utils
 
 type PartidoQuery = {
   equipoId: string;
+  tipo?: 'todos' | 'liga' | 'amistoso';
   estado?: 'pendiente' | 'confirmado' | 'finalizado' | 'cancelado';
   competenciaId?: string;
+  temporadaId?: string;
+  faseId?: string;
 };
 
 type PartidoUpdatePayload = {
@@ -104,6 +107,16 @@ type BackendCompetencia = {
   nombre?: string;
 };
 
+type BackendTemporada = {
+  _id: string;
+  nombre?: string;
+};
+
+type BackendFase = {
+  _id: string;
+  nombre?: string;
+};
+
 type BackendEquipoRef = {
   _id: string;
   nombre?: string;
@@ -130,6 +143,8 @@ type BackendPartido = {
   fecha: string;
   ubicacion?: string;
   competencia?: BackendCompetencia | string;
+  temporada?: BackendTemporada | string;
+  fase?: BackendFase | string;
   equipoLocal?: BackendEquipoRef | string;
   equipoVisitante?: BackendEquipoRef | string;
   marcadorLocal?: number;
@@ -236,10 +251,25 @@ const mapPartido = (partido: BackendPartido, contextoEquipoId?: string): Partido
     id: partido._id,
     fecha: fechaISO,
     hora,
+    tipoPartido: competencia ? 'liga' : 'amistoso',
     rival: rivalNombre,
     estado,
     escenario: partido.ubicacion,
     competencia,
+    temporada:
+      partido.temporada
+        ? {
+            id: typeof partido.temporada === 'string' ? partido.temporada : partido.temporada._id,
+            nombre: typeof partido.temporada === 'string' ? 'Temporada' : partido.temporada.nombre ?? 'Temporada',
+          }
+        : undefined,
+    fase:
+      partido.fase
+        ? {
+            id: typeof partido.fase === 'string' ? partido.fase : partido.fase._id,
+            nombre: typeof partido.fase === 'string' ? 'Fase' : partido.fase.nombre ?? 'Fase',
+          }
+        : undefined,
     equipoLocal: local ? { _id: local.id, nombre: local.nombre } : undefined,
     equipoVisitante: visitante ? { _id: visitante.id, nombre: visitante.nombre } : undefined,
     marcadorLocal: partido.marcadorLocal,
@@ -259,16 +289,34 @@ const mapPartido = (partido: BackendPartido, contextoEquipoId?: string): Partido
   return mapped;
 };
 
-export const getPartidos = async ({ equipoId, estado, competenciaId }: PartidoQuery): Promise<Partido[]> => {
+export const getPartidos = async ({ equipoId, estado, competenciaId, temporadaId, faseId, tipo = 'todos' }: PartidoQuery): Promise<Partido[]> => {
   const params = new URLSearchParams();
   if (equipoId) params.set('equipo', equipoId);
   if (estado) params.set('estado', estado);
   if (competenciaId) params.set('competencia', competenciaId);
+  if (temporadaId) params.set('temporadaId', temporadaId);
+  if (faseId) params.set('fase', faseId);
+  if (tipo === 'amistoso') params.set('tipo', 'amistoso');
 
   const response = await authFetch<BackendPartido[] | { items?: BackendPartido[] }>(`/partidos?${params.toString()}`);
-  const partidos = Array.isArray(response) ? response : (response?.items || []);
-  return partidos.map((partido) => mapPartido(partido, equipoId));
+  const partidosRaw = Array.isArray(response) ? response : (response?.items || []);
+  let partidos = partidosRaw.map((partido) => mapPartido(partido, equipoId));
+
+  if (tipo === 'liga') {
+    partidos = partidos.filter((partido) => Boolean(partido.competencia?.id));
+  }
+
+  return partidos;
 };
+
+export type TemporadaOption = { _id: string; nombre?: string };
+export type FaseOption = { _id: string; nombre?: string };
+
+export const getTemporadasByCompetencia = (competenciaId: string) =>
+  authFetch<TemporadaOption[]>(`/temporadas?competencia=${competenciaId}`);
+
+export const getFasesByTemporada = (temporadaId: string) =>
+  authFetch<FaseOption[]>(`/fases?temporada=${temporadaId}`);
 
 export const getPartido = async (partidoId: string, equipoId?: string): Promise<Partido> => {
   const partido = await authFetch<BackendPartido>(`/partidos/${partidoId}`);

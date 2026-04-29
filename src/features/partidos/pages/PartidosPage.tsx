@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import PartidoCard from '../../../shared/components/PartidoCard/PartidoCard';
 import { useEquipo } from '../../../app/providers/EquipoContext';
-import { getPartido, getPartidos } from '../services/partidoService';
+import { getPartido, getPartidos, getTemporadasByCompetencia, getFasesByTemporada } from '../services/partidoService';
 import type { Partido } from '../../../shared/utils/types/types';
 import { ModalPartidoAdmin, ModalSolicitudEditarPartido } from '../components';
 import { useToken } from '../../../app/providers/AuthContext';
@@ -10,6 +10,9 @@ import ModalAlineacionPartido from '../components/modals/ModalAlineacionPartido'
 import ModalInformacionPartido from '../components/modals/ModalInformacionPartido';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { AdjustmentsHorizontalIcon, PencilSquareIcon, EnvelopeIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { getParticipaciones } from '../../competencias/services/equipoCompetenciaService';
+
+type FiltroTipoPartido = 'todos' | 'liga' | 'amistoso';
 
 const PartidosPage = () => {
   const token = useToken();
@@ -17,6 +20,14 @@ const PartidosPage = () => {
   const { addToast } = useToast();
   const [proximos, setProximos] = useState<Partido[]>([]);
   const [recientes, setRecientes] = useState<Partido[]>([]);
+  const [pasadosSinCerrar, setPasadosSinCerrar] = useState<Partido[]>([]);
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipoPartido>('todos');
+  const [filtroCompetencia, setFiltroCompetencia] = useState('');
+  const [filtroTemporada, setFiltroTemporada] = useState('');
+  const [filtroFase, setFiltroFase] = useState('');
+  const [competencias, setCompetencias] = useState<Array<{ id: string; nombre: string }>>([]);
+  const [temporadas, setTemporadas] = useState<Array<{ id: string; nombre: string }>>([]);
+  const [fases, setFases] = useState<Array<{ id: string; nombre: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [showCrearModal, setShowCrearModal] = useState(false);
   const [modalAdminAbierto, setModalAdminAbierto] = useState(false);
@@ -33,11 +44,18 @@ const PartidosPage = () => {
     if (!equipoId) return;
     try {
       setLoading(true);
-      const partidos = await getPartidos({ equipoId });
+      const partidos = await getPartidos({
+        equipoId,
+        tipo: filtroTipo,
+        competenciaId: filtroCompetencia || undefined,
+        temporadaId: filtroTemporada || undefined,
+        faseId: filtroFase || undefined,
+      });
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
       const futuros: Partido[] = [];
       const pasados: Partido[] = [];
+      const pasadosNoFinalizados: Partido[] = [];
 
       partidos.forEach((partido) => {
         const fechaPartido = partido.fecha ? new Date(partido.fecha) : null;
@@ -55,33 +73,104 @@ const PartidosPage = () => {
         } else {
           if (partido.estado === 'finalizado') {
             pasados.push(partido);
+          } else {
+            pasadosNoFinalizados.push(partido);
           }
         }
       });
 
       futuros.sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
       pasados.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      pasadosNoFinalizados.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
       setProximos(futuros);
       setRecientes(pasados);
+      setPasadosSinCerrar(pasadosNoFinalizados);
     } catch (error) {
       console.error(error);
       addToast({ type: 'error', title: 'Error', message: 'No pudimos cargar los partidos del equipo.' });
     } finally {
       setLoading(false);
     }
-  }, [equipoSeleccionado?.id, addToast]);
+  }, [equipoSeleccionado?.id, addToast, filtroTipo, filtroCompetencia, filtroTemporada, filtroFase]);
 
   useEffect(() => {
     const equipoId = equipoSeleccionado?.id;
     if (!equipoId) {
       setProximos([]);
       setRecientes([]);
+      setPasadosSinCerrar([]);
       return;
     }
 
     void refreshPartidos();
   }, [equipoSeleccionado?.id, refreshPartidos]);
+
+  useEffect(() => {
+    const equipoId = equipoSeleccionado?.id;
+    if (!equipoId) {
+      setCompetencias([]);
+      return;
+    }
+
+    const cargar = async () => {
+      try {
+        const participaciones = await getParticipaciones({ equipoId });
+        const mapa = new Map<string, { id: string; nombre: string }>();
+        participaciones.forEach((item) => {
+          if (item.competencia?.id) {
+            mapa.set(item.competencia.id, { id: item.competencia.id, nombre: item.competencia.nombre });
+          }
+        });
+        setCompetencias(Array.from(mapa.values()));
+      } catch {
+        setCompetencias([]);
+      }
+    };
+
+    void cargar();
+  }, [equipoSeleccionado?.id]);
+
+  useEffect(() => {
+    if (!filtroCompetencia) {
+      setTemporadas([]);
+      setFiltroTemporada('');
+      return;
+    }
+
+    const cargar = async () => {
+      try {
+        const data = await getTemporadasByCompetencia(filtroCompetencia);
+        setTemporadas(data.map((temp) => ({ id: temp._id, nombre: temp.nombre ?? 'Temporada' })));
+      } catch {
+        setTemporadas([]);
+      }
+    };
+
+    setFiltroTemporada('');
+    setFiltroFase('');
+    void cargar();
+  }, [filtroCompetencia]);
+
+  useEffect(() => {
+    if (!filtroTemporada) {
+      setFases([]);
+      setFiltroFase('');
+      return;
+    }
+
+    const cargar = async () => {
+      try {
+        const data = await getFasesByTemporada(filtroTemporada);
+        setFases(data.map((fase) => ({ id: fase._id, nombre: fase.nombre ?? 'Fase' })));
+      } catch {
+        setFases([]);
+      }
+    };
+
+    setFiltroFase('');
+    void cargar();
+  }, [filtroTemporada]);
 
   const handleAbrirCrear = () => {
     setShowCrearModal(true);
@@ -158,6 +247,79 @@ const PartidosPage = () => {
           >
             Agregar amistoso
           </button>
+        </div>
+        <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-4">
+          <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Tipo
+            <select
+              value={filtroTipo}
+              onChange={(event) => {
+                const next = event.target.value as FiltroTipoPartido;
+                setFiltroTipo(next);
+                if (next !== 'liga') {
+                  setFiltroCompetencia('');
+                  setFiltroTemporada('');
+                  setFiltroFase('');
+                }
+              }}
+              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700"
+            >
+              <option value="todos">Todos</option>
+              <option value="liga">Liga</option>
+              <option value="amistoso">Amistosos</option>
+            </select>
+          </label>
+
+          <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Competencia
+            <select
+              value={filtroCompetencia}
+              onChange={(event) => setFiltroCompetencia(event.target.value)}
+              disabled={filtroTipo !== 'liga'}
+              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
+            >
+              <option value="">Todas</option>
+              {competencias.map((competencia) => (
+                <option key={competencia.id} value={competencia.id}>
+                  {competencia.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Temporada
+            <select
+              value={filtroTemporada}
+              onChange={(event) => setFiltroTemporada(event.target.value)}
+              disabled={filtroTipo !== 'liga' || !filtroCompetencia}
+              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
+            >
+              <option value="">Todas</option>
+              {temporadas.map((temporada) => (
+                <option key={temporada.id} value={temporada.id}>
+                  {temporada.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Fase
+            <select
+              value={filtroFase}
+              onChange={(event) => setFiltroFase(event.target.value)}
+              disabled={filtroTipo !== 'liga' || !filtroTemporada}
+              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
+            >
+              <option value="">Todas</option>
+              {fases.map((fase) => (
+                <option key={fase.id} value={fase.id}>
+                  {fase.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </header>
 
@@ -327,6 +489,53 @@ const PartidosPage = () => {
             </p>
           )}
         </div>
+      </section>
+
+      <section className="space-y-4">
+        <header className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">Partidos pasados sin cierre</h2>
+          <span className="text-xs uppercase tracking-wide text-slate-400">Revisión pendiente</span>
+        </header>
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 1 }).map((_, index) => (
+              <div key={index} className="h-32 animate-pulse rounded-2xl bg-slate-200" />
+            ))}
+          </div>
+        ) : pasadosSinCerrar.length ? (
+          <div className="space-y-4">
+            {pasadosSinCerrar.slice(0, 10).map((partido) => (
+              <PartidoCard
+                key={partido.id}
+                partido={partido}
+                actions={
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleAbrirInformacion(partido.id)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                    >
+                      <PencilSquareIcon className="h-4 w-4" />
+                      Datos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAbrirSolicitud(partido.id)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
+                    >
+                      <EnvelopeIcon className="h-4 w-4" />
+                      Solicitar edición
+                    </button>
+                  </>
+                }
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
+            No hay partidos anteriores pendientes de cierre.
+          </p>
+        )}
       </section>
       
       <ModalCrearPartido

@@ -139,6 +139,7 @@ export interface Partido {
   id: string;
   fecha: string;
   hora?: string;
+  tipoPartido?: 'liga' | 'amistoso';
   rival?: string;
   equipoLocal?: {
     _id: string;
@@ -155,6 +156,14 @@ export interface Partido {
   estado: EstadoPartido;
   escenario?: string;
   competencia?: Competencia;
+  temporada?: {
+    id: string;
+    nombre: string;
+  };
+  fase?: {
+    id: string;
+    nombre: string;
+  };
   resultado?: {
     puntosEquipo: number;
     puntosRival: number;
