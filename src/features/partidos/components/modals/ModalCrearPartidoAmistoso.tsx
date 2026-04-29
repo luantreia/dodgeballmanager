@@ -40,6 +40,7 @@ export const ModalCrearPartido = ({ isOpen, equipoId, onClose, onSuccess }: Moda
   const [form, setForm] = useState<CrearFormState>(crearFormDefault);
   const [equiposOpciones, setEquiposOpciones] = useState<EquipoOpcion[]>([]);
   const [equiposLoading, setEquiposLoading] = useState(false);
+  const [equiposError, setEquiposError] = useState<string | null>(null);
   const [rivalSeleccionado, setRivalSeleccionado] = useState<EquipoOpcion | null>(null);
   const [crearLoading, setCrearLoading] = useState(false);
   const [crearError, setCrearError] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export const ModalCrearPartido = ({ isOpen, equipoId, onClose, onSuccess }: Moda
     setForm(crearFormDefault());
     setEquiposOpciones([]);
     setEquiposLoading(false);
+    setEquiposError(null);
     setRivalSeleccionado(null);
     setCrearLoading(false);
     setCrearError(null);
@@ -67,14 +69,21 @@ export const ModalCrearPartido = ({ isOpen, equipoId, onClose, onSuccess }: Moda
     const buscar = async () => {
       try {
         setEquiposLoading(true);
+        setEquiposError(null);
         const termino = form.rival?.trim?.() ?? '';
+        if (termino.length < 2) {
+          if (!controller.signal.aborted) {
+            setEquiposOpciones([]);
+          }
+          return;
+        }
         const opciones = await obtenerOpcionesEquipos(termino, equipoId);
         if (!controller.signal.aborted) {
           setEquiposOpciones(opciones);
         }
-      } catch (error) {
+      } catch (_error) {
         if (!controller.signal.aborted) {
-          console.error(error);
+          setEquiposError('No pudimos cargar equipos rivales. Intenta nuevamente.');
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -148,7 +157,8 @@ export const ModalCrearPartido = ({ isOpen, equipoId, onClose, onSuccess }: Moda
       onClose();
     } catch (error) {
       console.error(error);
-      setCrearError('No pudimos crear el partido. Intenta nuevamente.');
+      const detail = (error as any)?.message;
+      setCrearError(detail ? `No pudimos crear el partido: ${detail}` : 'No pudimos crear el partido. Intenta nuevamente.');
     } finally {
       setCrearLoading(false);
     }
@@ -189,8 +199,11 @@ export const ModalCrearPartido = ({ isOpen, equipoId, onClose, onSuccess }: Moda
             {equiposLoading ? (
               <p className="mt-2 text-xs text-slate-400">Buscando equipos…</p>
             ) : null}
-            {!equiposLoading && equiposOpciones.length === 0 ? (
+            {!equiposLoading && !equiposError && form.rival.trim().length >= 2 && equiposOpciones.length === 0 ? (
               <p className="mt-2 text-xs text-slate-500">No encontramos equipos. Probá con otro nombre.</p>
+            ) : null}
+            {!equiposLoading && equiposError ? (
+              <p className="mt-2 text-xs text-rose-600">{equiposError}</p>
             ) : null}
             {equiposOpciones.length ? (
               <ul className="mt-2 max-h-48 overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">

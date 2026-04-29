@@ -10,6 +10,14 @@ export interface PartidoCardProps {
 }
 
 const badgeStyles = {
+  pendiente: {
+    label: 'Programado',
+    className: 'bg-slate-100 text-slate-600',
+  },
+  confirmado: {
+    label: 'Confirmado',
+    className: 'bg-sky-100 text-sky-700',
+  },
   programado: {
     label: 'Programado',
     className: 'bg-slate-100 text-slate-600',
@@ -41,7 +49,10 @@ const PartidoCard = ({ partido, variante = 'proximo', actions, onClick }: Partid
 
   const estado = partido.estado || 'programado';
   const badge = badgeStyles[estado as keyof typeof badgeStyles] || badgeStyles.programado;
-  const mostrarMarcador = estado === 'finalizado' || estado === 'en_juego';
+  const mostrarMarcador =
+    estado === 'finalizado' ||
+    estado === 'en_juego' ||
+    (typeof partido.marcadorLocal === 'number' && typeof partido.marcadorVisitante === 'number');
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (!onClick) return;

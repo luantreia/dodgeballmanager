@@ -166,7 +166,7 @@ export const mapEstadoPartido = (estado?: BackendPartido['estado']): Partido['es
     case 'programado':
       return 'pendiente';
     case 'en_juego':
-      return 'confirmado';
+      return 'en_juego';
     case 'finalizado':
       return 'finalizado';
     case 'cancelado':
@@ -240,9 +240,16 @@ const mapPartido = (partido: BackendPartido, contextoEquipoId?: string): Partido
     estado,
     escenario: partido.ubicacion,
     competencia,
+    equipoLocal: local ? { _id: local.id, nombre: local.nombre } : undefined,
+    equipoVisitante: visitante ? { _id: visitante.id, nombre: visitante.nombre } : undefined,
+    marcadorLocal: partido.marcadorLocal,
+    marcadorVisitante: partido.marcadorVisitante,
   };
 
-  if (estado === 'finalizado') {
+  if (
+    estado === 'finalizado' ||
+    (typeof partido.marcadorLocal === 'number' && typeof partido.marcadorVisitante === 'number')
+  ) {
     mapped.resultado = {
       puntosEquipo,
       puntosRival,

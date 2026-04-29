@@ -132,10 +132,15 @@ export const obtenerOpcionesEquipos = async (query: string, excluirId?: string):
   if (query) params.set('q', query);
   if (excluirId) params.set('excluir', excluirId);
 
-  const data = await authFetch<Array<{ _id: string; nombre: string; escudo?: string; tipo?: string; pais?: string }>>(
+  const data = await authFetch<
+    Array<{ _id: string; nombre: string; escudo?: string; tipo?: string; pais?: string }>
+    | { items?: Array<{ _id: string; nombre: string; escudo?: string; tipo?: string; pais?: string }> }
+  >(
     `/equipos?${params.toString()}`
   );
-  return data.map((item) => ({ id: item._id, nombre: item.nombre, escudo: item.escudo, tipo: item.tipo, pais: item.pais }));
+
+  const items = Array.isArray(data) ? data : (data?.items || []);
+  return items.map((item) => ({ id: item._id, nombre: item.nombre, escudo: item.escudo, tipo: item.tipo, pais: item.pais }));
 };
 
 // Nota: flujo de jugador removido en esta app; opciones para jugador no se exponen aquí.

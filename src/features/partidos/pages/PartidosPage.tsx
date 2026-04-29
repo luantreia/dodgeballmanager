@@ -53,7 +53,9 @@ const PartidosPage = () => {
         if (fechaComparacion.getTime() >= hoy.getTime()) {
           futuros.push(partido);
         } else {
-          pasados.push(partido);
+          if (partido.estado === 'finalizado') {
+            pasados.push(partido);
+          }
         }
       });
 
