@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { actualizarUsuario, cambiarPassword } from '../services/usuarioService';
 import { Input } from '../../../shared/components/ui';
@@ -26,7 +26,7 @@ const PerfilPage = () => {
   const [jugadoresCount, setJugadoresCount] = useState<number | null>(null);
   const [equiposCount, setEquiposCount] = useState<number | null>(null);
 
-  const refreshCounts = async () => {
+  const refreshCounts = useCallback(async () => {
     try {
       const [jugadores, equipos] = await Promise.all([
         authFetch<any[]>('/jugadores/admin'),
@@ -38,13 +38,13 @@ const PerfilPage = () => {
       setJugadoresCount(0);
       setEquiposCount(0);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (user) {
       void refreshCounts();
     }
-  }, [user?.id]);
+  }, [user, refreshCounts]);
 
   const openSolicitud = (tipo: SolicitudEdicionTipo) => {
     setPrefillTipo(tipo);

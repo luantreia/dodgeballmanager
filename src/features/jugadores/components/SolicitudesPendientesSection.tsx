@@ -28,7 +28,6 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
   const [adminsEquipo, setAdminsEquipo] = useState<string[]>([]);
   const [jugadorNombres, setJugadorNombres] = useState<Map<string, string>>(new Map());
   const [jugadorAdmins, setJugadorAdmins] = useState<Map<string, string[]>>(new Map());
-  const [contratoToEquipo, setContratoToEquipo] = useState<Map<string, string>>(new Map());
   const [contratoToJugador, setContratoToJugador] = useState<Map<string, string>>(new Map());
   const { user } = useAuth();
   const { addToast } = useToast();
@@ -53,7 +52,6 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
         if (contratoId) cte.set(contratoId, eqId);
         if (contratoId && jugId) ctj.set(contratoId, jugId);
       }
-      setContratoToEquipo(cte);
       setContratoToJugador(ctj);
 
       // Filtrar relacionadas con este equipo: crear, eliminar y editar
@@ -65,13 +63,13 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
         if (solicitud.tipo === 'jugador-equipo-eliminar') {
           const contratoId = (solicitud.datosPropuestos as any)?.contratoId as string | undefined;
           if (!contratoId) return false;
-          const eqId = contratoToEquipo.get(contratoId);
+          const eqId = cte.get(contratoId);
           return eqId === equipoId;
         }
         if (solicitud.tipo === 'jugador-equipo-editar') {
           const contratoId = solicitud.entidad as string | undefined;
           if (!contratoId) return false;
-          const eqId = contratoToEquipo.get(contratoId);
+          const eqId = cte.get(contratoId);
           return eqId === equipoId;
         }
         return false;
@@ -108,11 +106,11 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
           .filter((id): id is string => Boolean(id)),
         ...relacionadas
           .filter((s) => s.tipo === 'jugador-equipo-eliminar')
-          .map((s) => contratoToJugador.get(((s.datosPropuestos as any)?.contratoId as string) || ''))
+          .map((s) => ctj.get(((s.datosPropuestos as any)?.contratoId as string) || ''))
           .filter((id): id is string => Boolean(id)),
         ...relacionadas
           .filter((s) => s.tipo === 'jugador-equipo-editar')
-          .map((s) => (s.entidad ? contratoToJugador.get(String(s.entidad)) : undefined))
+          .map((s) => (s.entidad ? ctj.get(String(s.entidad)) : undefined))
           .filter((id): id is string => Boolean(id)),
       ]));
 

@@ -66,7 +66,7 @@ export const SolicitudModal: React.FC<SolicitudModalProps> = ({
       if (prefillTipo) setTipoSeleccionado(prefillTipo);
       if (prefillDatos) setDatosPropuestos((prev) => ({ ...prev, ...prefillDatos }));
     }
-  }, [prefillTipo, JSON.stringify(prefillDatos), isOpen]);
+  }, [prefillTipo, prefillDatos, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

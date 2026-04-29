@@ -4,7 +4,7 @@ import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getParticipaciones } from '../services/equipoCompetenciaService';
 import type { EquipoCompetencia } from '../../../shared/utils/types/types';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
-import { Input, Textarea } from '../../../shared/components/ui';
+import { Textarea } from '../../../shared/components/ui';
 import { opcionesTemporadasParaEquipo, crearSolicitudParticipacionTemporada, type TemporadaOpcion } from '../services/participacionTemporadaService';
 
 const CompetenciasPage = () => {

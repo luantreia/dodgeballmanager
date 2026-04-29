@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../providers/AuthContext';
 import TeamSelector from '../../features/equipo/components/TeamSelector';
 import { SolicitudNotification } from '../../shared/components';

@@ -25,7 +25,7 @@ export const FeatureFlagsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         const data = await res.json();
         const remote: FeatureFlags = {
           enableGpt5: !!data?.features?.enableGpt5,
-          model: data?.model || flags.model,
+          model: data?.model || defaultFlags.model,
         };
         if (mounted) setFlags((prev) => ({ ...prev, ...remote }));
       } catch {

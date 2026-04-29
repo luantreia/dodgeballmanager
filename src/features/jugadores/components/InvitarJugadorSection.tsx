@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Input } from '../../../shared/components/ui';
 import SolicitudModal from '../../../shared/components/SolicitudModal/SolicitudModal';
-import { SolicitudButton } from '../../../shared/components';
 import { buscarJugadoresDisponibles, type JugadorOpcion } from '../services/jugadorEquipoOpcionesService';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 

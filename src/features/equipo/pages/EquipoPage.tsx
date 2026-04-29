@@ -37,7 +37,6 @@ const EquipoPage = () => {
     logoUrl: '',
   });
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
-  const [adminUsers, setAdminUsers] = useState<Map<string, any>>(new Map());
   const [miembros, setMiembros] = useState<TeamMember[]>([]);
   const [miembroUsers, setMiembroUsers] = useState<Map<string, { nombre?: string; email?: string }>>(new Map());
   const [loadingMiembros, setLoadingMiembros] = useState(false);
@@ -72,17 +71,6 @@ const EquipoPage = () => {
           descripcion: equipo.descripcion ?? '',
           logoUrl: equipo.logoUrl ?? '',
         });
-        // Cargar administradores
-        const adminIds = await getAdminsEquipo(equipoId);
-        const userPromises = adminIds.map(async (id) => {
-          return await getUsuarioById(id).catch(() => ({ id, nombre: id, email: 'Usuario no encontrado' }));
-        });
-        const users = await Promise.all(userPromises);
-        const adminUsersMap = new Map<string, any>();
-        users.forEach((user) => {
-          adminUsersMap.set(user.id, user);
-        });
-        setAdminUsers(adminUsersMap);
       } catch (error) {
         console.error(error);
         if (!isCancelled) {
@@ -161,27 +149,8 @@ const EquipoPage = () => {
     }
   };
 
-  const refreshAdmins = async () => {
-    if (!equipoSeleccionado) return;
-    try {
-      const adminIds = await getAdminsEquipo(equipoSeleccionado.id);
-      const userPromises = adminIds.map(async (id) => {
-        return await getUsuarioById(id).catch(() => ({ id, nombre: id, email: 'Usuario no encontrado' }));
-      });
-      const users = await Promise.all(userPromises);
-      const adminUsersMap = new Map<string, any>();
-      users.forEach((user) => {
-        adminUsersMap.set(user.id, user);
-      });
-      setAdminUsers(adminUsersMap);
-    } catch (error) {
-      console.error('Error refreshing admins:', error);
-    }
-  };
-
   const addAdminFunction = async (entityId: string, { email }: { email: string }) => {
     await agregarAdminEquipo(entityId, email);
-    await refreshAdmins();
     addToast({ type: 'success', title: 'Agregado', message: 'Administrador agregado' });
   };
 
@@ -222,7 +191,6 @@ const EquipoPage = () => {
 
   const removeAdminFunction = async (entityId: string, adminId: string) => {
     await quitarAdminEquipo(entityId, adminId);
-    await refreshAdmins();
     addToast({ type: 'success', title: 'Quitado', message: 'Administrador removido' });
   };
 

@@ -5,8 +5,6 @@ import {
   ISolicitudCrearPayload,
   ISolicitudActualizarPayload,
   ISolicitudFiltros,
-  SolicitudEdicionEstado,
-  ISolicitudesPaginadas,
 } from '../types/solicitudesEdicion';
 import { ISolicitudOpciones, ISolicitudLoadingState } from '../types/solicitudesEdicion';
 import {
@@ -16,7 +14,6 @@ import {
   crearSolicitudEdicion,
   actualizarSolicitudEdicion,
   cancelarSolicitudEdicion,
-  getSolicitudesPendientes,
   contarSolicitudesPendientes,
 } from '../index';
 

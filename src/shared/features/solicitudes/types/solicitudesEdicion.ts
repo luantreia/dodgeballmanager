@@ -1,4 +1,4 @@
-﻿export type SolicitudEdicionEstado = 'pendiente' | 'aceptado' | 'rechazado' | 'cancelado';
+export type SolicitudEdicionEstado = 'pendiente' | 'aceptado' | 'rechazado' | 'cancelado';
 
 export type SolicitudEdicionTipo =
   //pagina partido
