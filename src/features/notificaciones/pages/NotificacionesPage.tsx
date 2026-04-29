@@ -277,50 +277,54 @@ export default function NotificacionesPage() {
           <h1 className="text-2xl font-semibold text-slate-900">Notificaciones</h1>
           <p className="text-sm text-slate-500">Gestioná todas las solicitudes por categoría.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select value={fEstado} onChange={(e) => setFEstado(e.target.value as any)} className="rounded-lg border-slate-300 text-sm">
-            <option value="todos">Todos los estados</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="aceptado">Aceptado</option>
-            <option value="rechazado">Rechazado</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
-          <select value={fCategoria} onChange={(e) => setFCategoria(e.target.value)} className="rounded-lg border-slate-300 text-sm">
-            <option>Todas</option>
-            <option>Solicitudes de usuarios</option>
-            <option>Contratos</option>
-            <option>Participaciones Temporada</option>
-            <option>Participaciones Jugador-Temporada</option>
-            <option>Partidos</option>
-          </select>
-          
-          {/* Filtro de Entidad (Equipos) */}
-          <select 
-            value={fEntidad} 
-            onChange={(e) => setFEntidad(e.target.value)} 
-            className="rounded-lg border-slate-300 text-sm"
-          >
-            <option value="todas">Todos mis equipos</option>
-            {equipos.map(eq => (
-               <option key={eq.id} value={eq.id}>{eq.nombre}</option>
-            ))}
-          </select>
+        <div className="w-full space-y-2 md:w-auto">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <select value={fEstado} onChange={(e) => setFEstado(e.target.value as any)} className="w-full rounded-lg border-slate-300 text-sm">
+              <option value="todos">Todos los estados</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="aceptado">Aceptado</option>
+              <option value="rechazado">Rechazado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+            <select value={fCategoria} onChange={(e) => setFCategoria(e.target.value)} className="w-full rounded-lg border-slate-300 text-sm">
+              <option>Todas</option>
+              <option>Solicitudes de usuarios</option>
+              <option>Contratos</option>
+              <option>Participaciones Temporada</option>
+              <option>Participaciones Jugador-Temporada</option>
+              <option>Partidos</option>
+            </select>
+            <select
+              value={fEntidad}
+              onChange={(e) => setFEntidad(e.target.value)}
+              className="w-full rounded-lg border-slate-300 text-sm"
+            >
+              <option value="todas">Todos mis equipos</option>
+              {equipos.map((eq) => (
+                <option key={eq.id} value={eq.id}>{eq.nombre}</option>
+              ))}
+            </select>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar…"
+              className="w-full rounded-lg border-slate-300 text-sm"
+            />
+          </div>
 
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar…"
-            className="w-48 rounded-lg border-slate-300 text-sm"
-          />
-          <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" checked={fMostrarSoloMias} onChange={(e) => setFMostrarSoloMias(e.target.checked)} />
-            Solo mis solicitudes
-          </label>
-          <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
-            Auto-refresh 30s
-          </label>
-          <button onClick={() => void cargar()} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Recargar</button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" checked={fMostrarSoloMias} onChange={(e) => setFMostrarSoloMias(e.target.checked)} />
+                Solo mis solicitudes
+              </label>
+              <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+                Auto-refresh 30s
+              </label>
+            </div>
+            <button onClick={() => void cargar()} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Recargar</button>
+          </div>
         </div>
       </header>
 

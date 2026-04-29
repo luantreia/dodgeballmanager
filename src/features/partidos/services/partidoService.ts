@@ -258,7 +258,8 @@ export const getPartidos = async ({ equipoId, estado, competenciaId }: PartidoQu
   if (estado) params.set('estado', estado);
   if (competenciaId) params.set('competencia', competenciaId);
 
-  const partidos = await authFetch<BackendPartido[]>(`/partidos?${params.toString()}`);
+  const response = await authFetch<BackendPartido[] | { items?: BackendPartido[] }>(`/partidos?${params.toString()}`);
+  const partidos = Array.isArray(response) ? response : (response?.items || []);
   return partidos.map((partido) => mapPartido(partido, equipoId));
 };
 

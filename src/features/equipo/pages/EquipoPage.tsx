@@ -41,6 +41,8 @@ const EquipoPage = () => {
   const [miembroUsers, setMiembroUsers] = useState<Map<string, { nombre?: string; email?: string }>>(new Map());
   const [loadingMiembros, setLoadingMiembros] = useState(false);
   const [savingMiembro, setSavingMiembro] = useState(false);
+  const [snapshotMiembros, setSnapshotMiembros] = useState<Record<string, string>>({});
+  const [miembroAQuitar, setMiembroAQuitar] = useState<{ usuarioId: string; nombre: string } | null>(null);
   const [nuevoMiembroEmail, setNuevoMiembroEmail] = useState('');
   const [nuevoMiembroRol, setNuevoMiembroRol] = useState<TeamMemberRole>('video_analista');
   const [nuevoMiembroPermisos, setNuevoMiembroPermisos] = useState<TeamPermission[]>(['stats.capture']);
@@ -100,6 +102,15 @@ const EquipoPage = () => {
       setLoadingMiembros(true);
       const data = await listarMiembrosEquipo(equipoSeleccionado.id);
       setMiembros(data);
+      const nextSnapshot: Record<string, string> = {};
+      data.forEach((miembro) => {
+        nextSnapshot[miembro.usuarioId] = JSON.stringify({
+          rol: miembro.rol,
+          estado: miembro.estado,
+          permisos: [...(miembro.permisos || [])].sort(),
+        });
+      });
+      setSnapshotMiembros(nextSnapshot);
 
       const usuarios = await Promise.all(
         data.map(async (miembro) => {
@@ -324,6 +335,23 @@ const EquipoPage = () => {
 
       return { ...item, permisos: nextPermisos };
     }));
+  };
+
+  const isMiembroDirty = (miembro: TeamMember) => {
+    const current = JSON.stringify({
+      rol: miembro.rol,
+      estado: miembro.estado,
+      permisos: [...(miembro.permisos || [])].sort(),
+    });
+    return snapshotMiembros[miembro.usuarioId] !== current;
+  };
+
+  const handleSolicitarQuitarMiembro = (usuarioId: string) => {
+    const info = miembroUsers.get(usuarioId);
+    setMiembroAQuitar({
+      usuarioId,
+      nombre: info?.nombre || info?.email || usuarioId,
+    });
   };
 
   const handleQuitarMiembro = async (usuarioId: string) => {
@@ -599,16 +627,23 @@ const EquipoPage = () => {
                   </td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex gap-2">
+                      {isMiembroDirty(miembro) ? (
+                        <span className="rounded bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                          Sin guardar
+                        </span>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => void handleGuardarMiembro(miembro)}
+                        disabled={savingMiembro || !isMiembroDirty(miembro)}
                         className="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                       >
                         Guardar
                       </button>
                       <button
                         type="button"
-                        onClick={() => void handleQuitarMiembro(miembro.usuarioId)}
+                        onClick={() => handleSolicitarQuitarMiembro(miembro.usuarioId)}
+                        disabled={savingMiembro}
                         className="rounded-md border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50"
                       >
                         Quitar
@@ -658,6 +693,34 @@ const EquipoPage = () => {
               className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
             >
               Reemplazar por preset
+            </button>
+          </div>
+        </div>
+      </ModalBase>
+
+      <ModalBase isOpen={Boolean(miembroAQuitar)} onClose={() => setMiembroAQuitar(null)} title="Quitar miembro" size="sm">
+        <div className="p-4">
+          <p className="text-sm text-slate-700">
+            Vas a quitar a <span className="font-semibold">{miembroAQuitar?.nombre}</span> del equipo. Esta acción no se puede deshacer.
+          </p>
+          <div className="mt-6 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setMiembroAQuitar(null)}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:border-slate-300 hover:text-slate-900"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!miembroAQuitar) return;
+                void handleQuitarMiembro(miembroAQuitar.usuarioId);
+                setMiembroAQuitar(null);
+              }}
+              className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-700"
+            >
+              Confirmar quitar
             </button>
           </div>
         </div>

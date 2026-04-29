@@ -9,6 +9,7 @@ import { ModalCrearPartido } from '../components/modals/ModalCrearPartidoAmistos
 import ModalAlineacionPartido from '../components/modals/ModalAlineacionPartido';
 import ModalInformacionPartido from '../components/modals/ModalInformacionPartido';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
+import { AdjustmentsHorizontalIcon, PencilSquareIcon, EnvelopeIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 
 const PartidosPage = () => {
   const token = useToken();
@@ -222,28 +223,32 @@ const PartidosPage = () => {
                         onClick={() => handleAbrirAlineacion(partido.id)}
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                       >
-                        🏐 Alineación
+                        <AdjustmentsHorizontalIcon className="h-4 w-4" />
+                        Alineación
                       </button>
                       <button
                         type="button"
                         onClick={() => handleAbrirInformacion(partido.id)}
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                       >
-                        🖊️ Datos
+                        <PencilSquareIcon className="h-4 w-4" />
+                        Datos
                       </button>
                       <button
                         type="button"
                         onClick={() => handleAbrirSolicitud(partido.id)}
                         className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
                       >
-                        ✉️ Solicitar Edición
+                        <EnvelopeIcon className="h-4 w-4" />
+                        Solicitar edición
                       </button>
                       <button
                         type="button"
                         onClick={() => handleSeleccionar(partido.id)}
                         className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
                       >
-                        ⚙️ Gestionar
+                        <Cog6ToothIcon className="h-4 w-4" />
+                        Gestionar
                       </button>
                     </>
                   }
@@ -282,28 +287,32 @@ const PartidosPage = () => {
                         onClick={() => handleAbrirAlineacion(partido.id)}
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                       >
-                        🏐 Alineación
+                        <AdjustmentsHorizontalIcon className="h-4 w-4" />
+                        Alineación
                       </button>
                       <button
                         type="button"
                         onClick={() => handleAbrirInformacion(partido.id)}
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                       >
-                        🖊️ Datos
+                        <PencilSquareIcon className="h-4 w-4" />
+                        Datos
                       </button>
                       <button
                         type="button"
                         onClick={() => handleAbrirSolicitud(partido.id)}
                         className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
                       >
-                        ✉️ Solicitar Edición
+                        <EnvelopeIcon className="h-4 w-4" />
+                        Solicitar edición
                       </button>
                       <button
                         type="button"
                         onClick={() => handleSeleccionar(partido.id)}
                         className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
                       >
-                        ⚙️ Gestionar
+                        <Cog6ToothIcon className="h-4 w-4" />
+                        Gestionar
                       </button>
                     </>
                   }
