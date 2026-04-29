@@ -467,6 +467,7 @@ export type EstadisticasJugadorSet = {
   hits: number;
   outs: number;
   catches: number;
+  survive?: boolean;
 };
 
 export const obtenerEstadisticasJugadorSet = (query: {
@@ -492,6 +493,7 @@ export const crearEstadisticaJugadorSet = (payload: {
   hits?: number;
   outs?: number;
   catches?: number;
+  survive?: boolean;
 }) =>
   authFetch<EstadisticasJugadorSet>(`/estadisticas/jugador-set`, {
     method: 'POST',
@@ -500,7 +502,7 @@ export const crearEstadisticaJugadorSet = (payload: {
 
 export const actualizarEstadisticaJugadorSet = (
   id: string,
-  payload: Partial<Pick<EstadisticasJugadorSet, 'throws' | 'hits' | 'outs' | 'catches'>>,
+  payload: Partial<Pick<EstadisticasJugadorSet, 'throws' | 'hits' | 'outs' | 'catches' | 'survive'>>,
 ) =>
   authFetch<EstadisticasJugadorSet>(`/estadisticas/jugador-set/${id}`, {
     method: 'PUT',

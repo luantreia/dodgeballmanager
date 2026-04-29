@@ -15,6 +15,7 @@ type BackendRef = {
   _id?: string;
   id?: string;
   nombre?: string;
+  toString?: () => string;
 };
 
 type BackendEquipoCompetencia = {
@@ -45,7 +46,15 @@ type BackendCompetenciaCatalogo = {
 const toId = (ref?: BackendRef | string): string | undefined => {
   if (!ref) return undefined;
   if (typeof ref === 'string') return ref;
-  return ref.id || ref._id;
+  if (ref.id || ref._id) return ref.id || ref._id;
+
+  // Mongoose ObjectId serialized through lean can arrive as object with only toString.
+  if (typeof ref.toString === 'function') {
+    const raw = ref.toString();
+    if (raw && raw !== '[object Object]') return raw;
+  }
+
+  return undefined;
 };
 
 const toNombre = (ref?: BackendRef | string, fallback = 'Competencia'): string => {

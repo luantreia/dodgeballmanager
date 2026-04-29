@@ -27,7 +27,7 @@ type ModalCapturaSetEstadisticasProps = {
   esCompetencia?: boolean;
 };
 
-const ESTADISTICAS_INICIALES = { throws: 0, hits: 0, outs: 0, catches: 0 } as const;
+const ESTADISTICAS_INICIALES = { throws: 0, hits: 0, outs: 0, catches: 0, survive: false } as const;
 
 const ModalCapturaSetEstadisticas = ({
   partido,
@@ -49,7 +49,8 @@ const ModalCapturaSetEstadisticas = ({
   const [opcionesVisitante, setOpcionesVisitante] = useState<Array<{ value: string; label: string }>>([]);
   const [guardando, setGuardando] = useState(false);
 
-  type Stats = { throws: number; hits: number; outs: number; catches: number };
+  type Stats = { throws: number; hits: number; outs: number; catches: number; survive: boolean };
+  type CampoNumerico = 'throws' | 'hits' | 'outs' | 'catches';
   type Row = { jugadorId?: string; jugadorPartidoId?: string; estadisticas: Stats; statId?: string };
   const [rowsLocal, setRowsLocal] = useState<Row[]>([]);
   const [rowsVisitante, setRowsVisitante] = useState<Row[]>([]);
@@ -146,7 +147,13 @@ const ModalCapturaSetEstadisticas = ({
           const row: Row = {
             jugadorId,
             jugadorPartidoId,
-            estadisticas: { throws: stat.throws ?? 0, hits: stat.hits ?? 0, outs: stat.outs ?? 0, catches: stat.catches ?? 0 },
+            estadisticas: {
+              throws: stat.throws ?? 0,
+              hits: stat.hits ?? 0,
+              outs: stat.outs ?? 0,
+              catches: stat.catches ?? 0,
+              survive: Boolean(stat.survive),
+            },
             statId: stat._id,
           };
           if (jugadorPartidoId) statMap[jugadorPartidoId] = stat._id;
@@ -164,7 +171,7 @@ const ModalCapturaSetEstadisticas = ({
           ...faltantesLocal.map((opt) => ({
             jugadorId: opt.value,
             jugadorPartidoId: mapJugadorToJp[opt.value] ?? opt.value,
-            estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0 },
+            estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0, survive: false },
           } as Row)),
         ];
         aVisit = [
@@ -172,7 +179,7 @@ const ModalCapturaSetEstadisticas = ({
           ...faltantesVisit.map((opt) => ({
             jugadorId: opt.value,
             jugadorPartidoId: mapJugadorToJp[opt.value] ?? opt.value,
-            estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0 },
+            estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0, survive: false },
           } as Row)),
         ];
 
@@ -198,12 +205,12 @@ const ModalCapturaSetEstadisticas = ({
     } as Record<string, Row[]>;
   }, [partido?.equipoLocal, partido?.equipoVisitante, rowsLocal, rowsVisitante]);
 
-  const cambiarEstadistica = useCallback((equipoId: string, idx: number, campo: keyof Stats, delta: number) => {
+  const cambiarEstadistica = useCallback((equipoId: string, idx: number, campo: CampoNumerico, delta: number) => {
     const localId = extractEquipoId(partido?.equipoLocal);
     if (equipoId === localId) {
       setRowsLocal((prev) => {
         const next = [...prev];
-        const cur = next[idx] ?? { estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0 } };
+        const cur = next[idx] ?? { estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0, survive: false } };
         const value = (cur.estadisticas[campo] ?? 0) + delta;
         next[idx] = { ...cur, estadisticas: { ...cur.estadisticas, [campo]: Math.max(0, value) } } as Row;
         return next;
@@ -211,9 +218,28 @@ const ModalCapturaSetEstadisticas = ({
     } else {
       setRowsVisitante((prev) => {
         const next = [...prev];
-        const cur = next[idx] ?? { estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0 } };
+        const cur = next[idx] ?? { estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0, survive: false } };
         const value = (cur.estadisticas[campo] ?? 0) + delta;
         next[idx] = { ...cur, estadisticas: { ...cur.estadisticas, [campo]: Math.max(0, value) } } as Row;
+        return next;
+      });
+    }
+  }, [partido?.equipoLocal]);
+
+  const cambiarSurvive = useCallback((equipoId: string, idx: number, value: boolean) => {
+    const localId = extractEquipoId(partido?.equipoLocal);
+    if (equipoId === localId) {
+      setRowsLocal((prev) => {
+        const next = [...prev];
+        const cur = next[idx] ?? { estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0, survive: false } };
+        next[idx] = { ...cur, estadisticas: { ...cur.estadisticas, survive: value } } as Row;
+        return next;
+      });
+    } else {
+      setRowsVisitante((prev) => {
+        const next = [...prev];
+        const cur = next[idx] ?? { estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0, survive: false } };
+        next[idx] = { ...cur, estadisticas: { ...cur.estadisticas, survive: value } } as Row;
         return next;
       });
     }
@@ -224,7 +250,7 @@ const ModalCapturaSetEstadisticas = ({
     setter((prev) => {
       const next = [...prev];
       const jpId = mapJugadorToJp[jugadorId] ?? jugadorId;
-      const cur = next[index] ?? { estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0 } };
+      const cur = next[index] ?? { estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0, survive: false } };
       next[index] = { ...cur, jugadorId, jugadorPartidoId: jpId, statId: cur.statId && cur.jugadorPartidoId === jpId ? cur.statId : undefined };
       return next;
     });
@@ -374,7 +400,8 @@ const ModalCapturaSetEstadisticas = ({
                       estadisticas: { ...ESTADISTICAS_INICIALES, ...j.estadisticas },
                     })),
                   }}
-                  onCambiarEstadistica={(equipoId, idx, campo, delta) => cambiarEstadistica(equipoId, idx, campo as any, delta)}
+                  onCambiarEstadistica={(equipoId, idx, campo, delta) => cambiarEstadistica(equipoId, idx, campo, delta)}
+                  onCambiarSurvive={cambiarSurvive}
                   onAsignarJugador={(equipo, index, jugadorId) => onAsignarJugador(equipo, index, jugadorId)}
                   token={token}
                   opcionesJugadoresLocal={opcionesLocal}

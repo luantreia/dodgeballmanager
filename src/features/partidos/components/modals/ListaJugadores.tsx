@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FC } from 'react';
-import JugadorEstadisticasCard, {
-  type EstadisticasJugador,
-} from '../common/JugadorEstadisticasCard';
+import JugadorEstadisticasCard from '../common/JugadorEstadisticasCard';
 import { getJugadoresEquipo } from '../../../jugadores/services/jugadorEquipoService';
+
+type CampoNumerico = 'throws' | 'hits' | 'outs' | 'catches';
 
 export type EstadisticaJugadorEntrada = {
   jugadorId?: string;
-  estadisticas?: Record<string, number>;
+  estadisticas?: {
+    throws?: number;
+    hits?: number;
+    outs?: number;
+    catches?: number;
+    survive?: boolean;
+  };
 };
 
 export type ListaJugadoresProps = {
@@ -15,7 +21,8 @@ export type ListaJugadoresProps = {
   equipoId: string;
   estadisticasJugador?: EstadisticaJugadorEntrada[];
   onAsignarJugador: (index: number, jugadorId: string) => void;
-  onCambiarEstadistica: (index: number, campo: keyof EstadisticasJugador, delta: number) => void;
+  onCambiarEstadistica: (index: number, campo: CampoNumerico, delta: number) => void;
+  onCambiarSurvive?: (index: number, value: boolean) => void;
   token: string;
   opcionesJugadores?: Array<{ value: string; label: string }>;
 };
@@ -26,6 +33,7 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
   estadisticasJugador = [],
   onAsignarJugador,
   onCambiarEstadistica,
+  onCambiarSurvive,
   token,
   opcionesJugadores,
 }) => {
@@ -122,10 +130,11 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
               jugadorId={jugadorId}
               opcionesJugadores={opcionesFiltradas}
               onCambiarJugador={(nuevoId: string) => onAsignarJugador(idx, nuevoId)}
-              onCambiarEstadistica={(campo: keyof EstadisticasJugador, delta: number) =>
+              onCambiarEstadistica={(campo: CampoNumerico, delta: number) =>
                 onCambiarEstadistica(idx, campo, delta)
               }
               estadisticasJugador={stats}
+              onCambiarSurvive={(value) => onCambiarSurvive?.(idx, value)}
             />
           );
         })}

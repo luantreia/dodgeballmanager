@@ -9,7 +9,13 @@ type EquipoResumen = {
 
 type ListaJugadorEstadistica = {
   jugadorId?: string;
-  estadisticas?: Record<string, number> | undefined;
+  estadisticas?: {
+    throws?: number;
+    hits?: number;
+    outs?: number;
+    catches?: number;
+    survive?: boolean;
+  } | undefined;
 };
 
 type EstadisticasEquipo = {
@@ -26,6 +32,8 @@ type CambiarEstadisticaHandler = (
   delta: number,
 ) => void;
 
+type CambiarSurviveHandler = (equipoId: string, index: number, value: boolean) => void;
+
 type AsignarJugadorHandler = (
   equipo: 'local' | 'visitante',
   index: number,
@@ -37,6 +45,7 @@ type EquiposEstadisticasProps = {
   equipoVisitante: EquipoResumen;
   estadisticas: EstadisticasEquipo;
   onCambiarEstadistica: CambiarEstadisticaHandler;
+  onCambiarSurvive: CambiarSurviveHandler;
   onAsignarJugador: AsignarJugadorHandler;
   token: string;
   opcionesJugadoresLocal?: Array<{ value: string; label: string }>;
@@ -48,6 +57,7 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
   equipoVisitante,
   estadisticas,
   onCambiarEstadistica,
+  onCambiarSurvive,
   onAsignarJugador,
   token,
   opcionesJugadoresLocal,
@@ -77,6 +87,7 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
           handleCambiarEstadisticaLocal(equipoLocal._id, index, campo, delta)
         }
         onAsignarJugador={(index, jugadorId) => handleAsignarJugador('local', index, jugadorId)}
+        onCambiarSurvive={(index, value) => onCambiarSurvive(equipoLocal._id, index, value)}
         token={token}
         opcionesJugadores={opcionesJugadoresLocal}
       />
@@ -88,6 +99,7 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
           handleCambiarEstadisticaLocal(equipoVisitante._id, index, campo, delta)
         }
         onAsignarJugador={(index, jugadorId) => handleAsignarJugador('visitante', index, jugadorId)}
+        onCambiarSurvive={(index, value) => onCambiarSurvive(equipoVisitante._id, index, value)}
         token={token}
         opcionesJugadores={opcionesJugadoresVisitante}
       />
