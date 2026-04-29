@@ -23,6 +23,7 @@ import type { JugadorPartido } from '../../../../shared/utils/types/types';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 import { crearSolicitudEdicion } from '../../../../shared/features/solicitudes/services/solicitudesEdicionService';
+import { getMisPermisosEquipo } from '../../../equipo/services/equipoService';
 
 type ModalPartidoAdminProps = {
   partidoId: string;
@@ -62,6 +63,8 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
   const [hayDatosAutomaticosGenerales, setHayDatosAutomaticosGenerales] = useState<boolean>(false);
   const [alineacionModalAbierta, setAlineacionModalAbierta] = useState<boolean>(false);
   const [confirmEliminarAbierto, setConfirmEliminarAbierto] = useState<boolean>(false);
+  const [canCaptureStats, setCanCaptureStats] = useState<boolean>(false);
+  const [canEditStats, setCanEditStats] = useState<boolean>(false);
   const { addToast } = useToast();
 
   // Cargar partido
@@ -157,6 +160,27 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
     cargarPartido();
   }, [cargarPartido]);
 
+  useEffect(() => {
+    const cargarPermisos = async () => {
+      if (!equipoContextoId) {
+        setCanCaptureStats(false);
+        return;
+      }
+
+      try {
+        const permisos = await getMisPermisosEquipo(equipoContextoId);
+        setCanCaptureStats(Boolean(permisos?.canCaptureStats));
+        setCanEditStats(Boolean(permisos?.canEditStats));
+      } catch (error) {
+        console.error('Error cargando permisos del equipo:', error);
+        setCanCaptureStats(false);
+        setCanEditStats(false);
+      }
+    };
+
+    void cargarPermisos();
+  }, [equipoContextoId]);
+
   // Handlers
 
   const handleEliminarPartido = async () => {
@@ -222,7 +246,17 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
       <div>
         <div className="bg-white rounded-lg p-2 sm:p-1">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-base font-semibold">Vistas</h3>
+            <div>
+              <h3 className="text-base font-semibold">Vistas</h3>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${canCaptureStats ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                  {canCaptureStats ? 'Puede capturar estadisticas' : 'Sin permiso de captura'}
+                </span>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${canEditStats ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                  {canEditStats ? 'Puede editar estadisticas' : 'Edicion restringida'}
+                </span>
+              </div>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setVistaEstadisticas('generales')}
@@ -278,7 +312,8 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
           {vistaEstadisticas === 'setASet' && (
             <SeccionEstadisticasSetASet
               partido={partido}
-              onAbrirCaptura={abrirCapturaSet}
+              canCaptureStats={canCaptureStats}
+              onAbrirCaptura={canCaptureStats ? abrirCapturaSet : undefined}
               onAbrirGestionSets={() => setGestionSetsAbierta(true)}
             />
           )}
@@ -288,6 +323,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
               partido={partido}
               partidoId={partidoId}
               token={token}
+              canCaptureStats={canCaptureStats}
               onRefresh={cargarPartido}
               setModalEstadisticasGeneralesAbierto={({ datosIniciales, hayDatosAutomaticos }) =>
                 abrirCapturaGenerales({ datosIniciales, hayDatosAutomaticos })
@@ -321,11 +357,11 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
           partidoId={partidoId}
           isOpen={gestionSetsAbierta}
           onClose={() => setGestionSetsAbierta(false)}
-          onAbrirCaptura={(numero) => {
+          onAbrirCaptura={canCaptureStats ? ((numero) => {
             setNumeroSetEnCaptura(numero);
             setGestionSetsAbierta(false);
             setCapturaSetAbierta(true);
-          }}
+          }) : undefined}
           esCompetencia={!!partido?.competencia}
         />
       )}

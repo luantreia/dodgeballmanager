@@ -14,11 +14,12 @@ interface PartidoConSets {
 
 interface SeccionEstadisticasSetASetProps {
   partido: PartidoConSets;
+  canCaptureStats?: boolean;
   onAbrirCaptura?: (numeroSet?: number) => void;
   onAbrirGestionSets?: () => void;
 }
 
-export const SeccionEstadisticasSetASet: FC<SeccionEstadisticasSetASetProps> = ({ partido, onAbrirCaptura, onAbrirGestionSets }) => {
+export const SeccionEstadisticasSetASet: FC<SeccionEstadisticasSetASetProps> = ({ partido, canCaptureStats = false, onAbrirCaptura, onAbrirGestionSets }) => {
   const [setsExpandidos, setSetsExpandidos] = useState<Record<string, boolean>>({});
 
   return (
@@ -27,6 +28,11 @@ export const SeccionEstadisticasSetASet: FC<SeccionEstadisticasSetASetProps> = (
         <div className="min-w-0">
           <h4 className="text-lg font-semibold text-purple-800">🎯 Estadísticas Set a Set</h4>
           <p className="text-sm text-purple-700">Análisis detallado de cada set individual del partido</p>
+          {!canCaptureStats && (
+            <p className="mt-1 inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">
+              Sin permisos para capturar estadisticas
+            </p>
+          )}
         </div>
 
         {onAbrirGestionSets && (

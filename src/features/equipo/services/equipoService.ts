@@ -7,6 +7,77 @@ export type UpdateEquipoPayload = {
   descripcion?: string;
 };
 
+export type TeamMemberRole =
+  | 'jugador'
+  | 'entrenador'
+  | 'video_analista'
+  | 'preparador_fisico'
+  | 'community_manager'
+  | 'sponsor_manager'
+  | 'staff'
+  | 'otro';
+
+export type TeamPermission =
+  | 'stats.capture'
+  | 'stats.edit'
+  | 'stats.view_private'
+  | 'matches.manage'
+  | 'lineup.manage'
+  | 'members.manage'
+  | 'team.settings.manage'
+  | 'team.*';
+
+export interface TeamMember {
+  _id: string;
+  equipo: string;
+  usuarioId: string;
+  rol: TeamMemberRole;
+  permisos: TeamPermission[];
+  estado: 'invitado' | 'activo' | 'suspendido' | 'inactivo';
+  notas?: string;
+  creadoPor: string;
+  actualizadoPor?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const TEAM_MEMBER_ROLE_OPTIONS: Array<{ value: TeamMemberRole; label: string }> = [
+  { value: 'jugador', label: 'Jugador' },
+  { value: 'entrenador', label: 'Entrenador' },
+  { value: 'video_analista', label: 'Video analista' },
+  { value: 'preparador_fisico', label: 'Preparador fisico' },
+  { value: 'community_manager', label: 'Community manager' },
+  { value: 'sponsor_manager', label: 'Sponsor manager' },
+  { value: 'staff', label: 'Staff' },
+  { value: 'otro', label: 'Otro' },
+];
+
+export const TEAM_PERMISSION_OPTIONS: Array<{ value: TeamPermission; label: string }> = [
+  { value: 'stats.capture', label: 'Capturar estadisticas' },
+  { value: 'stats.edit', label: 'Editar estadisticas' },
+  { value: 'stats.view_private', label: 'Ver estadisticas privadas' },
+  { value: 'matches.manage', label: 'Gestionar partidos' },
+  { value: 'lineup.manage', label: 'Gestionar alineaciones' },
+  { value: 'members.manage', label: 'Gestionar miembros' },
+  { value: 'team.settings.manage', label: 'Gestionar configuracion de equipo' },
+  { value: 'team.*', label: 'Permisos totales de equipo' },
+];
+
+export const TEAM_ROLE_PERMISSION_PRESETS: Record<TeamMemberRole, TeamPermission[]> = {
+  jugador: ['stats.view_private'],
+  entrenador: ['stats.capture', 'stats.edit', 'stats.view_private', 'lineup.manage'],
+  video_analista: ['stats.capture', 'stats.edit', 'stats.view_private'],
+  preparador_fisico: ['stats.view_private'],
+  community_manager: [],
+  sponsor_manager: [],
+  staff: ['stats.capture'],
+  otro: [],
+};
+
+export const getRolePresetPermissions = (rol: TeamMemberRole): TeamPermission[] => {
+  return [...(TEAM_ROLE_PERMISSION_PRESETS[rol] || [])];
+};
+
 export type BackendEquipo = {
   _id: string;
   nombre: string;
@@ -121,4 +192,66 @@ export const actualizarEquipo = async (
   });
 
   return mapEquipo(equipo);
+};
+
+type UsuarioLookupResponse = {
+  id: string;
+  email: string;
+  nombre: string;
+};
+
+export const buscarUsuarioPorEmail = async (email: string): Promise<UsuarioLookupResponse> => {
+  const usuario = await authFetch<UsuarioLookupResponse>(`/usuarios?email=${encodeURIComponent(email)}`);
+  return usuario;
+};
+
+export const listarMiembrosEquipo = async (equipoId: string): Promise<TeamMember[]> => {
+  const resp = await authFetch<{ miembros: TeamMember[] }>(`/equipos/${equipoId}/miembros`);
+  return resp.miembros || [];
+};
+
+export const crearMiembroEquipo = async (
+  equipoId: string,
+  payload: {
+    usuarioId: string;
+    rol: TeamMemberRole;
+    permisos?: TeamPermission[];
+    estado?: TeamMember['estado'];
+    notas?: string;
+  }
+): Promise<TeamMember> => {
+  return authFetch<TeamMember>(`/equipos/${equipoId}/miembros`, {
+    method: 'POST',
+    body: payload,
+  });
+};
+
+export const actualizarMiembroEquipo = async (
+  equipoId: string,
+  usuarioId: string,
+  payload: {
+    rol?: TeamMemberRole;
+    permisos?: TeamPermission[];
+    estado?: TeamMember['estado'];
+    notas?: string;
+  }
+): Promise<TeamMember> => {
+  return authFetch<TeamMember>(`/equipos/${equipoId}/miembros/${usuarioId}`, {
+    method: 'PUT',
+    body: payload,
+  });
+};
+
+export const eliminarMiembroEquipo = async (equipoId: string, usuarioId: string): Promise<void> => {
+  await authFetch<{ message: string }>(`/equipos/${equipoId}/miembros/${usuarioId}`, {
+    method: 'DELETE',
+  });
+};
+
+export const getMisPermisosEquipo = async (equipoId: string): Promise<{
+  equipoId: string;
+  canCaptureStats: boolean;
+  canEditStats: boolean;
+}> => {
+  return authFetch(`/equipos/${equipoId}/mis-permisos`);
 };

@@ -16,6 +16,7 @@ type SeccionEstadisticasDirectasProps = {
   partido: PartidoDetallado | null;
   partidoId: string;
   token: string;
+  canCaptureStats?: boolean;
   onRefresh?: () => void | Promise<void>;
   setModalEstadisticasGeneralesAbierto: (config: {
     datosIniciales: EstadisticaAutomatica[];
@@ -27,6 +28,7 @@ export const SeccionEstadisticasDirectas: FC<SeccionEstadisticasDirectasProps> =
   partido,
   partidoId,
   token,
+  canCaptureStats = false,
   onRefresh,
   setModalEstadisticasGeneralesAbierto
 }) => {
@@ -151,10 +153,10 @@ export const SeccionEstadisticasDirectas: FC<SeccionEstadisticasDirectasProps> =
         </div>
         <button
           onClick={handleAbrirModal}
-          disabled={cargando}
+          disabled={cargando || !canCaptureStats}
           className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
         >
-          {cargando ? 'Cargando...' : 'Capturar Estadísticas Generales'}
+          {cargando ? 'Cargando...' : canCaptureStats ? 'Capturar Estadísticas Generales' : 'Sin permiso de captura'}
         </button>
       </div>
 
@@ -170,6 +172,11 @@ export const SeccionEstadisticasDirectas: FC<SeccionEstadisticasDirectasProps> =
             : 'Haz clic para capturar estadísticas. Si hay datos por set guardados, se cargarán automáticamente.'
           }
         </p>
+        {!canCaptureStats && (
+          <p className="mt-2 text-xs text-rose-700">
+            No tienes permisos del equipo para capturar estadísticas.
+          </p>
+        )}
       </div>
     </div>
   );
