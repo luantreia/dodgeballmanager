@@ -38,6 +38,7 @@ const categoriaDeTipo = (tipo: SolicitudEdicionTipo): string => {
 
   if (
     tipo === 'resultadoPartido' ||
+    tipo === 'editarPartidoCompetencia' ||
     tipo === 'resultadoSet' ||
     tipo === 'estadisticasJugadorSet' ||
     tipo === 'estadisticasJugadorPartido' ||
@@ -66,6 +67,7 @@ const labelTipo = (t: SolicitudEdicionTipo) => {
     'jugador-temporada-actualizar': 'Participación: Jugador-Temporada (actualizar)',
     'jugador-temporada-eliminar': 'Participación: Jugador-Temporada (eliminar)',
     resultadoPartido: 'Partido: Resultado partido',
+    editarPartidoCompetencia: 'Partido: Solicitud corrección de competencia',
     resultadoSet: 'Partido: Resultado set',
     estadisticasJugadorSet: 'Partido: Estadísticas jugador set',
     estadisticasJugadorPartido: 'Partido: Estadísticas jugador partido',
@@ -95,6 +97,9 @@ export default function NotificacionesPage() {
     (searchParams.get('estado') as SolicitudEdicionEstado) || 'pendiente'
   );
   const [fCategoria, setFCategoria] = useState<string>(searchParams.get('categoria') || 'Todas');
+  const [fTipo, setFTipo] = useState<SolicitudEdicionTipo | 'todos'>(
+    (searchParams.get('tipo') as SolicitudEdicionTipo) || 'todos'
+  );
   const [q, setQ] = useState<string>(searchParams.get('q') || '');
   const [fMostrarSoloMias, setFMostrarSoloMias] = useState<boolean>(
     searchParams.get('soloMias') === 'true'
@@ -108,6 +113,7 @@ export default function NotificacionesPage() {
       // Si hay estado distinto a 'todos', consultar ya filtrado en backend
       const params: any = {};
       if (fEstado !== 'todos') params.estado = fEstado;
+      if (fTipo !== 'todos') params.tipo = fTipo;
       params.scope = fMostrarSoloMias ? 'mine' : 'related';
       if (fEntidad !== 'todas') params.entidad = fEntidad;
       
@@ -118,7 +124,7 @@ export default function NotificacionesPage() {
         'jugador-equipo-crear','jugador-equipo-eliminar','jugador-equipo-editar',
         'participacion-temporada-crear','participacion-temporada-actualizar','participacion-temporada-eliminar',
         'jugador-temporada-crear','jugador-temporada-actualizar','jugador-temporada-eliminar',
-        'resultadoPartido','resultadoSet','estadisticasJugadorSet','estadisticasJugadorPartido','estadisticasEquipoPartido','estadisticasEquipoSet'
+        'resultadoPartido','editarPartidoCompetencia','resultadoSet','estadisticasJugadorSet','estadisticasJugadorPartido','estadisticasEquipoPartido','estadisticasEquipoSet'
       ]);
       const filtradas = data.solicitudes.filter((s: any) => allowedTipos.has(s.tipo));
       setSolicitudes(filtradas.map((s: any) => ({ ...s, id: s._id })));
@@ -127,7 +133,7 @@ export default function NotificacionesPage() {
     } finally {
       setLoading(false);
     }
-  }, [fEstado, fMostrarSoloMias, fEntidad]);
+  }, [fEstado, fTipo, fMostrarSoloMias, fEntidad]);
 
   useEffect(() => { void cargar(); }, [cargar]);
 
@@ -143,11 +149,12 @@ export default function NotificacionesPage() {
     const sp = new URLSearchParams();
     if (fEstado && fEstado !== 'todos') sp.set('estado', fEstado);
     if (fCategoria && fCategoria !== 'Todas') sp.set('categoria', fCategoria);
+    if (fTipo && fTipo !== 'todos') sp.set('tipo', fTipo);
     if (q) sp.set('q', q);
     if (fMostrarSoloMias) sp.set('soloMias', 'true');
     if (fEntidad && fEntidad !== 'todas') sp.set('entidad', fEntidad);
     setSearchParams(sp, { replace: true });
-  }, [fEstado, fCategoria, q, fMostrarSoloMias, fEntidad, setSearchParams]);
+  }, [fEstado, fCategoria, fTipo, q, fMostrarSoloMias, fEntidad, setSearchParams]);
 
   const filtradas = useMemo(() => {
     const byCat = (s: SolicitudEdicion) => {
@@ -160,8 +167,9 @@ export default function NotificacionesPage() {
       const txt = `${s.tipo} ${labelTipo(s.tipo)} ${JSON.stringify(s.datosPropuestos || {})}`.toLowerCase();
       return txt.includes(q.toLowerCase());
     };
-    return solicitudes.filter((s) => byCat(s) && byQ(s));
-  }, [solicitudes, fCategoria, q]);
+    const byTipo = (s: SolicitudEdicion) => (fTipo === 'todos' ? true : s.tipo === fTipo);
+    return solicitudes.filter((s) => byCat(s) && byTipo(s) && byQ(s));
+  }, [solicitudes, fCategoria, fTipo, q]);
 
   // Paginación simple en cliente
   const [page, setPage] = useState(1);
@@ -218,7 +226,7 @@ export default function NotificacionesPage() {
     };
   }, [paginated, puedeAprobarBySolicitud]);
 
-  useEffect(() => { setPage(1); }, [fCategoria, q, fEstado, fMostrarSoloMias, fEntidad]);
+  useEffect(() => { setPage(1); }, [fCategoria, fTipo, q, fEstado, fMostrarSoloMias, fEntidad]);
 
   const manejarAprobar = async (s: SolicitudEdicion) => {
     try {
@@ -278,13 +286,23 @@ export default function NotificacionesPage() {
           <p className="text-sm text-slate-500">Gestioná todas las solicitudes por categoría.</p>
         </div>
         <div className="w-full space-y-2 md:w-auto">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <select value={fEstado} onChange={(e) => setFEstado(e.target.value as any)} className="w-full rounded-lg border-slate-300 text-sm">
               <option value="todos">Todos los estados</option>
               <option value="pendiente">Pendiente</option>
               <option value="aceptado">Aceptado</option>
               <option value="rechazado">Rechazado</option>
               <option value="cancelado">Cancelado</option>
+            </select>
+            <select value={fTipo} onChange={(e) => setFTipo(e.target.value as SolicitudEdicionTipo | 'todos')} className="w-full rounded-lg border-slate-300 text-sm">
+              <option value="todos">Todos los tipos</option>
+              <option value="editarPartidoCompetencia">Partido: corrección de competencia</option>
+              <option value="resultadoPartido">Partido: resultado partido</option>
+              <option value="resultadoSet">Partido: resultado set</option>
+              <option value="estadisticasJugadorPartido">Partido: estadísticas jugador partido</option>
+              <option value="estadisticasJugadorSet">Partido: estadísticas jugador set</option>
+              <option value="estadisticasEquipoPartido">Partido: estadísticas equipo partido</option>
+              <option value="estadisticasEquipoSet">Partido: estadísticas equipo set</option>
             </select>
             <select value={fCategoria} onChange={(e) => setFCategoria(e.target.value)} className="w-full rounded-lg border-slate-300 text-sm">
               <option>Todas</option>

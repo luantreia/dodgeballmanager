@@ -15,9 +15,10 @@ interface ModalInformacionPartidoProps {
   partidoId: string | null;
   isOpen: boolean;
   onClose: () => void;
+  modoSoloLectura?: boolean;
 }
 
-const ModalInformacionPartido = ({ partidoId, isOpen, onClose }: ModalInformacionPartidoProps) => {
+const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura = false }: ModalInformacionPartidoProps) => {
   const { addToast } = useToast();
   const [partido, setPartido] = useState<PartidoDetallado | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,6 +36,9 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose }: ModalInformacio
     competencia: string;
   } | null>(null);
   const [competencias, setCompetencias] = useState<Competencia[]>([]);
+
+  const temporadaPartido = (partido as PartidoDetallado & { temporada?: string | { nombre?: string } })?.temporada;
+  const fasePartido = (partido as PartidoDetallado & { fase?: string | { nombre?: string } })?.fase;
 
   const equipoContextoId = useMemo(() => {
     if (!partido) return undefined;
@@ -143,7 +147,7 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose }: ModalInformacio
       isOpen={isOpen}
       onClose={onClose}
       title="Detalles del partido"
-      subtitle="Información básica y edición rápida"
+      subtitle={modoSoloLectura ? 'Información de competencia (solo lectura)' : 'Información básica y edición rápida'}
       size="lg"
       bodyClassName="p-0"
     >
@@ -160,13 +164,19 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose }: ModalInformacio
               <h2 className="text-xl font-bold">Información del Partido</h2>
               {!modoEdicion ? (
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setModoEdicion(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  >
-                    Editar
-                  </button>
+                  {!modoSoloLectura ? (
+                    <button
+                      type="button"
+                      onClick={() => setModoEdicion(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Editar
+                    </button>
+                  ) : (
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                      Partido de competencia: solo lectura
+                    </span>
+                  )}
                 </div>
               ) : (
                 <div className="space-x-2">
@@ -351,6 +361,18 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose }: ModalInformacio
                   {typeof partido.competencia === 'string'
                     ? partido.competencia
                     : partido.competencia?.nombre || 'No especificada'}
+                </p>
+                <p>
+                  <strong>Temporada:</strong>{' '}
+                  {typeof temporadaPartido === 'string'
+                    ? temporadaPartido
+                    : temporadaPartido?.nombre || 'No especificada'}
+                </p>
+                <p>
+                  <strong>Fase:</strong>{' '}
+                  {typeof fasePartido === 'string'
+                    ? fasePartido
+                    : fasePartido?.nombre || 'No especificada'}
                 </p>
                 <p>
                   <strong>Marcador:</strong> {partido.marcadorLocal} - {partido.marcadorVisitante}

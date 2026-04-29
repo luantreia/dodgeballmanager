@@ -221,6 +221,8 @@ const PartidosPage = () => {
     setPartidoSolicitudId(null);
   };
 
+  const esPartidoCompetencia = (partido: Partido) => Boolean(partido.competencia?.id);
+
   // onSaved no-op: actualizará vista dentro del modal
 
   if (!equipoSeleccionado) {
@@ -354,11 +356,25 @@ const PartidosPage = () => {
         partidoId={partidoInfoId}
         isOpen={infoModalAbierto && Boolean(partidoInfoId)}
         onClose={handleCerrarInformacion}
+        modoSoloLectura={
+          partidoInfoId
+            ? [...proximos, ...recientes, ...pasadosSinCerrar].some(
+                (partido) => partido.id === partidoInfoId && esPartidoCompetencia(partido),
+              )
+            : false
+        }
       />
 
       <ModalSolicitudEditarPartido
         isOpen={solicitudModalAbierto && Boolean(partidoSolicitudId)}
         partidoId={partidoSolicitudId ?? ''}
+        esCompetencia={
+          partidoSolicitudId
+            ? [...proximos, ...recientes, ...pasadosSinCerrar].some(
+                (partido) => partido.id === partidoSolicitudId && esPartidoCompetencia(partido),
+              )
+            : false
+        }
         onClose={handleCerrarSolicitud}
       />
 
@@ -384,14 +400,6 @@ const PartidosPage = () => {
                     <>
                       <button
                         type="button"
-                        onClick={() => handleAbrirAlineacion(partido.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                      >
-                        <AdjustmentsHorizontalIcon className="h-4 w-4" />
-                        Alineación
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => handleAbrirInformacion(partido.id)}
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                       >
@@ -406,14 +414,26 @@ const PartidosPage = () => {
                         <EnvelopeIcon className="h-4 w-4" />
                         Solicitar edición
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSeleccionar(partido.id)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
-                      >
-                        <Cog6ToothIcon className="h-4 w-4" />
-                        Gestionar
-                      </button>
+                      {!esPartidoCompetencia(partido) ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleAbrirAlineacion(partido.id)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                          >
+                            <AdjustmentsHorizontalIcon className="h-4 w-4" />
+                            Alineación
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSeleccionar(partido.id)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
+                          >
+                            <Cog6ToothIcon className="h-4 w-4" />
+                            Gestionar
+                          </button>
+                        </>
+                      ) : null}
                     </>
                   }
                 />
@@ -429,7 +449,7 @@ const PartidosPage = () => {
         <div className="space-y-4">
           <header className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-900">Resultados recientes</h2>
-            <span className="text-xs uppercase tracking-wide text-slate-400">Hasta 10 más recientes</span>
+            <span className="text-xs uppercase tracking-wide text-slate-400">Todos los finalizados</span>
           </header>
           {loading ? (
             <div className="space-y-3">
@@ -439,21 +459,13 @@ const PartidosPage = () => {
             </div>
           ) : recientes.length ? (
             <div className="space-y-4">
-              {recientes.slice(0, 10).map((partido) => (
+              {recientes.map((partido) => (
                 <PartidoCard
                   key={partido.id}
                   partido={partido}
                   variante="resultado"
                   actions={
                     <>
-                      <button
-                        type="button"
-                        onClick={() => handleAbrirAlineacion(partido.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                      >
-                        <AdjustmentsHorizontalIcon className="h-4 w-4" />
-                        Alineación
-                      </button>
                       <button
                         type="button"
                         onClick={() => handleAbrirInformacion(partido.id)}
@@ -470,14 +482,26 @@ const PartidosPage = () => {
                         <EnvelopeIcon className="h-4 w-4" />
                         Solicitar edición
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSeleccionar(partido.id)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
-                      >
-                        <Cog6ToothIcon className="h-4 w-4" />
-                        Gestionar
-                      </button>
+                      {!esPartidoCompetencia(partido) ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleAbrirAlineacion(partido.id)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                          >
+                            <AdjustmentsHorizontalIcon className="h-4 w-4" />
+                            Alineación
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSeleccionar(partido.id)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
+                          >
+                            <Cog6ToothIcon className="h-4 w-4" />
+                            Gestionar
+                          </button>
+                        </>
+                      ) : null}
                     </>
                   }
                 />
@@ -504,7 +528,7 @@ const PartidosPage = () => {
           </div>
         ) : pasadosSinCerrar.length ? (
           <div className="space-y-4">
-            {pasadosSinCerrar.slice(0, 10).map((partido) => (
+            {pasadosSinCerrar.map((partido) => (
               <PartidoCard
                 key={partido.id}
                 partido={partido}
@@ -526,6 +550,16 @@ const PartidosPage = () => {
                       <EnvelopeIcon className="h-4 w-4" />
                       Solicitar edición
                     </button>
+                    {!esPartidoCompetencia(partido) ? (
+                      <button
+                        type="button"
+                        onClick={() => handleAbrirAlineacion(partido.id)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                      >
+                        <AdjustmentsHorizontalIcon className="h-4 w-4" />
+                        Alineación
+                      </button>
+                    ) : null}
                   </>
                 }
               />
