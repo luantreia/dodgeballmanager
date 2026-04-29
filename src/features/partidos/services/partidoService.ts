@@ -3,7 +3,7 @@ import type { Partido, JugadorPartido, Competencia } from '../../../shared/utils
 
 type PartidoQuery = {
   equipoId: string;
-  tipo?: 'todos' | 'liga' | 'amistoso';
+  tipo?: 'todos' | 'competencia' | 'amistoso';
   estado?: 'pendiente' | 'confirmado' | 'finalizado' | 'cancelado';
   competenciaId?: string;
   temporadaId?: string;
@@ -302,7 +302,7 @@ export const getPartidos = async ({ equipoId, estado, competenciaId, temporadaId
   const partidosRaw = Array.isArray(response) ? response : (response?.items || []);
   let partidos = partidosRaw.map((partido) => mapPartido(partido, equipoId));
 
-  if (tipo === 'liga') {
+  if (tipo === 'competencia') {
     partidos = partidos.filter((partido) => Boolean(partido.competencia?.id));
   }
 

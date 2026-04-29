@@ -12,7 +12,7 @@ import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { AdjustmentsHorizontalIcon, PencilSquareIcon, EnvelopeIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { getParticipaciones } from '../../competencias/services/equipoCompetenciaService';
 
-type FiltroTipoPartido = 'todos' | 'liga' | 'amistoso';
+type FiltroTipoPartido = 'todos' | 'competencia' | 'amistoso';
 
 const PartidosPage = () => {
   const token = useToken();
@@ -258,7 +258,7 @@ const PartidosPage = () => {
               onChange={(event) => {
                 const next = event.target.value as FiltroTipoPartido;
                 setFiltroTipo(next);
-                if (next !== 'liga') {
+                if (next !== 'competencia') {
                   setFiltroCompetencia('');
                   setFiltroTemporada('');
                   setFiltroFase('');
@@ -267,7 +267,7 @@ const PartidosPage = () => {
               className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700"
             >
               <option value="todos">Todos</option>
-              <option value="liga">Liga</option>
+              <option value="competencia">Competencia</option>
               <option value="amistoso">Amistosos</option>
             </select>
           </label>
@@ -277,7 +277,7 @@ const PartidosPage = () => {
             <select
               value={filtroCompetencia}
               onChange={(event) => setFiltroCompetencia(event.target.value)}
-              disabled={filtroTipo !== 'liga'}
+              disabled={filtroTipo !== 'competencia'}
               className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
             >
               <option value="">Todas</option>
@@ -294,7 +294,7 @@ const PartidosPage = () => {
             <select
               value={filtroTemporada}
               onChange={(event) => setFiltroTemporada(event.target.value)}
-              disabled={filtroTipo !== 'liga' || !filtroCompetencia}
+              disabled={filtroTipo !== 'competencia' || !filtroCompetencia}
               className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
             >
               <option value="">Todas</option>
@@ -311,7 +311,7 @@ const PartidosPage = () => {
             <select
               value={filtroFase}
               onChange={(event) => setFiltroFase(event.target.value)}
-              disabled={filtroTipo !== 'liga' || !filtroTemporada}
+              disabled={filtroTipo !== 'competencia' || !filtroTemporada}
               className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
             >
               <option value="">Todas</option>
