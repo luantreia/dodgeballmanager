@@ -23,18 +23,16 @@ const rechazarSolicitud = async (id: string): Promise<ISolicitudEdicion> => {
 export const useNotificacionesData = ({
   scope = 'aprobables',
   allowedTipos,
-  entityType,
 }: UseNotificacionesDataProps = {}): UseNotificacionesDataResult => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [solicitudes, setSolicitudes] = useState<ISolicitudEdicion[]>([]);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const fetchSolicitudes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const filters: Record<string, string> = {
         estado: 'pendiente',
         ...(scope ? { scope } : {}),
@@ -42,13 +40,13 @@ export const useNotificacionesData = ({
 
       const response = await getSolicitudesEdicion(filters as any);
       let filteredSolicitudes = response.solicitudes;
-      
+
       if (allowedTipos && allowedTipos.length > 0) {
-        filteredSolicitudes = filteredSolicitudes.filter(s => 
+        filteredSolicitudes = filteredSolicitudes.filter(s =>
           allowedTipos.includes(s.tipo as SolicitudEdicionTipo)
         );
       }
-      
+
       setSolicitudes(filteredSolicitudes);
     } catch (err: any) {
       setError(err.message || 'Error al cargar solicitudes');
@@ -62,33 +60,31 @@ export const useNotificacionesData = ({
   }, [fetchSolicitudes]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshTrigger(prev => prev + 1);
-    }, 30000);
+    const interval = setInterval(fetchSolicitudes, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchSolicitudes]);
 
   const aprobar = useCallback(async (solicitud: ISolicitudEdicion) => {
     try {
       await aprobarSolicitud(solicitud._id);
-      setRefreshTrigger(prev => prev + 1);
+      await fetchSolicitudes();
     } catch (err: any) {
       throw new Error(`Error al aprobar: ${err.message}`);
     }
-  }, []);
+  }, [fetchSolicitudes]);
 
   const rechazar = useCallback(async (solicitud: ISolicitudEdicion) => {
     try {
       await rechazarSolicitud(solicitud._id);
-      setRefreshTrigger(prev => prev + 1);
+      await fetchSolicitudes();
     } catch (err: any) {
       throw new Error(`Error al rechazar: ${err.message}`);
     }
-  }, []);
+  }, [fetchSolicitudes]);
 
   const refresh = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1);
-  }, []);
+    fetchSolicitudes();
+  }, [fetchSolicitudes]);
 
   return {
     loading,
