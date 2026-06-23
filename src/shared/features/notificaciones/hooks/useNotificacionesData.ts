@@ -55,7 +55,7 @@ export const useNotificacionesData = ({
     } finally {
       setLoading(false);
     }
-  }, [scope, allowedTipos, entityType, refreshTrigger]);
+  }, [scope, allowedTipos]);
 
   useEffect(() => {
     fetchSolicitudes();

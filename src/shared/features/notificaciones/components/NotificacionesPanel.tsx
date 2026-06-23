@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { ISolicitudEdicion } from '../../solicitudes/types/solicitudesEdicion';
 import type { NotificacionFilterState } from '../types/notificacionesTypes';
 import { useNotificacionesData } from '../hooks/useNotificacionesData';

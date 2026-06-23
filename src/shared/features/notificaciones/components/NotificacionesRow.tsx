@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ISolicitudEdicion, SolicitudEdicionTipo } from '../../solicitudes/types/solicitudesEdicion';
+import type { SolicitudEdicionTipo } from '../../solicitudes/types/solicitudesEdicion';
 import type { NotificacionesRowProps } from '../types/notificacionesTypes';
 import { AprobarButton } from './AprobarButton';
 

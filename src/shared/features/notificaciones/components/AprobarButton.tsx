@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import type { ISolicitudEdicion } from '../../solicitudes/types/solicitudesEdicion';
 import { getSolicitudAprobadores } from '../../solicitudes/services/solicitudesEdicionService';
 import type { AprobarButtonProps } from '../types/notificacionesTypes';
 
