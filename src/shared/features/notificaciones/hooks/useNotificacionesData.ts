@@ -37,9 +37,10 @@ export const useNotificacionesData = ({
       
       const filters: Record<string, string> = {
         estado: 'pendiente',
+        ...(scope ? { scope } : {}),
       };
-      
-      const response = await getSolicitudesEdicion(filters);
+
+      const response = await getSolicitudesEdicion(filters as any);
       let filteredSolicitudes = response.solicitudes;
       
       if (allowedTipos && allowedTipos.length > 0) {

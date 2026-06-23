@@ -16,6 +16,7 @@ export default function NotificacionesPage() {
         'jugador-equipo-crear',
         'jugador-equipo-editar',
         'jugador-equipo-eliminar',
+        'participacion-temporada-crear',
       ]}
       entityType="none"
       scope="aprobables"
