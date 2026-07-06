@@ -26,12 +26,21 @@ export interface AdminUser {
 // TIPOS DE EQUIPOS
 // ========================================
 
+export interface RedesSociales {
+  instagram?: string;
+  facebook?: string;
+  twitter?: string;
+  tiktok?: string;
+  youtube?: string;
+}
+
 export interface Equipo {
   id: string;
   nombre: string;
   logoUrl?: string;
   staff?: string[];
   descripcion?: string;
+  redesSociales?: RedesSociales;
 }
 
 // ========================================

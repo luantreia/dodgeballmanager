@@ -1,10 +1,11 @@
 import { authFetch } from '../../../shared/utils/authFetch';
-import type { Equipo } from '../../../shared/utils/types/types';
+import type { Equipo, RedesSociales } from '../../../shared/utils/types/types';
 
 export type UpdateEquipoPayload = {
   nombre?: string;
   logoUrl?: string;
   descripcion?: string;
+  redesSociales?: RedesSociales;
 };
 
 export type TeamMemberRole =
@@ -85,6 +86,7 @@ export type BackendEquipo = {
   descripcion?: string;
   administradores?: string[];
   creadoPor?: string;
+  redesSociales?: RedesSociales;
 };
 
 export interface EquipoOpcion {
@@ -99,6 +101,7 @@ const mapEquipo = (equipo: BackendEquipo): Equipo => ({
   nombre: equipo.nombre,
   logoUrl: equipo.escudo,
   descripcion: equipo.descripcion,
+  redesSociales: equipo.redesSociales,
   staff: equipo.administradores?.map((admin) => {
     if (typeof admin === 'string') {
       return admin;
@@ -185,6 +188,10 @@ export const actualizarEquipo = async (
 
   if (payload.logoUrl !== undefined) {
     body.escudo = payload.logoUrl;
+  }
+
+  if (payload.redesSociales !== undefined) {
+    body.redesSociales = payload.redesSociales;
   }
 
   const equipo = await authFetch<BackendEquipo>(`/equipos/${equipoId}`, {

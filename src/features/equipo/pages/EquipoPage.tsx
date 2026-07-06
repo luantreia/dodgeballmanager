@@ -35,6 +35,13 @@ const EquipoPage = () => {
     nombre: '',
     descripcion: '',
     logoUrl: '',
+    redesSociales: {
+      instagram: '',
+      facebook: '',
+      twitter: '',
+      tiktok: '',
+      youtube: '',
+    },
   });
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [miembros, setMiembros] = useState<TeamMember[]>([]);
@@ -56,7 +63,12 @@ const EquipoPage = () => {
     const equipoId = equipoSeleccionado?.id;
     if (!equipoId) {
       setDetalleEquipo(null);
-      setFormData({ nombre: '', descripcion: '', logoUrl: '' });
+      setFormData({
+        nombre: '',
+        descripcion: '',
+        logoUrl: '',
+        redesSociales: { instagram: '', facebook: '', twitter: '', tiktok: '', youtube: '' },
+      });
       return;
     }
 
@@ -72,6 +84,13 @@ const EquipoPage = () => {
           nombre: equipo.nombre,
           descripcion: equipo.descripcion ?? '',
           logoUrl: equipo.logoUrl ?? '',
+          redesSociales: {
+            instagram: equipo.redesSociales?.instagram ?? '',
+            facebook: equipo.redesSociales?.facebook ?? '',
+            twitter: equipo.redesSociales?.twitter ?? '',
+            tiktok: equipo.redesSociales?.tiktok ?? '',
+            youtube: equipo.redesSociales?.youtube ?? '',
+          },
         });
       } catch (error) {
         console.error(error);
@@ -141,6 +160,10 @@ const EquipoPage = () => {
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleRedSocialChange = (red: keyof typeof formData.redesSociales, value: string) => {
+    setFormData((prev) => ({ ...prev, redesSociales: { ...prev.redesSociales, [red]: value } }));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -432,6 +455,57 @@ const EquipoPage = () => {
             onChange={handleChange as any}
             placeholder="https://..."
           />
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-slate-700">Redes sociales</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Input
+                id="instagram"
+                name="instagram"
+                label="Instagram"
+                type="url"
+                value={formData.redesSociales.instagram}
+                onChange={(event) => handleRedSocialChange('instagram', event.target.value)}
+                placeholder="https://instagram.com/..."
+              />
+              <Input
+                id="facebook"
+                name="facebook"
+                label="Facebook"
+                type="url"
+                value={formData.redesSociales.facebook}
+                onChange={(event) => handleRedSocialChange('facebook', event.target.value)}
+                placeholder="https://facebook.com/..."
+              />
+              <Input
+                id="twitter"
+                name="twitter"
+                label="X / Twitter"
+                type="url"
+                value={formData.redesSociales.twitter}
+                onChange={(event) => handleRedSocialChange('twitter', event.target.value)}
+                placeholder="https://x.com/..."
+              />
+              <Input
+                id="tiktok"
+                name="tiktok"
+                label="TikTok"
+                type="url"
+                value={formData.redesSociales.tiktok}
+                onChange={(event) => handleRedSocialChange('tiktok', event.target.value)}
+                placeholder="https://tiktok.com/@..."
+              />
+              <Input
+                id="youtube"
+                name="youtube"
+                label="YouTube"
+                type="url"
+                value={formData.redesSociales.youtube}
+                onChange={(event) => handleRedSocialChange('youtube', event.target.value)}
+                placeholder="https://youtube.com/..."
+              />
+            </div>
+          </div>
 
           <div className="flex items-center justify-end">
             <button
