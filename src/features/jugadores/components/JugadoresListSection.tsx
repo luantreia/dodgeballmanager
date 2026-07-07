@@ -70,6 +70,7 @@ const JugadoresListSection: React.FC<JugadoresListSectionProps> = ({
             ) : null}
           </header>
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                 <tr>
@@ -112,6 +113,7 @@ const JugadoresListSection: React.FC<JugadoresListSectionProps> = ({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
           {jugadores.length === 0 ? (
             <p className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">

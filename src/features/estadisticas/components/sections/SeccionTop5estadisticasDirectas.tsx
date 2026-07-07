@@ -102,6 +102,7 @@ export const SeccionTop5estadisticasDirectas: FC<Props> = ({ equipoId, titulo = 
           <div className="p-4 text-sm text-slate-500">Cargando ranking...</div>
         ) : (
           <>
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 <tr>
@@ -128,6 +129,7 @@ export const SeccionTop5estadisticasDirectas: FC<Props> = ({ equipoId, titulo = 
                 ))}
               </tbody>
             </table>
+            </div>
             {top5.length === 0 ? (
               <p className="px-4 py-5 text-sm text-slate-500">Aún no hay estadísticas registradas.</p>
             ) : null}

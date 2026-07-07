@@ -20,7 +20,7 @@ import type { Equipo } from '../../../shared/utils/types/types';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { Input, Textarea } from '../../../shared/components/ui';
 import ModalGestionAdministradoresEntidad from '../../../shared/components/modalGestionAdministradoresEntidad/ModalGestionAdministradoresEntidad';
-import ModalBase from '../../../shared/components/ModalBase/ModalBase';
+import ConfirmModal from '../../../shared/components/ConfirmModal/ConfirmModal';
 import { agregarAdminEquipo, quitarAdminEquipo, getAdminsEquipo, getUsuarioById } from '../../auth/services/usersService';
 
 const EquipoPage = () => {
@@ -54,6 +54,7 @@ const EquipoPage = () => {
   const [nuevoMiembroRol, setNuevoMiembroRol] = useState<TeamMemberRole>('video_analista');
   const [nuevoMiembroPermisos, setNuevoMiembroPermisos] = useState<TeamPermission[]>(['stats.capture']);
   const [confirmPresetOpen, setConfirmPresetOpen] = useState(false);
+  const [confirmReloadMiembros, setConfirmReloadMiembros] = useState(false);
   const [pendingRoleChange, setPendingRoleChange] = useState<{
     usuarioId: string;
     nextRole: TeamMemberRole;
@@ -303,12 +304,15 @@ const EquipoPage = () => {
     return b.every((item) => setA.has(item));
   };
 
-  const applyRoleChange = (usuarioId: string, nextRole: TeamMemberRole, replaceWithPreset: boolean) => {
+  const applyRoleChange = (usuarioId: string, nextRole: TeamMemberRole, replaceWithPreset: boolean): TeamMember | null => {
+    let updated: TeamMember | null = null;
     setMiembros((prev) => prev.map((item) => {
       if (item.usuarioId !== usuarioId) return item;
       const nextPermisos = replaceWithPreset ? getRolePresetPermissions(nextRole) : (item.permisos || []);
-      return { ...item, rol: nextRole, permisos: nextPermisos };
+      updated = { ...item, rol: nextRole, permisos: nextPermisos };
+      return updated;
     }));
+    return updated;
   };
 
   const handleChangeRolMiembro = (usuarioId: string, nextRole: TeamMemberRole) => {
@@ -330,16 +334,20 @@ const EquipoPage = () => {
 
   const confirmarAplicarPreset = () => {
     if (!pendingRoleChange) return;
-    applyRoleChange(pendingRoleChange.usuarioId, pendingRoleChange.nextRole, true);
+    const updated = applyRoleChange(pendingRoleChange.usuarioId, pendingRoleChange.nextRole, true);
     setConfirmPresetOpen(false);
     setPendingRoleChange(null);
+    // El modal ya fue una confirmación explícita del cambio: guardamos directamente
+    // en vez de dejarlo "sin guardar" y pedir un click extra en la fila.
+    if (updated) void handleGuardarMiembro(updated);
   };
 
   const mantenerPermisosActuales = () => {
     if (!pendingRoleChange) return;
-    applyRoleChange(pendingRoleChange.usuarioId, pendingRoleChange.nextRole, false);
+    const updated = applyRoleChange(pendingRoleChange.usuarioId, pendingRoleChange.nextRole, false);
     setConfirmPresetOpen(false);
     setPendingRoleChange(null);
+    if (updated) void handleGuardarMiembro(updated);
   };
 
   const cancelarCambioRolPendiente = () => {
@@ -367,6 +375,19 @@ const EquipoPage = () => {
       permisos: [...(miembro.permisos || [])].sort(),
     });
     return snapshotMiembros[miembro.usuarioId] !== current;
+  };
+
+  const handleClickRecargarMiembros = () => {
+    if (miembros.some((m) => isMiembroDirty(m))) {
+      setConfirmReloadMiembros(true);
+      return;
+    }
+    void refreshMiembros();
+  };
+
+  const handleConfirmReloadMiembros = () => {
+    setConfirmReloadMiembros(false);
+    void refreshMiembros();
   };
 
   const handleSolicitarQuitarMiembro = (usuarioId: string) => {
@@ -548,7 +569,7 @@ const EquipoPage = () => {
           </div>
           <button
             type="button"
-            onClick={() => void refreshMiembros()}
+            onClick={handleClickRecargarMiembros}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
             Recargar
@@ -741,64 +762,51 @@ const EquipoPage = () => {
 
       {loading ? <p className="text-sm text-slate-500">Actualizando información…</p> : null}
 
-      <ModalBase isOpen={confirmPresetOpen} onClose={cancelarCambioRolPendiente} title="Cambiar rol del miembro" size="sm">
-        <div className="p-4">
-          <p className="text-sm text-slate-700">
-            Este miembro tiene permisos personalizados. Elige cómo continuar con el cambio de rol.
-          </p>
-          <div className="mt-6 flex flex-wrap justify-end gap-2">
-            <button
-              type="button"
-              onClick={cancelarCambioRolPendiente}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:border-slate-300 hover:text-slate-900"
-            >
-              Cancelar cambio
-            </button>
+      <ConfirmModal
+        isOpen={confirmPresetOpen}
+        title="Cambiar rol del miembro"
+        onCancel={cancelarCambioRolPendiente}
+        onConfirm={confirmarAplicarPreset}
+        cancelLabel="Cancelar cambio"
+        confirmLabel="Reemplazar por preset"
+        variant="primary"
+        message={
+          <div className="space-y-3">
+            <p>Este miembro tiene permisos personalizados. Elige cómo continuar con el cambio de rol.</p>
             <button
               type="button"
               onClick={mantenerPermisosActuales}
-              className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+              className="w-full rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
             >
               Mantener permisos actuales
             </button>
-            <button
-              type="button"
-              onClick={confirmarAplicarPreset}
-              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-            >
-              Reemplazar por preset
-            </button>
           </div>
-        </div>
-      </ModalBase>
+        }
+      />
 
-      <ModalBase isOpen={Boolean(miembroAQuitar)} onClose={() => setMiembroAQuitar(null)} title="Quitar miembro" size="sm">
-        <div className="p-4">
-          <p className="text-sm text-slate-700">
-            Vas a quitar a <span className="font-semibold">{miembroAQuitar?.nombre}</span> del equipo. Esta acción no se puede deshacer.
-          </p>
-          <div className="mt-6 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setMiembroAQuitar(null)}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:border-slate-300 hover:text-slate-900"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!miembroAQuitar) return;
-                void handleQuitarMiembro(miembroAQuitar.usuarioId);
-                setMiembroAQuitar(null);
-              }}
-              className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-700"
-            >
-              Confirmar quitar
-            </button>
-          </div>
-        </div>
-      </ModalBase>
+      <ConfirmModal
+        isOpen={Boolean(miembroAQuitar)}
+        title="Quitar miembro"
+        message={<>Vas a quitar a <span className="font-semibold">{miembroAQuitar?.nombre}</span> del equipo. Esta acción no se puede deshacer.</>}
+        confirmLabel="Confirmar quitar"
+        variant="danger"
+        onConfirm={() => {
+          if (!miembroAQuitar) return;
+          void handleQuitarMiembro(miembroAQuitar.usuarioId);
+          setMiembroAQuitar(null);
+        }}
+        onCancel={() => setMiembroAQuitar(null)}
+      />
+
+      <ConfirmModal
+        isOpen={confirmReloadMiembros}
+        title="Descartar cambios sin guardar"
+        message="Hay ediciones de miembros sin guardar. Recargar la tabla descartará esos cambios. ¿Continuar?"
+        confirmLabel="Descartar y recargar"
+        variant="danger"
+        onConfirm={handleConfirmReloadMiembros}
+        onCancel={() => setConfirmReloadMiembros(false)}
+      />
 
       {/* Modal de invitación movido a JugadoresPage */}
     </div>

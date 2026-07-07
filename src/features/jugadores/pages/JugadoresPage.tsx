@@ -141,6 +141,7 @@ const JugadoresPage = () => {
             <p className="mt-4 text-sm text-slate-500">No hay contratos no activos registrados.</p>
           ) : (
             <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+              <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200 text-sm">
                 <thead className="bg-slate-50 text-slate-500">
                   <tr>
@@ -165,6 +166,7 @@ const JugadoresPage = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </ModalBase>

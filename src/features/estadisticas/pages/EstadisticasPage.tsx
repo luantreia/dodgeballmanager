@@ -183,6 +183,7 @@ const EstadisticasPage = () => {
             <span className="text-xs uppercase tracking-wide text-slate-400">{jugadores.length} registros</span>
           </header>
           <div className="overflow-hidden rounded-xl border border-slate-200">
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 <tr>
@@ -207,6 +208,7 @@ const EstadisticasPage = () => {
                 ))}
               </tbody>
             </table>
+            </div>
             {jugadores.length === 0 ? (
               <p className="px-4 py-5 text-sm text-slate-500">Todavía no hay datos suficientes para este ranking.</p>
             ) : null}
@@ -293,6 +295,7 @@ const EstadisticasPage = () => {
           <span className="text-xs uppercase tracking-wide text-slate-400">{historial.length} partidos</span>
         </header>
         <div className="overflow-hidden rounded-xl border border-slate-200">
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
               <tr>
@@ -313,6 +316,7 @@ const EstadisticasPage = () => {
               ))}
             </tbody>
           </table>
+          </div>
           {historial.length === 0 ? (
             <p className="px-4 py-5 text-sm text-slate-500">Sin resultados recientes.</p>
           ) : null}
