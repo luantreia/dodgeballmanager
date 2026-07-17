@@ -262,9 +262,13 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
                   <div className="font-semibold text-slate-900">{getTipoLabel(sol.tipo)}</div>
                   <div className="text-xs text-slate-500 mt-1">
                     {(() => {
-                      const userCreador = usuariosCreadores.get(sol.creadoPor);
+                      if (typeof sol.creadoPor === 'object' && sol.creadoPor !== null) {
+                        return `${sol.creadoPor.nombre ?? '—'}${sol.creadoPor.email ? ` (${sol.creadoPor.email})` : ''}`;
+                      }
+                      const creadoPorId = sol.creadoPor;
+                      const userCreador = usuariosCreadores.get(creadoPorId);
                       if (userCreador) return `${userCreador.nombre} (${userCreador.email})`;
-                      return `Usuario ${sol.creadoPor.slice(-6)}`;
+                      return `Usuario ${creadoPorId.slice(-6)}`;
                     })()}
                     {' | '}
                     {fecha ? new Date(fecha).toLocaleString('es-AR') : ''}

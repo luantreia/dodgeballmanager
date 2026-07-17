@@ -1,137 +1,97 @@
-import React, { useMemo, useState } from 'react';
-import type { ISolicitudEdicion, SolicitudEdicionTipo } from '../../solicitudes/types/solicitudesEdicion';
+// Tabla agrupada por categoría de solicitudes
+
+import React from 'react';
+import type { SolicitudEdicionTipo } from '../../solicitudes/types/solicitudesEdicion';
 import type { NotificacionesTableProps } from '../types/notificacionesTypes';
 import { NotificacionesRow } from './NotificacionesRow';
 
 export const NotificacionesTable: React.FC<NotificacionesTableProps> = ({
-  solicitudes,
-  loading,
-  error,
-  filters,
-  onFiltersChange,
-  categoriasDisponibles,
-  categoriaDeTipo,
+  categoria,
+  items,
   labelTipo,
-  canApprove,
-  showCategoriaFilter = true,
-  showEntidadFilter = false,
-  onRefresh,
+  expanded,
+  setExpanded,
+  rechazoEdit,
+  setRechazoEdit,
+  accionando,
   onAprobar,
   onRechazar,
-  onViewDetails,
+  onEditar,
+  canApprove,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
 }) => {
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-
-  const filteredSolicitudes = useMemo(() => {
-    return solicitudes.filter((s) => {
-      if (filters.estado && s.estado !== filters.estado) {
-        return false;
-      }
-      if (filters.categoria) {
-        const cat = categoriaDeTipo(s.tipo as SolicitudEdicionTipo);
-        if (cat !== filters.categoria) {
-          return false;
-        }
-      }
-      if (filters.query) {
-        const q = filters.query.toLowerCase();
-        const matchTipo = labelTipo(s.tipo as SolicitudEdicionTipo).toLowerCase().includes(q);
-        const matchEstado = s.estado.toLowerCase().includes(q);
-        if (!matchTipo && !matchEstado) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [solicitudes, filters, categoriaDeTipo, labelTipo]);
-
-  const groupedByCategoria = useMemo(() => {
-    const grupos: Record<string, ISolicitudEdicion[]> = {};
-    for (const s of filteredSolicitudes) {
-      const cat = categoriaDeTipo(s.tipo as SolicitudEdicionTipo);
-      if (!grupos[cat]) {
-        grupos[cat] = [];
-      }
-      grupos[cat].push(s);
-    }
-    return grupos;
-  }, [filteredSolicitudes, categoriaDeTipo]);
-
-  const toggleExpand = (id: string) => {
+  // Función para toggle expandido
+  const handleToggle = (id: string) => {
     const newExpanded = { ...expanded, [id]: !expanded[id] };
     setExpanded(newExpanded);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-600" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
-        <p className="text-red-600">{error}</p>
-        {onRefresh && (
-          <button
-            onClick={onRefresh}
-            className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-          >
-            Reintentar
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  if (filteredSolicitudes.length === 0) {
-    return (
-      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
-        <p className="text-slate-500">No hay solicitudes pendientes</p>
-      </div>
-    );
-  }
+  const seleccionablesIds = items.filter((s) => s.estado === 'pendiente').map((s) => s._id);
+  const todasSeleccionadas = seleccionablesIds.length > 0 && seleccionablesIds.every((id) => selectedIds.has(id));
 
   return (
-    <div className="space-y-6">
-      {Object.entries(groupedByCategoria).map(([categoria, items]) => (
-        <section key={categoria} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">{categoria}</h3>
-            <p className="text-sm text-slate-500">{items.length} solicitud(es)</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="text-xs uppercase text-slate-500">
-                  <th className="pb-3">Tipo</th>
-                  <th className="pb-3">Estado</th>
-                  <th className="pb-3">Fecha</th>
-                  <th className="pb-3">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((solicitud) => (
-                  <NotificacionesRow
-                    key={solicitud._id}
-                    solicitud={solicitud}
-                    labelTipo={labelTipo}
-                    canApprove={canApprove}
-                    accionando={null}
-                    isExpanding={!!expanded[solicitud._id]}
-                    onToggleExpand={() => toggleExpand(solicitud._id)}
-                    onAprobar={onAprobar}
-                    onRechazar={onRechazar}
-                    onViewDetails={onViewDetails}
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
+      {/* Header de la categoría */}
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-900">{categoria}</h2>
+        <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+          {items.length}
+        </span>
+      </div>
+
+      {/* Tabla */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th className="px-3 py-2">
+                {canApprove && seleccionablesIds.length > 0 && (
+                  <input
+                    type="checkbox"
+                    checked={todasSeleccionadas}
+                    onChange={() => onToggleSelectAll(seleccionablesIds)}
+                    aria-label={`Seleccionar todas las solicitudes pendientes de ${categoria}`}
+                    className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                   />
-                ))}
-              </tbody>
-            </table>
+                )}
+              </th>
+              <th className="px-3 py-2">Tipo</th>
+              <th className="px-3 py-2">Estado</th>
+              <th className="px-3 py-2">Fecha</th>
+              <th className="px-3 py-2">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((solicitud) => (
+              <NotificacionesRow
+                key={solicitud._id}
+                solicitud={solicitud}
+                labelTipo={labelTipo(solicitud.tipo as SolicitudEdicionTipo)}
+                expanded={!!expanded[solicitud._id]}
+                onToggle={() => handleToggle(solicitud._id)}
+                rechazoEdit={rechazoEdit}
+                setRechazoEdit={setRechazoEdit}
+                accionando={accionando}
+                onAprobar={() => onAprobar(solicitud)}
+                onRechazar={() => onRechazar(solicitud)}
+                onEditar={() => onEditar(solicitud)}
+                canApprove={canApprove}
+                selected={selectedIds.has(solicitud._id)}
+                onToggleSelect={() => onToggleSelect(solicitud._id)}
+              />
+            ))}
+          </tbody>
+        </table>
+
+        {/* Empty state */}
+        {items.length === 0 && (
+          <div className="py-8 text-center text-slate-500">
+            No hay solicitudes en esta categoría
           </div>
-        </section>
-      ))}
-    </div>
+        )}
+      </div>
+    </section>
   );
 };
