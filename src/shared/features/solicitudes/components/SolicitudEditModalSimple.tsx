@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { SolicitudEdicion } from '../types/solicitudesEdicion';
 import { actualizarSolicitudEdicion as actualizarSolicitud } from '../services/solicitudesEdicionService';
+import { useToast } from '../../../components/Toast/ToastProvider';
 
 interface Props {
   solicitud: SolicitudEdicion | null;
@@ -11,6 +12,7 @@ interface Props {
 export default function SolicitudEditModalSimple({ solicitud, onClose, onSaved }: Props) {
   const [loading, setLoading] = useState(false);
   const [datos, setDatos] = useState<Record<string, any>>({});
+  const { addToast } = useToast();
 
   useEffect(() => {
     setDatos(solicitud?.datosPropuestos ? { ...solicitud!.datosPropuestos } : {});
@@ -29,7 +31,7 @@ export default function SolicitudEditModalSimple({ solicitud, onClose, onSaved }
       onSaved({ ...updated, id: updated._id }); // Agregar la propiedad id
       onClose();
     } catch (err: any) {
-      alert(err?.message || 'Error');
+      addToast({ type: 'error', title: 'Error', message: err?.message || 'Error' });
     } finally {
       setLoading(false);
     }
