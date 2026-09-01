@@ -1,5 +1,6 @@
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
+import { Link } from 'react-router-dom';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/react/24/outline';
 import type { Equipo } from '../../../shared/utils/types/types';
@@ -10,9 +11,12 @@ const optionClassName = (active: boolean) =>
   }`;
 
 const EmptyState = () => (
-  <div className="rounded-lg border border-dashed border-slate-300 bg-white/60 px-4 py-2 text-sm text-slate-500">
-    Sin equipos disponibles
-  </div>
+  <Link
+    to="/onboarding"
+    className="rounded-lg border border-dashed border-brand-300 bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
+  >
+    + Crear o sumarme a un equipo
+  </Link>
 );
 
 const TeamSelector = () => {
@@ -34,6 +38,14 @@ const TeamSelector = () => {
         <Listbox.Button className="relative w-full cursor-pointer rounded-lg border border-slate-200 bg-white py-2 pl-3 pr-10 text-left text-sm font-medium text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20">
           <span className="block truncate">
             {equipoSeleccionado?.nombre ?? 'Seleccionar equipo'}
+            {equipoSeleccionado && equipoSeleccionado.verificado === false ? (
+              <span
+                title="Equipo sin verificar: todavía no puede inscribirse a competencias"
+                className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-700"
+              >
+                Sin verificar
+              </span>
+            ) : null}
           </span>
           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400">
             <ChevronUpDownIcon aria-hidden className="h-5 w-5" />

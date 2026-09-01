@@ -108,6 +108,19 @@ const CompetenciasPage = () => {
         </p>
       </header>
 
+      {equipoSeleccionado.verificado === false ? (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+          <h2 className="text-lg font-semibold text-amber-900">Equipo pendiente de verificación</h2>
+          <p className="mt-2 text-sm text-amber-800">
+            {equipoSeleccionado.nombre} todavía no fue verificado por Overtime, así que no puede
+            inscribirse a competencias. Mientras tanto podés cargar la plantilla, organizar amistosos y
+            registrar estadísticas con normalidad.
+          </p>
+          <p className="mt-3 text-sm text-amber-800">
+            La verificación la hace un administrador de Overtime. Si ya pasó un tiempo, escribinos.
+          </p>
+        </section>
+      ) : (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
         <h2 className="text-lg font-semibold text-slate-900">Solicitar inscripción</h2>
         <p className="mt-1 text-sm text-slate-500">Completá los datos de la competencia que deseás solicitar.</p>
@@ -162,6 +175,7 @@ const CompetenciasPage = () => {
           </div>
         </form>
       </section>
+      )}
 
       {loading ? (
         <p className="text-sm text-slate-500">Cargando participaciones…</p>

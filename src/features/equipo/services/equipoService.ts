@@ -87,6 +87,7 @@ export type BackendEquipo = {
   administradores?: string[];
   creadoPor?: string;
   redesSociales?: RedesSociales;
+  verificado?: boolean;
 };
 
 export interface EquipoOpcion {
@@ -102,6 +103,7 @@ const mapEquipo = (equipo: BackendEquipo): Equipo => ({
   logoUrl: equipo.escudo,
   descripcion: equipo.descripcion,
   redesSociales: equipo.redesSociales,
+  verificado: Boolean(equipo.verificado),
   staff: equipo.administradores?.map((admin) => {
     if (typeof admin === 'string') {
       return admin;
@@ -122,6 +124,42 @@ export const getEquipo = async (equipoId: string): Promise<Equipo> => {
   return mapEquipo(equipo);
 };
 
+export type CrearEquipoPayload = {
+  nombre: string;
+  escudo?: string;
+  tipo?: string;
+  pais?: string;
+};
+
+/**
+ * Crea el equipo y deja al usuario como administrador. Nace sin verificar:
+ * puede gestionar plantilla, amistosos y estadisticas, pero no inscribirse a
+ * competencias hasta que un Super Admin lo valide.
+ */
+export const crearEquipo = async (payload: CrearEquipoPayload): Promise<Equipo> => {
+  const equipo = await authFetch<BackendEquipo>('/equipos', {
+    method: 'POST',
+    body: payload,
+  });
+  return mapEquipo(equipo);
+};
+
+/**
+ * Pide ser administrador de un equipo que ya existe. Genera una SolicitudEdicion
+ * que aprueban los administradores actuales de ese equipo (o el Super Admin si
+ * el equipo no tiene ninguno). Tope de 3 administradores por equipo.
+ */
+export const solicitarAccesoAEquipo = async (equipoId: string, mensaje?: string) => {
+  return authFetch<{ _id: string }>('/solicitudes-edicion', {
+    method: 'POST',
+    body: {
+      tipo: 'usuario-solicitar-admin-equipo',
+      entidad: equipoId,
+      datosPropuestos: { equipoId, mensaje: mensaje || '' },
+    },
+  });
+};
+
 export interface JugadorOpcion {
   id: string;
   nombre: string;
@@ -132,7 +170,7 @@ export interface JugadorOpcion {
 
 export const obtenerOpcionesEquipos = async (query: string, excluirId?: string): Promise<EquipoOpcion[]> => {
   const params = new URLSearchParams();
-  if (query) params.set('q', query);
+  if (query) params.set('search', query);
   if (excluirId) params.set('excluir', excluirId);
 
   const data = await authFetch<

@@ -7,7 +7,11 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { login as loginRequest, getProfile } from '../../features/auth/services/authService';
+import {
+  login as loginRequest,
+  register as registerRequest,
+  getProfile,
+} from '../../features/auth/services/authService';
 import type { Usuario } from '../../shared/utils/types/types';
 
 type AuthContextValue = {
@@ -17,6 +21,7 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  register: (nombre: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
 };
@@ -106,6 +111,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
+  const register = useCallback(async (nombre: string, email: string, password: string) => {
+    try {
+      setLoading(true);
+      const { accessToken, refreshToken: rt, user } = await registerRequest({ nombre, email, password });
+      setStoredToken(accessToken);
+      setStoredRefreshToken(rt);
+      setToken(accessToken);
+      setRefreshToken(rt ?? null);
+      setUser(user);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setUser(null);
+      setStoredToken(null);
+      setStoredRefreshToken(null);
+      setToken(null);
+      setRefreshToken(null);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     setStoredToken(null);
     setStoredRefreshToken(null);
@@ -126,10 +154,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       isAuthenticated: Boolean(user),
       token,
       login,
+      register,
       logout,
       refreshProfile,
     }),
-    [user, loading, error, token, login, logout, refreshProfile]
+    [user, loading, error, token, login, register, logout, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

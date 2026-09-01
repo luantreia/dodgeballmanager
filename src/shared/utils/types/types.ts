@@ -41,6 +41,8 @@ export interface Equipo {
   staff?: string[];
   descripcion?: string;
   redesSociales?: RedesSociales;
+  /** Un equipo sin verificar opera normalmente pero no puede inscribirse a competencias. */
+  verificado?: boolean;
 }
 
 // ========================================

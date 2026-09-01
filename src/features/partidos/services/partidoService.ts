@@ -292,7 +292,7 @@ const mapPartido = (partido: BackendPartido, contextoEquipoId?: string): Partido
 export const getPartidos = async ({ equipoId, estado, competenciaId, temporadaId, faseId, tipo = 'todos' }: PartidoQuery): Promise<Partido[]> => {
   const params = new URLSearchParams();
   if (equipoId) params.set('equipo', equipoId);
-  if (estado) params.set('estado', estado);
+  if (estado) params.set('estado', mapEstadoPartidoToBackend(estado) ?? 'programado');
   if (competenciaId) params.set('competencia', competenciaId);
   if (temporadaId) params.set('temporadaId', temporadaId);
   if (faseId) params.set('fase', faseId);

@@ -51,6 +51,26 @@ export const login = async (payload: LoginPayload): Promise<LoginResult> => {
   };
 };
 
+export type RegisterPayload = {
+  nombre: string;
+  email: string;
+  password: string;
+};
+
+export const register = async (payload: RegisterPayload): Promise<LoginResult> => {
+  const response = await authFetch<BackendLoginResponse>('/auth/registro', {
+    method: 'POST',
+    body: payload,
+    useAuth: false,
+  });
+
+  return {
+    accessToken: response.accessToken,
+    refreshToken: response.refreshToken,
+    user: mapUsuario(response.user),
+  };
+};
+
 export const getProfile = async (): Promise<Usuario> => {
   const profile = await authFetch<BackendProfileResponse>('/usuarios/mi-perfil');
   return mapUsuario(profile);

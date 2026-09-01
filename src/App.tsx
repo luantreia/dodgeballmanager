@@ -8,7 +8,10 @@ import EstadisticasPage from './features/estadisticas/pages/EstadisticasPage';
 import NotificacionesPage from './features/notificaciones/pages/NotificacionesPage';
 import PerfilPage from './features/perfil/pages/PerfilPage';
 import LoginPage from './features/auth/pages/LoginPage';
+import RegistroPage from './features/auth/pages/RegistroPage';
+import OnboardingPage from './features/onboarding/pages/OnboardingPage';
 import ProtectedRoute from './app/routes/ProtectedRoute';
+import RequireEquipo from './app/routes/RequireEquipo';
 import Navbar from './app/layout/Navbar';
 import { FeatureFlagsProvider } from './shared/config/featureFlags';
 
@@ -21,11 +24,22 @@ const App = () => {
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/registro" element={<RegistroPage />} />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <OnboardingPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <DashboardPage />
+                <RequireEquipo>
+                  <DashboardPage />
+                </RequireEquipo>
               </ProtectedRoute>
             }
           />
@@ -33,7 +47,9 @@ const App = () => {
             path="/equipo"
             element={
               <ProtectedRoute>
-                <EquipoPage />
+                <RequireEquipo>
+                  <EquipoPage />
+                </RequireEquipo>
               </ProtectedRoute>
             }
           />
@@ -41,7 +57,9 @@ const App = () => {
             path="/jugadores"
             element={
               <ProtectedRoute>
-                <JugadoresPage />
+                <RequireEquipo>
+                  <JugadoresPage />
+                </RequireEquipo>
               </ProtectedRoute>
             }
           />
@@ -49,7 +67,9 @@ const App = () => {
             path="/competencias"
             element={
               <ProtectedRoute>
-                <CompetenciasPage />
+                <RequireEquipo>
+                  <CompetenciasPage />
+                </RequireEquipo>
               </ProtectedRoute>
             }
           />
@@ -57,7 +77,9 @@ const App = () => {
             path="/partidos"
             element={
               <ProtectedRoute>
-                <PartidosPage />
+                <RequireEquipo>
+                  <PartidosPage />
+                </RequireEquipo>
               </ProtectedRoute>
             }
           />
@@ -65,7 +87,9 @@ const App = () => {
             path="/estadisticas"
             element={
               <ProtectedRoute>
-                <EstadisticasPage />
+                <RequireEquipo>
+                  <EstadisticasPage />
+                </RequireEquipo>
               </ProtectedRoute>
             }
           />

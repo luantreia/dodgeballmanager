@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 
@@ -91,6 +91,13 @@ const LoginPage = () => {
             {loading ? 'Ingresando…' : 'Ingresar'}
           </button>
         </form>
+
+        <p className="mt-6 text-center text-sm text-slate-200/80">
+          ¿Todavía no tenés cuenta?{' '}
+          <Link to="/registro" className="font-semibold text-brand-300 underline hover:text-brand-200">
+            Crear una
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -475,6 +475,15 @@ const EquipoPage = () => {
             value={formData.logoUrl}
             onChange={handleChange as any}
             placeholder="https://..."
+            helperText={
+              <>
+                Subí la imagen a{' '}
+                <a href="https://postimages.org/" target="_blank" rel="noopener noreferrer" className="underline">
+                  postimages.org
+                </a>{' '}
+                y pegá el link "Direct link". Usá una imagen cuadrada y de buena resolución para que se vea bien en las tarjetas compartibles.
+              </>
+            }
           />
 
           <div>
