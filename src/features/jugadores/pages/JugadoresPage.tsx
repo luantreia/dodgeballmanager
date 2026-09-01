@@ -4,6 +4,7 @@ import { getContratosNoActivos, getJugadoresEquipo } from '../services/jugadorEq
 import type { Jugador, ContratoJugadorResumen } from '../../../shared/utils/types/types';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import InvitarJugadorSection from '../components/InvitarJugadorSection';
+import CrearJugadorSection from '../components/CrearJugadorSection';
 import SolicitudesPendientesSection from '../components/SolicitudesPendientesSection';
 import ModalBase from '../../../shared/components/ModalBase/ModalBase';
 import JugadoresListSection from '../components/JugadoresListSection';
@@ -111,6 +112,8 @@ const JugadoresPage = () => {
       ) : null}
 
       <InvitarJugadorSection equipoId={equipoSeleccionado.id} onSuccess={refreshData} />
+
+      <CrearJugadorSection equipoId={equipoSeleccionado.id} onSuccess={refreshData} />
 
       {error ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>

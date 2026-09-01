@@ -92,7 +92,16 @@ const LoginPage = () => {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-200/80">
+        <p className="mt-4 text-center text-sm text-slate-200/80">
+          <Link
+            to="/olvide-password"
+            className="font-medium text-slate-300 underline hover:text-slate-100"
+          >
+            Olvidé mi contraseña
+          </Link>
+        </p>
+
+        <p className="mt-2 text-center text-sm text-slate-200/80">
           ¿Todavía no tenés cuenta?{' '}
           <Link to="/registro" className="font-semibold text-brand-300 underline hover:text-brand-200">
             Crear una

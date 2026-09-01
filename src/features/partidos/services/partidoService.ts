@@ -484,6 +484,13 @@ export const obtenerEstadisticasJugadorSet = (query: {
   return authFetch<EstadisticasJugadorSet[]>(`/estadisticas/jugador-set?${params.toString()}`);
 };
 
+/**
+ * Visibilidad que se le pide a una estadística al guardarla.
+ * En un partido de competencia dispara la aprobación del organizador; en un
+ * amistoso se aplica directo, porque el equipo es la única autoridad.
+ */
+export type VisibilidadEstadistica = 'organizacion' | 'publica';
+
 export const crearEstadisticaJugadorSet = (payload: {
   set: string;
   jugadorPartido: string;
@@ -494,6 +501,7 @@ export const crearEstadisticaJugadorSet = (payload: {
   outs?: number;
   catches?: number;
   survive?: boolean;
+  visibilidadObjetivo?: VisibilidadEstadistica;
 }) =>
   authFetch<EstadisticasJugadorSet>(`/estadisticas/jugador-set`, {
     method: 'POST',
@@ -502,7 +510,9 @@ export const crearEstadisticaJugadorSet = (payload: {
 
 export const actualizarEstadisticaJugadorSet = (
   id: string,
-  payload: Partial<Pick<EstadisticasJugadorSet, 'throws' | 'hits' | 'outs' | 'catches' | 'survive'>>,
+  payload: Partial<Pick<EstadisticasJugadorSet, 'throws' | 'hits' | 'outs' | 'catches' | 'survive'>> & {
+    visibilidadObjetivo?: VisibilidadEstadistica;
+  },
 ) =>
   authFetch<EstadisticasJugadorSet>(`/estadisticas/jugador-set/${id}`, {
     method: 'PUT',

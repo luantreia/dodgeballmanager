@@ -14,6 +14,7 @@ export interface Usuario {
   nombre: string;
   email: string;
   rol: RolUsuario;
+  emailVerificado?: boolean;
 }
 
 export interface AdminUser {

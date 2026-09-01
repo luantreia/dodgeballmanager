@@ -9,6 +9,10 @@ import NotificacionesPage from './features/notificaciones/pages/NotificacionesPa
 import PerfilPage from './features/perfil/pages/PerfilPage';
 import LoginPage from './features/auth/pages/LoginPage';
 import RegistroPage from './features/auth/pages/RegistroPage';
+import OlvidePasswordPage from './features/auth/pages/OlvidePasswordPage';
+import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
+import VerificarEmailPage from './features/auth/pages/VerificarEmailPage';
+import EmailVerificacionBanner from './shared/components/EmailVerificacionBanner';
 import OnboardingPage from './features/onboarding/pages/OnboardingPage';
 import ProtectedRoute from './app/routes/ProtectedRoute';
 import RequireEquipo from './app/routes/RequireEquipo';
@@ -20,11 +24,15 @@ const App = () => {
     <FeatureFlagsProvider>
     <div className="flex min-h-screen flex-col bg-slate-50">
       <Navbar />
+      <EmailVerificacionBanner />
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/registro" element={<RegistroPage />} />
+          <Route path="/olvide-password" element={<OlvidePasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          <Route path="/verificar-email/:token" element={<VerificarEmailPage />} />
           <Route
             path="/onboarding"
             element={

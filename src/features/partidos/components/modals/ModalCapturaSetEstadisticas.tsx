@@ -12,6 +12,7 @@ import {
   obtenerEstadisticasJugadorSet,
   crearEstadisticaJugadorSet,
   actualizarEstadisticaJugadorSet,
+  type VisibilidadEstadistica,
 } from '../../services/partidoService';
 
 import { crearSolicitudEdicion } from '../../../../shared/features/solicitudes/services/solicitudesEdicionService';
@@ -55,6 +56,7 @@ const ModalCapturaSetEstadisticas = ({
   const [rowsLocal, setRowsLocal] = useState<Row[]>([]);
   const [rowsVisitante, setRowsVisitante] = useState<Row[]>([]);
   const [mapJpToStatId, setMapJpToStatId] = useState<Record<string, string>>({});
+  const [visibilidad, setVisibilidad] = useState<VisibilidadEstadistica>('organizacion');
 
   const setsOrdenados = useMemo(() => [...sets].sort((a, b) => a.numeroSet - b.numeroSet), [sets]);
 
@@ -305,13 +307,19 @@ const ModalCapturaSetEstadisticas = ({
           if (!r?.jugadorId || !r?.jugadorPartidoId) continue;
           const existingId = r.statId || mapJpToStatId[r.jugadorPartidoId];
           if (existingId) {
-            await actualizarEstadisticaJugadorSet(existingId, r.estadisticas);
+            await actualizarEstadisticaJugadorSet(existingId, {
+              ...r.estadisticas,
+              visibilidadObjetivo: visibilidad,
+            });
           } else {
             // Doble chequeo: consultar existencia por (set, jugadorPartido) para evitar E11000
             const existentes = await obtenerEstadisticasJugadorSet({ set: setId, jugadorPartido: r.jugadorPartidoId });
             const yaExiste = Array.isArray(existentes) && existentes.length > 0 ? existentes[0] : null;
             if (yaExiste?._id) {
-              await actualizarEstadisticaJugadorSet(yaExiste._id, r.estadisticas);
+              await actualizarEstadisticaJugadorSet(yaExiste._id, {
+                ...r.estadisticas,
+                visibilidadObjetivo: visibilidad,
+              });
               setMapJpToStatId((prev) => ({ ...prev, [r.jugadorPartidoId as string]: yaExiste!._id }));
             } else {
               const creado = await crearEstadisticaJugadorSet({
@@ -320,6 +328,7 @@ const ModalCapturaSetEstadisticas = ({
                 jugador: r.jugadorId,
                 equipo: equipoId,
                 ...r.estadisticas,
+                visibilidadObjetivo: visibilidad,
               });
               if (creado && creado._id) {
                 setMapJpToStatId((prev) => ({ ...prev, [r.jugadorPartidoId as string]: creado._id }));
@@ -347,7 +356,7 @@ const ModalCapturaSetEstadisticas = ({
     } finally {
       setGuardando(false);
     }
-  }, [addToast, numeroSetSeleccionado, onRefresh, partido?.equipoLocal, partido?.equipoVisitante, rowsLocal, rowsVisitante, sets, mapJpToStatId, esCompetencia, onClose, partidoId]);
+  }, [addToast, numeroSetSeleccionado, onRefresh, partido?.equipoLocal, partido?.equipoVisitante, rowsLocal, rowsVisitante, sets, mapJpToStatId, esCompetencia, onClose, partidoId, visibilidad]);
 
   return (
     <ModalBase isOpen={isOpen} onClose={onClose} bodyClassName="p-0" size="xl" title="Captura de estadísticas por set">
@@ -409,6 +418,30 @@ const ModalCapturaSetEstadisticas = ({
                 />
               );
             })()}
+
+            {!esCompetencia ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <label
+                  className="block text-sm font-medium text-slate-700"
+                  htmlFor="visibilidad-estadisticas"
+                >
+                  ¿Quién puede ver estas estadísticas?
+                </label>
+                <select
+                  id="visibilidad-estadisticas"
+                  value={visibilidad}
+                  onChange={(event) => setVisibilidad(event.target.value as VisibilidadEstadistica)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:w-72"
+                >
+                  <option value="organizacion">Solo mi equipo y la organización</option>
+                  <option value="publica">Públicas (visibles en el portal)</option>
+                </select>
+                <p className="mt-1 text-xs text-slate-500">
+                  Al ser un amistoso, la visibilidad se aplica al guardar: no pasa por aprobación de
+                  ningún organizador.
+                </p>
+              </div>
+            ) : null}
 
             <div className="flex justify-end gap-2">
               <button
