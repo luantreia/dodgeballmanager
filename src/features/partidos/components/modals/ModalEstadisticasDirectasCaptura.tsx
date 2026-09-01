@@ -128,7 +128,10 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
         }).filter(Boolean);
 
         await crearSolicitudEdicion({
-          tipo: 'estadisticasJugadorPartido',
+          // Mismo caso que en la captura por set: son números que todavía no existen,
+          // no una fila a publicar. Con 'estadisticasJugadorPartido' el backend
+          // buscaba una estadística con el id del partido y descartaba la propuesta.
+          tipo: 'estadisticas-partido-propuesta',
           entidad: partidoId,
           datosPropuestos: {
             estadisticas

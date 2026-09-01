@@ -285,7 +285,11 @@ const ModalCapturaSetEstadisticas = ({
           }));
 
         await crearSolicitudEdicion({
-          tipo: 'estadisticasJugadorSet',
+          // 'estadisticasJugadorSet' pide publicar una fila que YA existe y espera
+          // su _id en `entidad`. Acá se proponen números que todavía no existen,
+          // así que el tipo es otro y `entidad` es el partido. Con el tipo viejo el
+          // backend hacía findByIdAndUpdate(partidoId) y descartaba los datos.
+          tipo: 'estadisticas-set-propuesta',
           entidad: partidoId,
           datosPropuestos: {
             setId,

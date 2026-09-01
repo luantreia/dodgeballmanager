@@ -414,26 +414,29 @@ const PartidosPage = () => {
                         <EnvelopeIcon className="h-4 w-4" />
                         Solicitar edición
                       </button>
+                      {/* La alineación es de la capa partido: en competencia la carga
+                          el organizador, así que el acceso vive dentro del modal y
+                          depende de los permisos reales sobre ese partido. */}
                       {!esPartidoCompetencia(partido) ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleAbrirAlineacion(partido.id)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                          >
-                            <AdjustmentsHorizontalIcon className="h-4 w-4" />
-                            Alineación
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSeleccionar(partido.id)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
-                          >
-                            <Cog6ToothIcon className="h-4 w-4" />
-                            Gestionar
-                          </button>
-                        </>
+                        <button
+                          type="button"
+                          onClick={() => handleAbrirAlineacion(partido.id)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                        >
+                          <AdjustmentsHorizontalIcon className="h-4 w-4" />
+                          Alineación
+                        </button>
                       ) : null}
+                      {/* En competencia el modal manda todo como propuesta al
+                          organizador, así que también sirve para partidos de liga. */}
+                      <button
+                        type="button"
+                        onClick={() => handleSeleccionar(partido.id)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
+                      >
+                        <Cog6ToothIcon className="h-4 w-4" />
+                        Gestionar
+                      </button>
                     </>
                   }
                 />
@@ -482,26 +485,29 @@ const PartidosPage = () => {
                         <EnvelopeIcon className="h-4 w-4" />
                         Solicitar edición
                       </button>
+                      {/* La alineación es de la capa partido: en competencia la carga
+                          el organizador, así que el acceso vive dentro del modal y
+                          depende de los permisos reales sobre ese partido. */}
                       {!esPartidoCompetencia(partido) ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleAbrirAlineacion(partido.id)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                          >
-                            <AdjustmentsHorizontalIcon className="h-4 w-4" />
-                            Alineación
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSeleccionar(partido.id)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
-                          >
-                            <Cog6ToothIcon className="h-4 w-4" />
-                            Gestionar
-                          </button>
-                        </>
+                        <button
+                          type="button"
+                          onClick={() => handleAbrirAlineacion(partido.id)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                        >
+                          <AdjustmentsHorizontalIcon className="h-4 w-4" />
+                          Alineación
+                        </button>
                       ) : null}
+                      {/* En competencia el modal manda todo como propuesta al
+                          organizador, así que también sirve para partidos de liga. */}
+                      <button
+                        type="button"
+                        onClick={() => handleSeleccionar(partido.id)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
+                      >
+                        <Cog6ToothIcon className="h-4 w-4" />
+                        Gestionar
+                      </button>
                     </>
                   }
                 />

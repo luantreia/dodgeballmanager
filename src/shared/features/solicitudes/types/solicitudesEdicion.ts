@@ -6,6 +6,8 @@ export type SolicitudEdicionTipo =
   | 'resultadoSet'
   | 'estadisticasJugadorPartido'
   | 'estadisticasJugadorSet'
+  | 'estadisticas-set-propuesta'
+  | 'estadisticas-partido-propuesta'
   | 'estadisticasEquipoPartido'
   | 'estadisticasEquipoSet'
   | 'editarPartidoCompetencia'

@@ -23,6 +23,7 @@ import type { JugadorPartido } from '../../../../shared/utils/types/types';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 import { getMisPermisosEquipo } from '../../../equipo/services/equipoService';
+import { getMisPermisosPartido, type PermisosPartido } from '../../services/partidoService';
 
 type ModalPartidoAdminProps = {
   partidoId: string;
@@ -64,6 +65,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
   const [confirmEliminarAbierto, setConfirmEliminarAbierto] = useState<boolean>(false);
   const [canCaptureStats, setCanCaptureStats] = useState<boolean>(false);
   const [canEditStats, setCanEditStats] = useState<boolean>(false);
+  const [permisosPartido, setPermisosPartido] = useState<PermisosPartido | null>(null);
   const { addToast } = useToast();
 
   // Cargar partido
@@ -180,6 +182,26 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
     void cargarPermisos();
   }, [equipoContextoId]);
 
+  // Permisos de la capa partido: definen si además de proponer se puede escribir
+  // directo (organizador, admin del partido o planillero con asignación vigente).
+  useEffect(() => {
+    const cargarPermisosPartido = async () => {
+      if (!partidoId) {
+        setPermisosPartido(null);
+        return;
+      }
+
+      try {
+        setPermisosPartido(await getMisPermisosPartido(partidoId));
+      } catch (error) {
+        console.error('Error cargando permisos del partido:', error);
+        setPermisosPartido(null);
+      }
+    };
+
+    void cargarPermisosPartido();
+  }, [partidoId]);
+
   // Handlers
 
   const handleEliminarPartido = async () => {
@@ -254,6 +276,15 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${canEditStats ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
                   {canEditStats ? 'Puede editar estadisticas' : 'Edicion restringida'}
                 </span>
+                {permisosPartido?.canManageLineup ? (
+                  <button
+                    type="button"
+                    onClick={() => setAlineacionModalAbierta(true)}
+                    className="rounded-full border border-slate-300 px-2 py-0.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100"
+                  >
+                    Alineación
+                  </button>
+                ) : null}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -289,6 +320,17 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
               </button>
             </div>
           </div>
+
+          {permisosPartido?.esCompetencia && !permisosPartido?.canManageSets ? (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p className="font-semibold">Partido de competencia</p>
+              <p className="mt-1">
+                Lo que cargues acá se envía como propuesta al organizador y recién se aplica cuando
+                la aprueba. La alineación la carga la organización: si todavía no lo hizo, no vas a
+                ver jugadores para completar.
+              </p>
+            </div>
+          ) : null}
 
           {vistaEstadisticas === 'generales' && (
             <SeccionEstadisticasGenerales

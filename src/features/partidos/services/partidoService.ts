@@ -368,6 +368,23 @@ export const actualizarPartido = async (
   return mapPartido(partido, equipoId);
 };
 
+export type PermisosPartido = {
+  partidoId: string;
+  esCompetencia: boolean;
+  canManageLineup: boolean;
+  canManageSets: boolean;
+  canSetResultado: boolean;
+};
+
+/**
+ * Qué puede hacer el usuario sobre ESTE partido. Es una capa distinta de los
+ * permisos de equipo: en un partido de competencia, la alineación y los sets son
+ * del organizador o de quien tenga una asignación vigente, aunque seas admin de
+ * uno de los equipos que juegan.
+ */
+export const getMisPermisosPartido = (partidoId: string) =>
+  authFetch<PermisosPartido>(`/partidos/${partidoId}/mis-permisos`);
+
 export const getAlineacion = (partidoId: string) =>
   authFetch<JugadorPartido[]>(`/jugador-partido?partido=${partidoId}`);
 
