@@ -5,18 +5,18 @@ import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getPartidos } from '../../partidos/services/partidoService';
 // Ranking reusable section
 import { SeccionTop5estadisticasDirectas } from '../../estadisticas/components/sections/SeccionTop5estadisticasDirectas';
-import type { EstadisticaEquipoResumen, Partido } from '../../../shared/utils/types/types';
+import type { Partido } from '../../../shared/utils/types/types';
 import { formatNumber } from '../../../shared/utils/formatNumber';
 import { Link } from 'react-router-dom';
 import { getSolicitudesEdicion } from '../../../shared/features/solicitudes';
-import { getEstadisticasEquipo } from '../../estadisticas/services/estadisticasService';
+import { getResumenOficialEquipo, type ResumenOficialEquipo } from '../../estadisticas/services/estadisticasService';
 
 
 const DashboardPage = () => {
   const { equipoSeleccionado, loading: loadingEquipo } = useEquipo();
   const [proximosPartidos, setProximosPartidos] = useState<Partido[]>([]);
   const [notificacionesPendientes, setNotificacionesPendientes] = useState<number>(0);
-  const [resumenEquipo, setResumenEquipo] = useState<EstadisticaEquipoResumen | null>(null);
+  const [resumenEquipo, setResumenEquipo] = useState<ResumenOficialEquipo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +37,9 @@ const DashboardPage = () => {
         const [partidos, solicitudesResp, stats] = await Promise.all([
           getPartidos({ equipoId, estado: 'pendiente' }),
           getSolicitudesEdicion({ estado: 'pendiente' }),
-          getEstadisticasEquipo(equipoId),
+          // .catch: si el resumen falla no debe arrastrar al resto del Promise.all. Antes
+          // un 404 acá dejaba el dashboard entero sin partidos ni notificaciones.
+          getResumenOficialEquipo(equipoId).catch(() => null),
         ]);
 
         if (isCancelled) return;
@@ -55,7 +57,7 @@ const DashboardPage = () => {
         setProximosPartidos(partidosOrdenados);
         const count = (solicitudesResp.solicitudes || []).filter((s) => s.tipo === 'jugador-equipo-crear' && (s.datosPropuestos as any)?.equipoId === equipoId).length;
         setNotificacionesPendientes(count);
-        setResumenEquipo(stats.resumen);
+        setResumenEquipo(stats);
         setError(null);
       } catch (err) {
         console.error(err);
@@ -78,25 +80,31 @@ const DashboardPage = () => {
 
   
 
+  // Vocabulario de dodgeball, y solo campos que el backend devuelve de verdad. Lo que
+  // había antes —efectividad de victorias, puntos por partido, posición— no existe en
+  // ninguna respuesta del backend y salía siempre vacío.
   const statsCards = useMemo(() => {
-    if (!resumenEquipo) return [];
+    if (!resumenEquipo || resumenEquipo.partidosJugados === 0) return [];
+    const { throws, hits, catches } = resumenEquipo.totales;
+    const efectividad = throws > 0 ? (hits / throws) * 100 : null;
+
     return [
       {
-        titulo: 'Efectividad del equipo',
-        valor: `${formatNumber(resumenEquipo.efectividadEquipo)}%`,
-        descripcion: 'Promedio de victorias sobre el total de partidos.',
+        titulo: 'Partidos con datos',
+        valor: String(resumenEquipo.partidosJugados),
+        descripcion: 'Con estadísticas oficiales cargadas.',
         tono: 'brand' as const,
       },
       {
-        titulo: 'Puntos por partido',
-        valor: formatNumber(resumenEquipo.puntosPorPartido),
-        descripcion: 'Promedio en los últimos encuentros.',
+        titulo: 'Efectividad',
+        valor: efectividad !== null ? `${formatNumber(efectividad)}%` : '—',
+        descripcion: `${hits} hits sobre ${throws} throws.`,
         tono: 'emerald' as const,
       },
       {
-        titulo: 'Posición actual',
-        valor: resumenEquipo.posicionActual ? `#${resumenEquipo.posicionActual}` : '—',
-        descripcion: 'Ranking en la competencia vigente.',
+        titulo: 'Catches',
+        valor: String(catches),
+        descripcion: 'Atrapadas del equipo en total.',
         tono: 'amber' as const,
       },
     ];
