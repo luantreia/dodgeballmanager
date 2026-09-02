@@ -1,23 +1,28 @@
 import { authFetch } from '../../../shared/utils/authFetch';
-import type { EstadisticaEquipoResumen, EstadisticaJugador } from '../../../shared/utils/types/types';
 
-type EstadisticasEquipoResponse = {
-  resumen: EstadisticaEquipoResumen;
-  jugadores: EstadisticaJugador[];
-};
+/**
+ * Resumen oficial del equipo, tal como lo devuelve el backend.
+ *
+ * Antes acá vivían `getEstadisticasEquipo` y `getHistorialResultados`, que pegaban a
+ * `/estadisticas?equipo=` y `/estadisticas/historial?equipo=`. Ninguna de las dos rutas
+ * existe: el backend expone `/estadisticas/equipo/:id/resumen`. Las llamadas daban 404,
+ * la pantalla caía en su `catch` y toda la cabecera de estadísticas quedaba vacía —
+ * incluidos los campos puntos/bloqueos/faltas, que además no existen en ningún lado del
+ * backend ni son vocabulario de dodgeball.
+ */
+export interface ResumenOficialEquipo {
+  equipo: string;
+  partidosJugados: number;
+  totales: {
+    throws: number;
+    hits: number;
+    outs: number;
+    catches: number;
+  };
+}
 
-type EstadisticaHistorica = {
-  fecha: string;
-  resultado: 'W' | 'D' | 'L';
-  puntosAnotados: number;
-  puntosRecibidos: number;
-};
-
-export const getEstadisticasEquipo = (equipoId: string) =>
-  authFetch<EstadisticasEquipoResponse>(`/estadisticas?equipo=${equipoId}`);
-
-export const getHistorialResultados = (equipoId: string) =>
-  authFetch<EstadisticaHistorica[]>(`/estadisticas/historial?equipo=${equipoId}`);
+export const getResumenOficialEquipo = (equipoId: string) =>
+  authFetch<ResumenOficialEquipo>(`/estadisticas/equipo/${equipoId}/resumen`);
 
 export interface EstadisticaJugadorSetResumen {
   _id: string;

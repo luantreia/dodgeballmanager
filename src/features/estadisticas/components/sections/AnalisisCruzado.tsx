@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from 'recharts';
+import {
   getFilasPlanillas,
   type FilaPlanilla,
 } from '../../../partidos/services/planillaEquipoService';
@@ -104,6 +107,14 @@ interface Props {
 
 const SIN_COLUMNAS = '__ninguna__';
 
+/** Más barras que esto no se leen en un teléfono; la tabla de arriba las tiene todas. */
+const MAX_BARRAS = 12;
+
+// Secuencial en azul para una sola serie, con acentos diferenciados cuando se abre por
+// columnas. Se evita el verde/rojo semántico: acá "ganado" y "perdido" son categorías,
+// no un juicio de valor sobre el jugador.
+const COLORES = ['#2563eb', '#0d9488', '#a16207', '#7c3aed', '#be123c', '#0369a1'];
+
 const AnalisisCruzado: React.FC<Props> = ({ equipoId }) => {
   const [filas, setFilas] = useState<FilaPlanilla[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,6 +187,28 @@ const AnalisisCruzado: React.FC<Props> = ({ equipoId }) => {
 
     return { celdas, clavesFila, clavesColumna, totalesFila, totalesColumna, total };
   }, [filas, dimFila, dimColumna, metrica]);
+
+  const seriesGrafico = useMemo(
+    () => (dimColumna === SIN_COLUMNAS ? ['Total'] : tabla.clavesColumna),
+    [dimColumna, tabla.clavesColumna],
+  );
+
+  /**
+   * Recharts necesita una fila por barra con una clave por serie. Las celdas sin valor
+   * se omiten en vez de mandarse como 0: un jugador que no jugó ningún set empatado no
+   * tiene 0% de efectividad ahí, no tiene dato.
+   */
+  const datosGrafico = useMemo(
+    () => tabla.clavesFila.slice(0, MAX_BARRAS).map((kf) => {
+      const punto: Record<string, string | number> = { nombre: kf };
+      for (const kc of seriesGrafico) {
+        const v = calcular(tabla.celdas.get(kf)?.get(kc), metrica);
+        if (v !== null) punto[kc] = Number(v.toFixed(2));
+      }
+      return punto;
+    }),
+    [tabla, seriesGrafico, metrica],
+  );
 
   const selectClase = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20';
 
@@ -304,6 +337,48 @@ const AnalisisCruzado: React.FC<Props> = ({ equipoId }) => {
               </tfoot>
             </table>
           </div>
+
+          {datosGrafico.length > 0 && (
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                {METRICAS.find((m) => m.clave === metrica)?.label}
+                {dimColumna !== SIN_COLUMNAS ? ` por ${DIMENSIONES.find((d) => d.clave === dimColumna)?.label.toLowerCase()}` : ''}
+              </h3>
+              <div style={{ width: '100%', height: Math.max(200, datosGrafico.length * 34) }}>
+                <ResponsiveContainer>
+                  <BarChart data={datosGrafico} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <YAxis
+                      type="category"
+                      dataKey="nombre"
+                      width={110}
+                      tick={{ fontSize: 11, fill: '#334155' }}
+                    />
+                    <Tooltip
+                      formatter={(v: number) => formatear(v, metrica)}
+                      contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+                    />
+                    {seriesGrafico.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
+                    {seriesGrafico.map((serie, i) => (
+                      <Bar
+                        key={serie}
+                        dataKey={serie}
+                        name={serie}
+                        fill={COLORES[i % COLORES.length]}
+                        radius={[0, 3, 3, 0]}
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {tabla.clavesFila.length > MAX_BARRAS && (
+                <p className="mt-1 text-xs text-slate-400">
+                  El gráfico muestra las {MAX_BARRAS} primeras filas; la tabla las tiene todas.
+                </p>
+              )}
+            </div>
+          )}
 
           <p className="text-xs text-slate-500">
             {filas.length} registros de {new Set(filas.map((f) => f.partidoId)).size} partidos.
