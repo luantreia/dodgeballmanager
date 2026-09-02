@@ -6,6 +6,7 @@ import { SeccionEstadisticasSetASet } from '../sections/SeccionEstadisticasSetAS
 import { SeccionEstadisticasDirectas } from '../sections/SeccionEstadisticasDirectas';
 import ModalCapturaSetEstadisticas from './ModalCapturaSetEstadisticas';
 import ModalEstadisticasGeneralesCaptura from './ModalEstadisticasDirectasCaptura';
+import ModalPlanillaEquipo from './ModalPlanillaEquipo';
 import ModalAlineacionPartido from './ModalAlineacionPartido';
 import ModalGestionSets from './ModalGestionSets';
 import {
@@ -63,6 +64,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
   const [hayDatosAutomaticosGenerales, setHayDatosAutomaticosGenerales] = useState<boolean>(false);
   const [alineacionModalAbierta, setAlineacionModalAbierta] = useState<boolean>(false);
   const [confirmEliminarAbierto, setConfirmEliminarAbierto] = useState<boolean>(false);
+  const [planillaAbierta, setPlanillaAbierta] = useState<boolean>(false);
   const [canCaptureStats, setCanCaptureStats] = useState<boolean>(false);
   const [canEditStats, setCanEditStats] = useState<boolean>(false);
   const [permisosPartido, setPermisosPartido] = useState<PermisosPartido | null>(null);
@@ -329,6 +331,22 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
                 la aprueba. La alineación la carga la organización: si todavía no lo hizo, no vas a
                 ver jugadores para completar.
               </p>
+              {equipoContextoId && canCaptureStats ? (
+                <>
+                  <p className="mt-2">
+                    Si necesitás los datos igual —para analizar el partido por tu cuenta— armá tu
+                    propia planilla: no depende de que la organización haya cargado nada, y no
+                    modifica los datos oficiales.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setPlanillaAbierta(true)}
+                    className="mt-3 rounded-md border border-amber-300 bg-white px-3 py-1.5 font-medium text-amber-900 transition hover:bg-amber-100"
+                  >
+                    Abrir mi planilla
+                  </button>
+                </>
+              ) : null}
             </div>
           ) : null}
 
@@ -404,6 +422,15 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
             setCapturaSetAbierta(true);
           }) : undefined}
           esCompetencia={!!partido?.competencia}
+        />
+      )}
+
+      {planillaAbierta && equipoContextoId && (
+        <ModalPlanillaEquipo
+          partidoId={partidoId}
+          equipoId={equipoContextoId}
+          onClose={() => setPlanillaAbierta(false)}
+          onRefresh={cargarPartido}
         />
       )}
 
