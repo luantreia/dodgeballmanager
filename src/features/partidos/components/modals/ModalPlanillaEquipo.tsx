@@ -20,7 +20,9 @@ import {
   type PlanillaCompleta,
   type PlanillaModo,
   type PlanillaPresente,
+  type PlanillaSet as PlanillaSetTipo,
 } from '../../services/planillaEquipoService';
+import { extractEquipoNombre, type PartidoDetallado } from '../../services/partidoService';
 
 /**
  * Captura del equipo sobre un partido propio.
@@ -36,6 +38,8 @@ interface Props {
   partidoId: string;
   equipoId: string;
   equipoNombre?: string;
+  /** Necesario para nombrar a los equipos en el selector de ganador de cada set. */
+  partido?: PartidoDetallado | null;
   onClose: () => void;
   onRefresh?: () => Promise<void> | void;
 }
@@ -63,6 +67,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   partidoId,
   equipoId,
   equipoNombre,
+  partido,
   onClose,
   onRefresh,
 }) => {
@@ -167,6 +172,41 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       });
     } finally {
       setCreando(false);
+    }
+  };
+
+  const nombreLocal = useMemo(
+    () => extractEquipoNombre(partido?.equipoLocal, 'Local'),
+    [partido],
+  );
+  const nombreVisitante = useMemo(
+    () => extractEquipoNombre(partido?.equipoVisitante, 'Visitante'),
+    [partido],
+  );
+
+  const setActivo = useMemo(
+    () => planilla?.sets.find((s) => s._id === setActivoId) ?? null,
+    [planilla, setActivoId],
+  );
+
+  /**
+   * Sin ganador el set se oficializa como 'pendiente', y al oficializar se crea un
+   * SetPartido en estado 'en_juego' dentro de un partido finalizado. Peor: el marcador
+   * del partido se deriva de los sets FINALIZADOS, así que un recálculo posterior los
+   * contaría como cero. Registrar el ganador acá es lo que cierra ese agujero.
+   */
+  const cambiarGanador = async (ganadorSet: PlanillaSetTipo['ganadorSet']): Promise<void> => {
+    if (!planilla || !setActivo) return;
+    try {
+      await guardarSet(planilla._id, { numeroSet: setActivo.numeroSet, ganadorSet });
+      const completa = await obtenerPlanilla(planilla._id);
+      setPlanilla(completa);
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'No se pudo guardar el resultado del set',
+        message: error instanceof Error ? error.message : 'Error inesperado',
+      });
     }
   };
 
@@ -434,6 +474,36 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                 >
                   + Agregar set
                 </button>
+              )}
+            </div>
+          )}
+
+          {planilla.modo === 'sets' && setActivo && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <label
+                htmlFor="ganador-set-planilla"
+                className="text-sm font-medium text-gray-700"
+              >
+                ¿Quién ganó el set {setActivo.numeroSet}?
+              </label>
+              <select
+                id="ganador-set-planilla"
+                value={setActivo.ganadorSet}
+                disabled={!editable}
+                onChange={(e) =>
+                  void cambiarGanador(e.target.value as PlanillaSetTipo['ganadorSet'])
+                }
+                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800 disabled:bg-gray-100 disabled:text-gray-500"
+              >
+                <option value="pendiente">Sin definir</option>
+                <option value="local">{nombreLocal}</option>
+                <option value="visitante">{nombreVisitante}</option>
+                <option value="empate">Empate</option>
+              </select>
+              {setActivo.ganadorSet === 'pendiente' && (
+                <span className="text-xs text-amber-700">
+                  Sin esto el set queda como no jugado si alguna vez se oficializa.
+                </span>
               )}
             </div>
           )}

@@ -436,6 +436,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
         <ModalPlanillaEquipo
           partidoId={partidoId}
           equipoId={equipoContextoId}
+          partido={partido}
           onClose={() => setPlanillaAbierta(false)}
           onRefresh={cargarPartido}
         />
