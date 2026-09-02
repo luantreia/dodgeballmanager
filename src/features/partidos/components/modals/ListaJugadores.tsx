@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FC } from 'react';
 import JugadorEstadisticasCard from '../common/JugadorEstadisticasCard';
 import { getJugadoresEquipo } from '../../../jugadores/services/jugadorEquipoService';
+import { JUGADORES_POR_SET } from '../../constants/capturaSet';
 
 type CampoNumerico = 'throws' | 'hits' | 'outs' | 'catches';
 
@@ -97,10 +98,16 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
       .map((j) => j?.jugadorId)
       .filter((value): value is string => Boolean(value));
 
+  // La grilla es de JUGADORES_POR_SET slots fijos. Ojo: recortar acá NO alcanza —
+  // quien pase más entradas de las que entran va a ver una cosa y guardar otra. El
+  // llamador tiene que mandar exactamente los slots que quiere capturar.
   const estadisticasCompletas: Array<EstadisticaJugadorEntrada | null> = [
     ...estadisticasJugador,
-    ...Array.from({ length: Math.max(0, 6 - estadisticasJugador.length) }, () => null),
-  ].slice(0, 6);
+    ...Array.from(
+      { length: Math.max(0, JUGADORES_POR_SET - estadisticasJugador.length) },
+      () => null,
+    ),
+  ].slice(0, JUGADORES_POR_SET);
 
   if (loading) {
     return (

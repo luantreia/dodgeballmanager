@@ -177,6 +177,44 @@ export const cancelarOficializacion = (planillaId: string) =>
 export const eliminarPlanilla = (planillaId: string) =>
   authFetch<void>(`${BASE}/${planillaId}`, { method: 'DELETE' });
 
+export interface ResumenJugadorPlanilla {
+  jugadorId: string;
+  nombre: string;
+  foto?: string;
+  throws: number;
+  hits: number;
+  outs: number;
+  catches: number;
+  sets: number;
+  partidos: number;
+}
+
+export interface ResumenPartidoPlanilla {
+  planillaId: string;
+  partido: {
+    _id: string;
+    fecha?: string;
+    estado?: string;
+    competencia?: string | null;
+  } | null;
+  estado: PlanillaEstado;
+  modo: PlanillaModo;
+  totales: { throws: number; hits: number; outs: number; catches: number };
+}
+
+export interface ResumenPlanillas {
+  jugadores: ResumenJugadorPlanilla[];
+  partidos: ResumenPartidoPlanilla[];
+}
+
+/**
+ * Acumulado de todas las planillas del equipo. Son datos propios, no oficiales: no
+ * salen de las colecciones de la competencia y nunca se suman a ellas. Un jugador
+ * puede tener números acá y otros distintos en el registro oficial.
+ */
+export const getResumenPlanillas = (equipoId: string) =>
+  authFetch<ResumenPlanillas>(`${BASE}/resumen?equipo=${encodeURIComponent(equipoId)}`);
+
 /** Totales por presente, sumando todos los sets. Es la base de la vista de análisis. */
 export const totalizarPorPresente = (
   planilla: PlanillaCompleta,

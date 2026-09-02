@@ -1,7 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
-import JugadorEstadisticasCard from '../common/JugadorEstadisticasCard';
+import { ListaJugadores } from './ListaJugadores';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
+import {
+  JUGADORES_POR_SET,
+  ESTADISTICAS_SLOT_VACIO,
+  completarSlots,
+  type EstadisticasSlot,
+} from '../../constants/capturaSet';
 import {
   obtenerPlanillaDePartido,
   obtenerPlanilla,
@@ -34,9 +40,17 @@ interface Props {
   onRefresh?: () => Promise<void> | void;
 }
 
-type Valores = { throws: number; hits: number; outs: number; catches: number; survive: boolean };
+/**
+ * Un slot de la grilla. `presenteId` es quién ocupa ese lugar en cancha este set;
+ * vacío significa que todavía no se eligió. Son JUGADORES_POR_SET slots fijos, igual
+ * que en la captura set a set del partido, para que las dos vistas se lean igual.
+ */
+type Slot = { presenteId?: string; estadisticas: EstadisticasSlot };
 
-const VACIO: Valores = { throws: 0, hits: 0, outs: 0, catches: 0, survive: false };
+const slotVacio = (): Slot => ({ estadisticas: { ...ESTADISTICAS_SLOT_VACIO } });
+
+const slotsVacios = (): Slot[] =>
+  Array.from({ length: JUGADORES_POR_SET }, slotVacio);
 
 const nombrePresente = (presente: PlanillaPresente): string => {
   const j = presente.jugador;
@@ -59,7 +73,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   const [creando, setCreando] = useState(false);
   const [modoNuevo, setModoNuevo] = useState<PlanillaModo>('sets');
   const [setActivoId, setSetActivoId] = useState<string | null>(null);
-  const [valores, setValores] = useState<Record<string, Valores>>({});
+  const [slots, setSlots] = useState<Slot[]>(slotsVacios);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -89,24 +103,30 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     void cargar();
   }, [cargar]);
 
-  // Los contadores en pantalla siempre reflejan el set activo (o los totales, en modo
+  // Los slots en pantalla siempre reflejan el set activo (o los totales, en modo
   // directa). Al cambiar de set se recargan desde lo guardado.
   useEffect(() => {
-    if (!planilla) return;
+    if (!planilla) {
+      setSlots(slotsVacios());
+      return;
+    }
+
     const filas = planilla.estadisticas.filter((e) =>
       planilla.modo === 'sets' ? e.planillaSet === setActivoId : e.planillaSet === null,
     );
-    const mapa: Record<string, Valores> = {};
-    for (const fila of filas) {
-      mapa[fila.planillaPresente] = {
+
+    const ocupados: Slot[] = filas.map((fila) => ({
+      presenteId: fila.planillaPresente,
+      estadisticas: {
         throws: fila.throws ?? 0,
         hits: fila.hits ?? 0,
         outs: fila.outs ?? 0,
         catches: fila.catches ?? 0,
         survive: Boolean(fila.survive),
-      };
-    }
-    setValores(mapa);
+      },
+    }));
+
+    setSlots(completarSlots(ocupados, slotVacio));
   }, [planilla, setActivoId]);
 
   const editable = planilla?.estado === 'borrador' || planilla?.estado === 'rechazada';
@@ -115,6 +135,13 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     () => (planilla ? totalizarPorPresente(planilla) : {}),
     [planilla],
   );
+
+  // ListaJugadores lo usa para cargar el plantel cuando no recibe opciones. Acá siempre
+  // se las pasamos, así que no llega a consultarlo, pero el prop es obligatorio.
+  const equipoIdDePlanilla = useMemo(() => {
+    if (!planilla) return equipoId;
+    return typeof planilla.equipo === 'string' ? planilla.equipo : planilla.equipo._id;
+  }, [planilla, equipoId]);
 
   const crear = async (): Promise<void> => {
     setCreando(true);
@@ -160,17 +187,41 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     }
   };
 
+  const asignarJugador = (index: number, presenteId: string): void => {
+    setSlots((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], presenteId: presenteId || undefined };
+      return next;
+    });
+  };
+
   const cambiarEstadistica = (
-    presenteId: string,
+    index: number,
     campo: 'throws' | 'hits' | 'outs' | 'catches',
     delta: number,
   ): void => {
-    setValores((prev) => {
-      const actual = prev[presenteId] ?? VACIO;
-      return {
-        ...prev,
-        [presenteId]: { ...actual, [campo]: Math.max(0, (actual[campo] ?? 0) + delta) },
+    setSlots((prev) => {
+      const next = [...prev];
+      const actual = next[index];
+      next[index] = {
+        ...actual,
+        estadisticas: {
+          ...actual.estadisticas,
+          [campo]: Math.max(0, (actual.estadisticas[campo] ?? 0) + delta),
+        },
       };
+      return next;
+    });
+  };
+
+  const cambiarSurvive = (index: number, value: boolean): void => {
+    setSlots((prev) => {
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        estadisticas: { ...next[index].estadisticas, survive: value },
+      };
+      return next;
     });
   };
 
@@ -183,17 +234,25 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
 
     setGuardando(true);
     try {
-      const filas = Object.entries(valores).map(([planillaPresente, v]) => ({
-        planillaPresente,
-        throws: v.throws,
-        hits: v.hits,
-        outs: v.outs,
-        catches: v.catches,
-        survive: v.survive,
-      }));
+      // Solo los slots con jugador asignado. Un slot vacío no es un jugador en cero:
+      // es un lugar que todavía no se completó, y no debe generar una fila.
+      const filas = slots
+        .filter((s): s is Slot & { presenteId: string } => Boolean(s.presenteId))
+        .map((s) => ({
+          planillaPresente: s.presenteId,
+          throws: s.estadisticas.throws,
+          hits: s.estadisticas.hits,
+          outs: s.estadisticas.outs,
+          catches: s.estadisticas.catches,
+          survive: s.estadisticas.survive,
+        }));
 
       if (!filas.length) {
-        addToast({ type: 'error', title: 'Nada para guardar', message: 'Cargá al menos un jugador' });
+        addToast({
+          type: 'error',
+          title: 'Nada para guardar',
+          message: 'Asigná al menos un jugador a la grilla',
+        });
         return;
       }
 
@@ -388,27 +447,37 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
               Agregá un set para empezar a cargar estadísticas.
             </div>
           ) : (
-            <div className="grid max-h-[55vh] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 xl:grid-cols-4">
-              {planilla.presentes.map((presente, idx) => (
-                <JugadorEstadisticasCard
-                  key={presente._id}
-                  index={idx}
-                  jugadorId={presente._id}
-                  opcionesJugadores={[{ value: presente._id, label: nombrePresente(presente) }]}
-                  onCambiarJugador={() => { /* el plantel se gestiona en el equipo, no acá */ }}
-                  onCambiarEstadistica={(campo, delta) =>
-                    editable && cambiarEstadistica(presente._id, campo, delta)
-                  }
-                  onCambiarSurvive={(value) =>
-                    editable &&
-                    setValores((prev) => ({
-                      ...prev,
-                      [presente._id]: { ...(prev[presente._id] ?? VACIO), survive: value },
-                    }))
-                  }
-                  estadisticasJugador={valores[presente._id] ?? VACIO}
-                />
-              ))}
+            <div>
+              <p className="mb-1 text-xs text-slate-500">
+                {JUGADORES_POR_SET} en cancha
+                {planilla.modo === 'sets' ? ' en este set' : ''}. Elegí quiénes jugaron y cargá sus
+                números.
+              </p>
+              {/* Misma grilla que usa la captura set a set del partido, para que las dos
+                  vistas se lean igual. Acá las opciones son los presentes de la planilla
+                  (id de PlanillaPresente), no jugadores sueltos. */}
+              <ListaJugadores
+                equipoNombre={equipoNombre ?? 'Mi equipo'}
+                equipoId={equipoIdDePlanilla}
+                token=""
+                estadisticasJugador={slots.map((s) => ({
+                  jugadorId: s.presenteId,
+                  estadisticas: s.estadisticas,
+                }))}
+                opcionesJugadores={planilla.presentes.map((p) => ({
+                  value: p._id,
+                  label: nombrePresente(p),
+                }))}
+                onAsignarJugador={(index, presenteId) => {
+                  if (editable) asignarJugador(index, presenteId);
+                }}
+                onCambiarEstadistica={(index, campo, delta) => {
+                  if (editable) cambiarEstadistica(index, campo, delta);
+                }}
+                onCambiarSurvive={(index, value) => {
+                  if (editable) cambiarSurvive(index, value);
+                }}
+              />
             </div>
           )}
 

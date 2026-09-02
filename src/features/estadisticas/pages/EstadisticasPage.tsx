@@ -8,6 +8,7 @@ import type { EstadisticaEquipoResumen, EstadisticaJugador } from '../../../shar
 import { ArrowTrendingUpIcon, ChartBarIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { SeccionTop5estadisticasDirectas } from '../components/sections/SeccionTop5estadisticasDirectas';
+import SeccionMisPlanillas from '../components/sections/SeccionMisPlanillas';
 
 
 
@@ -169,10 +170,14 @@ const EstadisticasPage = () => {
         </section>
       ) : null}
 
+      {/* Debajo de las métricas oficiales y visualmente separada: son datos propios del
+          equipo, sin verificar, y no se suman a ninguna cifra de arriba. */}
+      <SeccionMisPlanillas equipoId={equipoSeleccionado.id} />
+
       <section className="grid gap-6 xl:grid-cols-[1.6fr_minmax(0,1fr)]">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
             <SeccionTop5estadisticasDirectas equipoId={equipoSeleccionado.id} />
-        </div>  
+        </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
           <header className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

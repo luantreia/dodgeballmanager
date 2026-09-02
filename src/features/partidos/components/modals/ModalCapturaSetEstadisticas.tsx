@@ -16,6 +16,7 @@ import {
 } from '../../services/partidoService';
 
 import { crearSolicitudEdicion } from '../../../../shared/features/solicitudes/services/solicitudesEdicionService';
+import { completarSlots, ESTADISTICAS_SLOT_VACIO } from '../../constants/capturaSet';
 
 type ModalCapturaSetEstadisticasProps = {
   partido: PartidoDetallado | null;
@@ -163,30 +164,19 @@ const ModalCapturaSetEstadisticas = ({
           else if (equipoId === visitId) aVisit.push(row);
         });
 
-        // Completar con jugadores del partido sin stats (ceros) por equipo
-        const setLocal = new Set(aLocal.map((r) => r.jugadorId));
-        const setVisit = new Set(aVisit.map((r) => r.jugadorId));
-        const faltantesLocal = (opcionesLocal || []).filter((opt) => !setLocal.has(opt.value));
-        const faltantesVisit = (opcionesVisitante || []).filter((opt) => !setVisit.has(opt.value));
-        aLocal = [
-          ...aLocal,
-          ...faltantesLocal.map((opt) => ({
-            jugadorId: opt.value,
-            jugadorPartidoId: mapJugadorToJp[opt.value] ?? opt.value,
-            estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0, survive: false },
-          } as Row)),
-        ];
-        aVisit = [
-          ...aVisit,
-          ...faltantesVisit.map((opt) => ({
-            jugadorId: opt.value,
-            jugadorPartidoId: mapJugadorToJp[opt.value] ?? opt.value,
-            estadisticas: { throws: 0, hits: 0, outs: 0, catches: 0, survive: false },
-          } as Row)),
-        ];
+        // La grilla son JUGADORES_POR_SET slots: los que ya tienen estadísticas
+        // cargadas en este set, y el resto vacíos para elegir de la convocatoria.
+        //
+        // Antes esto rellenaba con la convocatoria ENTERA. Como la grilla recorta a 6,
+        // se veían 6 jugadores arbitrarios mientras el estado guardaba a todos: al
+        // guardar se creaban filas en cero para gente que nunca apareció en pantalla.
+        // Lo que ves y lo que se guarda tienen que ser lo mismo.
+        const slotVacio = (): Row => ({
+          estadisticas: { ...ESTADISTICAS_SLOT_VACIO },
+        });
 
-        setRowsLocal(aLocal);
-        setRowsVisitante(aVisit);
+        setRowsLocal(completarSlots(aLocal, slotVacio));
+        setRowsVisitante(completarSlots(aVisit, slotVacio));
         setMapJpToStatId(statMap);
       } catch (err) {
         console.error('Error cargando estadísticas del set:', err);

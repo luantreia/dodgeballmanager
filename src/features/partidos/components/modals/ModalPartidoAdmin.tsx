@@ -331,22 +331,29 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
                 la aprueba. La alineación la carga la organización: si todavía no lo hizo, no vas a
                 ver jugadores para completar.
               </p>
-              {equipoContextoId && canCaptureStats ? (
-                <>
-                  <p className="mt-2">
-                    Si necesitás los datos igual —para analizar el partido por tu cuenta— armá tu
-                    propia planilla: no depende de que la organización haya cargado nada, y no
-                    modifica los datos oficiales.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setPlanillaAbierta(true)}
-                    className="mt-3 rounded-md border border-amber-300 bg-white px-3 py-1.5 font-medium text-amber-900 transition hover:bg-amber-100"
-                  >
-                    Abrir mi planilla
-                  </button>
-                </>
-              ) : null}
+            </div>
+          ) : null}
+
+          {/* La planilla propia sirve siempre que puedas capturar para tu equipo pero no
+              manejar la estructura del partido. Eso pasa en un partido de competencia, y
+              también en un amistoso que creó el rival: ahí `esCompetencia` es false y el
+              aviso de arriba no aparece, pero el equipo está igual de bloqueado para
+              cargar sets. La condición mira los permisos, no el tipo de partido. */}
+          {equipoContextoId && canCaptureStats && !permisosPartido?.canManageSets ? (
+            <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <p className="font-semibold text-slate-900">Tu propia planilla</p>
+              <p className="mt-1">
+                No podés cargar los sets de este partido, pero sí armar tu planilla para analizarlo
+                por tu cuenta: no depende de que nadie más haya cargado nada, funciona aunque el
+                partido ya esté finalizado, y no modifica los datos oficiales.
+              </p>
+              <button
+                type="button"
+                onClick={() => setPlanillaAbierta(true)}
+                className="mt-3 rounded-md border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-800 transition hover:bg-slate-100"
+              >
+                Abrir mi planilla
+              </button>
             </div>
           ) : null}
 
