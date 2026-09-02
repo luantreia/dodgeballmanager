@@ -8,7 +8,8 @@ import {
   type SetPartido,
   extractEquipoId,
   extractEquipoNombre,
-  obtenerJugadoresDePartido,
+  obtenerJugadoresElegibles,
+  type JugadoresElegibles,
   obtenerEstadisticasJugadorSet,
   crearEstadisticaJugadorSet,
   actualizarEstadisticaJugadorSet,
@@ -50,6 +51,7 @@ const ModalCapturaSetEstadisticas = ({
   const [opcionesLocal, setOpcionesLocal] = useState<Array<{ value: string; label: string }>>([]);
   const [opcionesVisitante, setOpcionesVisitante] = useState<Array<{ value: string; label: string }>>([]);
   const [guardando, setGuardando] = useState(false);
+  const [infoElegibles, setInfoElegibles] = useState<JugadoresElegibles | null>(null);
 
   type Stats = { throws: number; hits: number; outs: number; catches: number; survive: boolean };
   type CampoNumerico = 'throws' | 'hits' | 'outs' | 'catches';
@@ -90,36 +92,39 @@ const ModalCapturaSetEstadisticas = ({
     let cancelado = false;
     const cargarJugadoresPartido = async () => {
       try {
-        const data = await obtenerJugadoresDePartido(partidoId);
-        if (cancelado) return;
-        const mapa: Record<string, string> = {};
-        const mapaReverse: Record<string, string> = {};
         const localId = extractEquipoId(partido?.equipoLocal);
         const visitanteId = extractEquipoId(partido?.equipoVisitante);
-        const optsLocal: Array<{ value: string; label: string }> = [];
-        const optsVisit: Array<{ value: string; label: string }> = [];
-        data.forEach((jp) => {
-          const jpId = jp._id;
-          const jugadorId = typeof jp.jugador === 'string' ? jp.jugador : jp.jugador?._id;
-          const jugadorNombre = typeof jp.jugador === 'string' ? 'Jugador' : (jp.jugador?.fullName || jp.jugador?.nombre || 'Jugador');
-          if (jpId && jugadorId) {
-            mapa[jpId] = jugadorId;
-            mapaReverse[jugadorId] = jpId;
-          }
-          const equipoRef = jp.equipo as any;
-          const eqId = typeof equipoRef === 'string' ? equipoRef : equipoRef?._id;
-          if (jugadorId && eqId) {
-            const opt = { value: jugadorId, label: jugadorNombre };
-            if (eqId === localId) optsLocal.push(opt);
-            else if (eqId === visitanteId) optsVisit.push(opt);
-          }
-        });
+        if (!localId || !visitanteId) return;
+
+        // Las opciones salen de la cascada del backend —convocatoria → lista de buena
+        // fe → plantel vigente A LA FECHA DEL PARTIDO— y no del plantel crudo. Antes se
+        // listaba /jugador-partido y, cuando no había convocatoria, la grilla caía al
+        // plantel entero: aparecían contratos de años anteriores en partidos recientes.
+        const [elegiblesLocal, elegiblesVisitante] = await Promise.all([
+          obtenerJugadoresElegibles(partidoId, localId),
+          obtenerJugadoresElegibles(partidoId, visitanteId),
+        ]);
+        if (cancelado) return;
+
+        const mapa: Record<string, string> = {};
+        const mapaReverse: Record<string, string> = {};
+
+        const aOpciones = (elegibles: JugadoresElegibles) =>
+          elegibles.jugadores.map((j) => {
+            if (j.jugadorPartidoId) {
+              mapa[j.jugadorPartidoId] = j.jugadorId;
+              mapaReverse[j.jugadorId] = j.jugadorPartidoId;
+            }
+            return { value: j.jugadorId, label: j.nombre };
+          });
+
+        setOpcionesLocal(aOpciones(elegiblesLocal));
+        setOpcionesVisitante(aOpciones(elegiblesVisitante));
         setMapJpToJugador(mapa);
         setMapJugadorToJp(mapaReverse);
-        setOpcionesLocal(optsLocal);
-        setOpcionesVisitante(optsVisit);
+        setInfoElegibles(elegiblesLocal);
       } catch (error) {
-        console.warn('No se pudieron cargar jugadores del partido:', error);
+        console.warn('No se pudieron cargar los jugadores elegibles:', error);
       }
     };
     void cargarJugadoresPartido();
@@ -375,6 +380,29 @@ const ModalCapturaSetEstadisticas = ({
 
           {null}
         </div>
+
+        {/* Sin esto el filtrado es invisible: alguien busca a un jugador, no lo
+            encuentra y no tiene forma de saber si es por la fecha del contrato, por la
+            categoría, o porque se olvidó de darlo de alta. */}
+        {infoElegibles && (infoElegibles.excluidos.porFecha > 0 || infoElegibles.excluidos.porCategoria > 0) ? (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            {infoElegibles.excluidos.porFecha > 0 ? (
+              <p>
+                {infoElegibles.excluidos.porFecha} jugador
+                {infoElegibles.excluidos.porFecha === 1 ? '' : 'es'} sin contrato vigente a la fecha
+                de este partido {infoElegibles.excluidos.porFecha === 1 ? 'no aparece' : 'no aparecen'} en
+                la lista.
+              </p>
+            ) : null}
+            {infoElegibles.excluidos.porCategoria > 0 ? (
+              <p>
+                {infoElegibles.excluidos.porCategoria} jugador
+                {infoElegibles.excluidos.porCategoria === 1 ? '' : 'es'} fuera de la categoría{' '}
+                {infoElegibles.categoria} de la competencia.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {!numeroSetSeleccionado ? (
           <p className="italic text-slate-500">Elegí un set para capturar estadísticas.</p>

@@ -412,6 +412,38 @@ export const eliminarJugadorPartido = (jugadorPartidoId: string) =>
 export const obtenerJugadoresDePartido = (partidoId: string) =>
   authFetch<JugadorPartidoResumen[]>(`/jugador-partido?partido=${partidoId}`);
 
+/** De dónde salió la lista de elegibles. Espeja el servicio del backend. */
+export type OrigenElegibles = 'partido' | 'temporada' | 'equipo' | 'ninguno';
+
+export interface JugadorElegible {
+  jugadorId: string;
+  /** Null cuando todavía no existe la convocatoria oficial del partido. */
+  jugadorPartidoId: string | null;
+  nombre: string;
+  numero?: number;
+  genero: string | null;
+}
+
+export interface JugadoresElegibles {
+  origen: OrigenElegibles;
+  /** 'Masculino' | 'Femenino' | 'Mixto' | 'Libre', o null en amistosos. */
+  categoria: string | null;
+  jugadores: JugadorElegible[];
+  excluidos: { porFecha: number; porCategoria: number };
+}
+
+/**
+ * Quiénes pueden aparecer en la captura de este partido.
+ *
+ * Resuelto por cascada en el backend: convocatoria del partido → lista de buena fe de
+ * la temporada → plantel vigente A LA FECHA DEL PARTIDO. Usar esto en vez del plantel
+ * crudo es lo que evita ofrecer contratos de años anteriores en un partido reciente.
+ */
+export const obtenerJugadoresElegibles = (partidoId: string, equipoId: string) =>
+  authFetch<JugadoresElegibles>(
+    `/partidos/${partidoId}/jugadores-elegibles?equipo=${encodeURIComponent(equipoId)}`,
+  );
+
 export const actualizarEstadisticasEquipoPartido = (
   partidoId: string,
   equipoId: string,
