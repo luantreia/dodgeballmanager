@@ -215,6 +215,35 @@ export interface ResumenPlanillas {
 export const getResumenPlanillas = (equipoId: string) =>
   authFetch<ResumenPlanillas>(`${BASE}/resumen?equipo=${encodeURIComponent(equipoId)}`);
 
+/**
+ * Una fila por jugador y set, con las dimensiones ya resueltas.
+ *
+ * Es el formato largo que consume el análisis cruzado: el cliente agrupa por lo que
+ * elija el usuario sin volver a pedirle nada al servidor.
+ */
+export interface FilaPlanilla {
+  jugadorId: string;
+  jugador: string;
+  partidoId: string;
+  fecha: string | null;
+  rival: string;
+  /** 'Masculino' | 'Femenino' | 'Mixto' | 'Libre' | 'Amistoso' */
+  categoria: string;
+  /** 'Cloth' | 'Foam' | 'Sin modalidad' */
+  modalidad: string;
+  numeroSet: number | null;
+  /** Visto desde el equipo, no desde local/visitante. */
+  resultadoSet: 'ganado' | 'perdido' | 'empate' | 'sin definir';
+  throws: number;
+  hits: number;
+  outs: number;
+  catches: number;
+  survive: boolean;
+}
+
+export const getFilasPlanillas = (equipoId: string) =>
+  authFetch<{ filas: FilaPlanilla[] }>(`${BASE}/filas?equipo=${encodeURIComponent(equipoId)}`);
+
 /** Totales por presente, sumando todos los sets. Es la base de la vista de análisis. */
 export const totalizarPorPresente = (
   planilla: PlanillaCompleta,

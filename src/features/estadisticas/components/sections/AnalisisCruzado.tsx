@@ -1,0 +1,319 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  getFilasPlanillas,
+  type FilaPlanilla,
+} from '../../../partidos/services/planillaEquipoService';
+
+/**
+ * Análisis cruzado de las planillas del equipo.
+ *
+ * Es una tabla dinámica de ejes fijos: en vez de arrastrar campos como en un pivot
+ * completo, se elige qué va en las filas, qué en las columnas y qué métrica se mide.
+ * Cubre las preguntas que un DT realmente se hace —"¿cómo rinde este jugador en los
+ * sets que perdemos?"— sin sumar una librería de pivot (jQuery, drag & drop de
+ * escritorio, agregadores a configurar) a una app que se usa desde el teléfono.
+ *
+ * Los datos son las planillas propias del equipo. No son oficiales.
+ */
+
+type ClaveDimension = 'jugador' | 'rival' | 'categoria' | 'modalidad' | 'resultadoSet' | 'partido';
+
+const DIMENSIONES: Array<{ clave: ClaveDimension; label: string }> = [
+  { clave: 'jugador', label: 'Jugador' },
+  { clave: 'rival', label: 'Rival' },
+  { clave: 'categoria', label: 'Categoría' },
+  { clave: 'modalidad', label: 'Modalidad' },
+  { clave: 'resultadoSet', label: 'Resultado del set' },
+  { clave: 'partido', label: 'Partido' },
+];
+
+type ClaveMetrica = 'throws' | 'hits' | 'outs' | 'catches' | 'sets' | 'hitPct' | 'survivePct' | 'outsPorSet';
+
+const METRICAS: Array<{ clave: ClaveMetrica; label: string; porcentaje?: boolean; decimales?: number }> = [
+  { clave: 'hits', label: 'Hits' },
+  { clave: 'throws', label: 'Throws' },
+  { clave: 'outs', label: 'Outs' },
+  { clave: 'catches', label: 'Catches' },
+  { clave: 'sets', label: 'Sets jugados' },
+  { clave: 'hitPct', label: 'Efectividad (hits/throws)', porcentaje: true },
+  { clave: 'survivePct', label: 'Supervivencia', porcentaje: true },
+  { clave: 'outsPorSet', label: 'Outs por set', decimales: 2 },
+];
+
+/** Acumulador por celda. Se guardan numeradores y denominadores por separado. */
+type Acumulador = {
+  throws: number;
+  hits: number;
+  outs: number;
+  catches: number;
+  survives: number;
+  sets: number;
+};
+
+const VACIO = (): Acumulador => ({ throws: 0, hits: 0, outs: 0, catches: 0, survives: 0, sets: 0 });
+
+const etiquetaFecha = (iso: string | null): string => {
+  if (!iso) return 'Sin fecha';
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const valorDimension = (fila: FilaPlanilla, clave: ClaveDimension): string => {
+  switch (clave) {
+    case 'jugador': return fila.jugador;
+    case 'rival': return fila.rival;
+    case 'categoria': return fila.categoria;
+    case 'modalidad': return fila.modalidad;
+    case 'resultadoSet': return fila.resultadoSet;
+    case 'partido': return `${etiquetaFecha(fila.fecha)} vs ${fila.rival}`;
+    default: return '—';
+  }
+};
+
+/**
+ * Las métricas de ratio se calculan sobre los totales acumulados, NO promediando los
+ * ratios de cada fila. Un jugador con 1/1 y otro con 2/10 no tienen 75% combinado:
+ * tienen 3/11. Promediar porcentajes es el error clásico de estas tablas.
+ */
+const calcular = (a: Acumulador | undefined, metrica: ClaveMetrica): number | null => {
+  if (!a || a.sets === 0) return null;
+  switch (metrica) {
+    case 'throws': return a.throws;
+    case 'hits': return a.hits;
+    case 'outs': return a.outs;
+    case 'catches': return a.catches;
+    case 'sets': return a.sets;
+    case 'hitPct': return a.throws > 0 ? (a.hits / a.throws) * 100 : null;
+    case 'survivePct': return (a.survives / a.sets) * 100;
+    case 'outsPorSet': return a.outs / a.sets;
+    default: return null;
+  }
+};
+
+const formatear = (valor: number | null, metrica: ClaveMetrica): string => {
+  if (valor === null) return '—';
+  const def = METRICAS.find((m) => m.clave === metrica);
+  if (def?.porcentaje) return `${valor.toFixed(0)}%`;
+  if (def?.decimales) return valor.toFixed(def.decimales);
+  return String(valor);
+};
+
+interface Props {
+  equipoId: string;
+}
+
+const SIN_COLUMNAS = '__ninguna__';
+
+const AnalisisCruzado: React.FC<Props> = ({ equipoId }) => {
+  const [filas, setFilas] = useState<FilaPlanilla[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [dimFila, setDimFila] = useState<ClaveDimension>('jugador');
+  const [dimColumna, setDimColumna] = useState<ClaveDimension | typeof SIN_COLUMNAS>('resultadoSet');
+  const [metrica, setMetrica] = useState<ClaveMetrica>('hitPct');
+
+  useEffect(() => {
+    let cancelado = false;
+    const cargar = async (): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getFilasPlanillas(equipoId);
+        if (!cancelado) setFilas(data.filas);
+      } catch (e) {
+        if (!cancelado) setError(e instanceof Error ? e.message : 'No se pudo cargar el análisis');
+      } finally {
+        if (!cancelado) setLoading(false);
+      }
+    };
+    void cargar();
+    return () => { cancelado = true; };
+  }, [equipoId]);
+
+  const tabla = useMemo(() => {
+    const celdas = new Map<string, Map<string, Acumulador>>();
+    const totalesFila = new Map<string, Acumulador>();
+    const totalesColumna = new Map<string, Acumulador>();
+    const total = VACIO();
+
+    const sumar = (acc: Acumulador, f: FilaPlanilla) => {
+      acc.throws += f.throws;
+      acc.hits += f.hits;
+      acc.outs += f.outs;
+      acc.catches += f.catches;
+      if (f.survive) acc.survives += 1;
+      acc.sets += 1;
+    };
+
+    for (const f of filas) {
+      const kf = valorDimension(f, dimFila);
+      const kc = dimColumna === SIN_COLUMNAS ? 'Total' : valorDimension(f, dimColumna);
+
+      if (!celdas.has(kf)) celdas.set(kf, new Map());
+      const fila = celdas.get(kf)!;
+      if (!fila.has(kc)) fila.set(kc, VACIO());
+      sumar(fila.get(kc)!, f);
+
+      if (!totalesFila.has(kf)) totalesFila.set(kf, VACIO());
+      sumar(totalesFila.get(kf)!, f);
+
+      if (!totalesColumna.has(kc)) totalesColumna.set(kc, VACIO());
+      sumar(totalesColumna.get(kc)!, f);
+
+      sumar(total, f);
+    }
+
+    // Las filas se ordenan por la métrica elegida: lo que se está midiendo es lo que
+    // define qué mirar primero.
+    const clavesFila = [...celdas.keys()].sort((a, b) => {
+      const va = calcular(totalesFila.get(a), metrica) ?? -Infinity;
+      const vb = calcular(totalesFila.get(b), metrica) ?? -Infinity;
+      return vb - va;
+    });
+
+    const clavesColumna = [...totalesColumna.keys()].sort((a, b) => a.localeCompare(b));
+
+    return { celdas, clavesFila, clavesColumna, totalesFila, totalesColumna, total };
+  }, [filas, dimFila, dimColumna, metrica]);
+
+  const selectClase = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20';
+
+  const maximo = useMemo(() => {
+    let max = 0;
+    for (const kf of tabla.clavesFila) {
+      for (const kc of tabla.clavesColumna) {
+        const v = calcular(tabla.celdas.get(kf)?.get(kc), metrica);
+        if (v !== null && v > max) max = v;
+      }
+    }
+    return max;
+  }, [tabla, metrica]);
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-card">
+      <header className="border-b border-slate-100 px-6 py-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-base font-semibold text-slate-900">Análisis cruzado</h2>
+          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">
+            Datos propios
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-slate-500">
+          Cruzá cualquier par de dimensiones sobre tus planillas. Por ejemplo: jugador contra
+          resultado del set, para ver quién sostiene el nivel cuando el set se pierde.
+        </p>
+      </header>
+
+      {loading ? (
+        <p className="px-6 py-5 text-sm text-slate-500">Cargando…</p>
+      ) : error ? (
+        <p className="px-6 py-5 text-sm text-rose-700">{error}</p>
+      ) : filas.length === 0 ? (
+        <p className="px-6 py-5 text-sm text-slate-500">
+          Todavía no hay planillas cargadas para analizar.
+        </p>
+      ) : (
+        <div className="space-y-5 px-6 py-5">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Filas</span>
+              <select className={selectClase} value={dimFila} onChange={(e) => setDimFila(e.target.value as ClaveDimension)}>
+                {DIMENSIONES.map((d) => <option key={d.clave} value={d.clave}>{d.label}</option>)}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Columnas</span>
+              <select
+                className={selectClase}
+                value={dimColumna}
+                onChange={(e) => setDimColumna(e.target.value as ClaveDimension | typeof SIN_COLUMNAS)}
+              >
+                <option value={SIN_COLUMNAS}>Sin abrir</option>
+                {DIMENSIONES.filter((d) => d.clave !== dimFila).map((d) => (
+                  <option key={d.clave} value={d.clave}>{d.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Métrica</span>
+              <select className={selectClase} value={metrica} onChange={(e) => setMetrica(e.target.value as ClaveMetrica)}>
+                {METRICAS.map((m) => <option key={m.clave} value={m.clave}>{m.label}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[520px] text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="sticky left-0 bg-white px-2 py-2 text-left">
+                    {DIMENSIONES.find((d) => d.clave === dimFila)?.label}
+                  </th>
+                  {tabla.clavesColumna.map((kc) => (
+                    <th key={kc} className="px-2 py-2 text-right capitalize">{kc}</th>
+                  ))}
+                  {tabla.clavesColumna.length > 1 && (
+                    <th className="px-2 py-2 text-right text-slate-700">Total</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 tabular-nums">
+                {tabla.clavesFila.map((kf) => (
+                  <tr key={kf} className="hover:bg-slate-50/60">
+                    <td className="sticky left-0 bg-white px-2 py-2 font-medium text-slate-900">{kf}</td>
+                    {tabla.clavesColumna.map((kc) => {
+                      const v = calcular(tabla.celdas.get(kf)?.get(kc), metrica);
+                      // Un sombreado suave da la lectura de un vistazo sin necesidad
+                      // de un gráfico aparte.
+                      const intensidad = v !== null && maximo > 0 ? v / maximo : 0;
+                      return (
+                        <td
+                          key={kc}
+                          className="px-2 py-2 text-right text-slate-700"
+                          style={intensidad > 0 ? { backgroundColor: `rgba(37, 99, 235, ${(intensidad * 0.18).toFixed(3)})` } : undefined}
+                        >
+                          {formatear(v, metrica)}
+                        </td>
+                      );
+                    })}
+                    {tabla.clavesColumna.length > 1 && (
+                      <td className="px-2 py-2 text-right font-semibold text-slate-900">
+                        {formatear(calcular(tabla.totalesFila.get(kf), metrica), metrica)}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-slate-300 text-slate-900">
+                  <td className="sticky left-0 bg-white px-2 py-2 text-xs font-bold uppercase tracking-wide">Total</td>
+                  {tabla.clavesColumna.map((kc) => (
+                    <td key={kc} className="px-2 py-2 text-right font-semibold tabular-nums">
+                      {formatear(calcular(tabla.totalesColumna.get(kc), metrica), metrica)}
+                    </td>
+                  ))}
+                  {tabla.clavesColumna.length > 1 && (
+                    <td className="px-2 py-2 text-right font-bold tabular-nums">
+                      {formatear(calcular(tabla.total, metrica), metrica)}
+                    </td>
+                  )}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <p className="text-xs text-slate-500">
+            {filas.length} registros de {new Set(filas.map((f) => f.partidoId)).size} partidos.
+            Los porcentajes se calculan sobre los totales de cada celda, no promediando
+            porcentajes: un jugador con 1 de 1 y otro con 2 de 10 dan 3 de 11, no 75%.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+};
+
+export default AnalisisCruzado;
