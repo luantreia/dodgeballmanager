@@ -87,10 +87,6 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
 
   const cargarEstadisticas = useCallback(async (): Promise<void> => {
     try {
-      console.log(`📊 Cargando estadísticas en modo ${modoEstadisticasUI}:`, {
-        modoEstadisticasUI,
-        modoVisualizacionUI
-      });
 
       setLoading(true);
       let data: EstadisticasData = { jugadores: [], equipos: [] };
@@ -102,7 +98,6 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
 
         // Si no hay sets o hay error, retornar datos vacíos
         if (sets.length === 0) {
-          console.log('⚠️ No hay sets con estadísticas en modo automático');
           data = {
             jugadores: [],
             equipos: []
@@ -204,14 +199,6 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
             }),
           );
 
-          console.log('📈 Datos de sets procesados:', {
-            sets: sets.length,
-            estadisticasTotales: jugadoresFormateados.length,
-            jugadoresUnicos: jugadoresAgregados.length,
-            equiposCalculados: equiposCalculados.length,
-            equiposData: equiposCalculados.map(e => ({ nombre: e.nombre, throws: e.throws, hits: e.hits }))
-          });
-
           data = {
             jugadores: jugadoresAgregados,
             equipos: equiposCalculados, // Ahora sí calculamos las estadísticas de equipos
@@ -221,24 +208,13 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
       } else {
         // Cargar estadísticas manuales agregadas
         const dataManual: ResumenEstadisticasManual = await getResumenEstadisticasManual(partidoId);
-        console.log('📊 Datos crudos del endpoint manual:', dataManual);
-        console.log('🎯 Estructura de dataManual:', {
-          tieneJugadores: !!dataManual.jugadores,
-          cantidadJugadores: dataManual.jugadores?.length || 0,
-          tieneEquipos: !!dataManual.equipos,
-          cantidadEquipos: dataManual.equipos?.length || 0
-        });
 
         // Inspeccionar la estructura de los primeros jugadores
         if (dataManual.jugadores && dataManual.jugadores.length > 0) {
-          console.log('🔍 Estructura del primer jugador:', dataManual.jugadores[0]);
-          console.log('🔍 Propiedades disponibles:', Object.keys(dataManual.jugadores[0]));
         }
 
         // Inspeccionar la estructura de equipos
         if (dataManual.equipos && dataManual.equipos.length > 0) {
-          console.log('🏆 Estructura del primer equipo:', dataManual.equipos[0]);
-          console.log('🏆 Propiedades de equipos:', Object.keys(dataManual.equipos[0]));
         }
 
         // En modo manual, siempre mostrar las estadísticas de jugadores disponibles
@@ -250,14 +226,7 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
           outs: jugador.outs ?? 0,
           catches: jugador.catches ?? 0,
         }));
-        console.log('🎯 Jugadores en modo manual:', jugadoresFiltrados.length, 'modoVisualizacion:', modoVisualizacionUI);
-        console.log('🔍 En modo manual, siempre mostramos estadísticas de jugadores disponibles');
 
-        console.log('📊 Datos finales modo manual:', {
-          jugadoresOriginales: dataManual.jugadores?.length || 0,
-          jugadoresFiltrados: jugadoresFiltrados.length,
-          equipos: dataManual.equipos?.length || 0
-        });
 
         data = {
           jugadores: jugadoresFiltrados,
@@ -270,21 +239,18 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
       }
 
       setEstadisticas(data);
-      console.log('✅ Estadísticas cargadas exitosamente:', {
-        jugadores: data.jugadores?.length || 0,
-        equipos: data.equipos?.length || 0
-      });
 
     } catch (error) {
       console.error('❌ Error cargando estadísticas:', error);
       // Asegurar que siempre tengamos un objeto válido
       const errorData = { jugadores: [], equipos: [] };
       setEstadisticas(errorData);
-      console.log('⚠️ Estadísticas establecidas con datos de error:', errorData);
     } finally {
       setLoading(false);
     }
-  }, [partidoId, modoEstadisticasUI, modoVisualizacionUI]);
+  // modoVisualizacionUI ya no entra acá: sólo lo leía un log de depuración que se fue. La carga
+  // depende del partido y del modo de estadísticas, no de cómo se muestran después.
+  }, [partidoId, modoEstadisticasUI]);
 
   const handleCambiarModo = async (nuevoModo: ModoEstadisticas): Promise<void> => {
     if (!partido || !onCambiarModoEstadisticas) return;
@@ -292,11 +258,6 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
     const modoAnterior = partido.modoEstadisticas;
 
     try {
-      console.log('🔄 Cambiando modo de estadísticas:', modoAnterior, '→', nuevoModo);
-      console.log('📊 Estados actuales antes del cambio:', {
-        modoEstadisticasUI,
-        modoVisualizacionUI
-      });
 
       // Actualizar estado local inmediatamente para mejor UX
       setModoEstadisticasUI(nuevoModo);
@@ -308,27 +269,20 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
 
       // Intentar actualizar modo de visualización para que coincida (sin bloquear si falla)
       try {
-        console.log('🔄 Intentando cambiar modoVisualizacion a:', nuevoModo);
         await actualizarModoVisualizacionPartido(partido._id, nuevoModo);
 
         // Actualizar estado local de visualización también
         setModoVisualizacionUI(nuevoModo);
-        console.log('✅ ModoVisualizacion actualizado correctamente a:', nuevoModo);
       } catch (error) {
         console.warn('⚠️ Error actualizando modoVisualizacion:', error);
         // Si no se pudo actualizar en backend, igual actualizamos localmente
         setModoVisualizacionUI(nuevoModo);
       }
 
-      console.log('📊 Estados después del cambio:', {
-        modoEstadisticasUI: nuevoModo,
-        modoVisualizacionUI: nuevoModo
-      });
 
       // Recargar estadísticas después del cambio
       await cargarEstadisticas();
 
-      console.log('✅ Modo cambiado exitosamente');
 
     } catch (error) {
       // Revertir cambio local si falló
@@ -426,12 +380,6 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
             return renderEstadisticasEquipos(estadisticas, partido);
           case 'jugadores':
           default:
-            console.log('🏃‍♂️ Renderizando vista de jugadores:', {
-              vista,
-              jugadoresCount: estadisticas.jugadores?.length || 0,
-              modoEstadisticasUI,
-              modoVisualizacionUI,
-            });
             return renderEstadisticasJugadores(estadisticas, partido);
         }
       })()}

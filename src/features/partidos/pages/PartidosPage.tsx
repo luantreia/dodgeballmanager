@@ -57,15 +57,24 @@ const PartidosPage = () => {
       const pasados: Partido[] = [];
       const pasadosNoFinalizados: Partido[] = [];
 
-      partidos.forEach((partido) => {
-        const fechaPartido = partido.fecha ? new Date(partido.fecha) : null;
+      // `fechaISO` es el instante real; `fecha` es sólo el día local y `new Date('2026-09-05')`
+      // se parsea como medianoche UTC, que en Argentina cae el día anterior a las 21:00. Sin
+      // esto, los partidos nocturnos se clasificaban un día corrido.
+      const instante = (partido: Partido) => {
+        const valor = partido.fechaISO ?? (partido.fecha ? `${partido.fecha}T${partido.hora ?? '00:00'}` : null);
+        if (!valor) return NaN;
+        return new Date(valor).getTime();
+      };
 
-        if (!fechaPartido || Number.isNaN(fechaPartido.getTime())) {
+      partidos.forEach((partido) => {
+        const t = instante(partido);
+
+        if (Number.isNaN(t)) {
           futuros.push(partido);
           return;
         }
 
-        const fechaComparacion = new Date(fechaPartido);
+        const fechaComparacion = new Date(t);
         fechaComparacion.setHours(0, 0, 0, 0);
 
         if (fechaComparacion.getTime() >= hoy.getTime()) {
@@ -79,9 +88,9 @@ const PartidosPage = () => {
         }
       });
 
-      futuros.sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-      pasados.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-      pasadosNoFinalizados.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      futuros.sort((a, b) => instante(a) - instante(b));
+      pasados.sort((a, b) => instante(b) - instante(a));
+      pasadosNoFinalizados.sort((a, b) => instante(b) - instante(a));
 
       setProximos(futuros);
       setRecientes(pasados);

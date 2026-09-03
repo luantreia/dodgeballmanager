@@ -261,7 +261,7 @@ export const ModalAlineacionPartido = ({
       title="Gestionar jugadores del partido"
       subtitle="Agregá, quitá o cambiá el rol de los jugadores"
       size="lg"
-      bodyClassName="p-0"
+     
     >
       <div className="space-y-6 p-6">
         <div className="grid gap-4 md:grid-cols-2">

@@ -21,3 +21,9 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Configuración de entorno. Hoy sólo tienen URLs, pero un .env versionado es el lugar donde
+# tarde o temprano alguien commitea una credencial sin darse cuenta.
+.env
+.env.*
+!.env.example

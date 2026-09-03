@@ -40,28 +40,23 @@ export const SeccionEstadisticasDirectas: FC<SeccionEstadisticasDirectasProps> =
     const cargarEstadisticasAutomaticas = async (): Promise<void> => {
       try {
         setCargando(true);
-        console.log('🔍 Buscando estadísticas automáticas para partido:', partidoId);
 
         // Intentar cargar estadísticas automáticas agregadas primero (servicio)
         const resumen = await getResumenEstadisticasJugadorPartido(partidoId);
         const jugadores = Array.isArray(resumen?.jugadores) ? (resumen.jugadores as EstadisticaAutomatica[]) : [];
         if (jugadores.length > 0) {
-          console.log('📊 Estadísticas automáticas agregadas encontradas:', jugadores.length);
           setEstadisticasAutomaticas(jugadores);
           return;
         }
 
-        console.log('⚠️ No hay estadísticas agregadas, buscando individuales...');
 
         // Si no hay agregadas, intentar cargar individuales (servicio)
         const individuales = await getEstadisticasJugadorPartido(partidoId);
         if ((individuales ?? []).length > 0) {
-          console.log('📊 Estadísticas automáticas individuales encontradas:', individuales.length);
           setEstadisticasAutomaticas(individuales as EstadisticaAutomatica[]);
           return;
         }
 
-        console.log('⚠️ No se encontraron estadísticas, intentando crearlas desde sets...');
         await crearEstadisticasDesdeSets();
       } catch (error) {
         console.error('Error cargando estadísticas automáticas:', error);
@@ -73,11 +68,9 @@ export const SeccionEstadisticasDirectas: FC<SeccionEstadisticasDirectasProps> =
 
     const crearEstadisticasDesdeSets = async (): Promise<void> => {
       try {
-        console.log('🔧 Intentando crear estadísticas desde datos de sets...');
 
         // Buscar estadísticas por set para este partido (servicio)
         const dataSets = await getEstadisticasJugadorSetPorPartido(partidoId);
-        console.log('📈 Estadísticas por set encontradas:', (dataSets ?? []).length);
 
         if ((dataSets ?? []).length > 0) {
           // Agrupar por jugador y crear estadísticas agregadas
@@ -109,10 +102,8 @@ export const SeccionEstadisticasDirectas: FC<SeccionEstadisticasDirectasProps> =
           });
 
           const estadisticasAgregadas = Object.values(statsPorJugador);
-          console.log('✅ Estadísticas agregadas creadas desde sets:', estadisticasAgregadas.length);
           setEstadisticasAutomaticas(estadisticasAgregadas);
         } else {
-          console.log('⚠️ No hay estadísticas por set para este partido');
           setEstadisticasAutomaticas([]);
         }
       } catch (error) {

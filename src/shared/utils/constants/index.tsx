@@ -59,7 +59,7 @@ export const ERROR_MESSAGES = {
   NETWORK_ERROR: 'Error de conexión. Verifica tu conexión a internet.',
   UNAUTHORIZED: 'No tienes permisos para realizar esta acción.',
   NOT_FOUND: 'El recurso solicitado no fue encontrado.',
-  SERVER_ERROR: 'Error interno del servidor. Intenta nuevamente.',
+  SERVER_ERROR: 'Error interno del servidor. Intentá de nuevo.',
   VALIDATION_ERROR: 'Los datos ingresados no son válidos.'
 };
 

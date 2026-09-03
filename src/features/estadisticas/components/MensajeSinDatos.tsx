@@ -12,7 +12,6 @@ export const MensajeSinDatos: FC<MensajeSinDatosProps> = ({ estadisticas }) => {
     return null;
   }
 
-  console.log('⚠️ Mostrando mensaje de sin datos manuales');
 
   return (
     <div className="space-y-8">

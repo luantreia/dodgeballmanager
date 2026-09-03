@@ -42,7 +42,10 @@ export const ToastProvider: FC<{ children: ReactNode }> = ({ children }) => {
     <ToastContext.Provider value={value}>
       {children}
       {/* Toaster */}
-      <div className="pointer-events-none fixed right-4 top-4 z-[100] flex w-96 max-w-[calc(100%-2rem)] flex-col gap-2">
+      {/* Abajo en mobile, arriba a la derecha desde `sm`. Arriba y a la derecha en un celular
+          los toasts caían justo encima del botón hamburguesa y de la campanita, tapando la
+          navegación mientras duraban. Abajo también quedan más cerca del pulgar. */}
+      <div className="pointer-events-none fixed inset-x-4 bottom-4 z-[100] flex flex-col gap-2 sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-4 sm:w-96 sm:max-w-[calc(100%-2rem)]">
         {toasts.map((t) => (
           <div
             key={t.id}

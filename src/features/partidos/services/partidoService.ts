@@ -1,13 +1,21 @@
 import { authFetch } from '../../../shared/utils/authFetch';
-import type { Partido, JugadorPartido, Competencia } from '../../../shared/utils/types/types';
+import type { Partido, EstadoPartido, JugadorPartido, Competencia } from '../../../shared/utils/types/types';
+import { toLocalDatePart, toLocalTimePart } from '../../../shared/utils/formatDate';
 
 type PartidoQuery = {
   equipoId: string;
   tipo?: 'todos' | 'competencia' | 'amistoso';
-  estado?: 'pendiente' | 'confirmado' | 'finalizado' | 'cancelado';
+  estado?: EstadoPartido | EstadoPartido[];
   competenciaId?: string;
   temporadaId?: string;
   faseId?: string;
+  /**
+   * El backend pagina con un default de 20 (`overtime/src/utils/pagination.js`) ordenando por
+   * fecha descendente. Sin mandar `limit` un equipo con historial perdía los partidos viejos
+   * en silencio: no aparecían, y tampoco había ningún "cargar más" que los trajera.
+   */
+  limit?: number;
+  page?: number;
 };
 
 type PartidoUpdatePayload = {
@@ -176,39 +184,23 @@ const mapEquipoNombre = (equipo?: BackendEquipoRef | string): { id: string; nomb
   return { id: equipo._id, nombre: equipo.nombre ?? 'Equipo' };
 };
 
-export const mapEstadoPartido = (estado?: BackendPartido['estado']): Partido['estado'] => {
-  switch (estado) {
-    case 'programado':
-      return 'pendiente';
-    case 'en_juego':
-      return 'en_juego';
-    case 'finalizado':
-      return 'finalizado';
-    case 'cancelado':
-      return 'cancelado';
-    default:
-      return 'pendiente';
-  }
-};
+const ESTADOS_PARTIDO: readonly EstadoPartido[] = ['programado', 'en_juego', 'finalizado', 'cancelado'];
 
-export const mapEstadoPartidoToBackend = (
-  estado?: Partido['estado'] | BackendPartido['estado'],
-): BackendPartido['estado'] => {
-  switch (estado) {
-    case 'pendiente':
-    case 'programado':
-    case undefined:
-      return 'programado';
-    case 'confirmado':
-    case 'en_juego':
-      return 'en_juego';
-    case 'finalizado':
-      return 'finalizado';
-    case 'cancelado':
-      return 'cancelado';
-    default:
-      return 'programado';
+/**
+ * Antes había dos funciones que traducían de ida y de vuelta entre el enum real de Mongoose y
+ * un vocabulario inventado en el front (`'pendiente'`, `'confirmado'`). Esa capa existía sólo
+ * para sostener la invención y era una trampa: cualquiera que llamara al backend sin pasar por
+ * ella filtraba por un estado inexistente y recibía 0 resultados sin error. Ahora el front
+ * habla el mismo idioma que el modelo y esto sólo normaliza datos viejos o inesperados.
+ */
+export const normalizarEstadoPartido = (estado?: string | null): EstadoPartido => {
+  if (estado && (ESTADOS_PARTIDO as readonly string[]).includes(estado)) {
+    return estado as EstadoPartido;
   }
+  // Valores heredados de versiones anteriores del front.
+  if (estado === 'pendiente' || estado === 'proximamente') return 'programado';
+  if (estado === 'confirmado' || estado === 'en_curso') return 'en_juego';
+  return 'programado';
 };
 
 const mapPartido = (partido: BackendPartido, contextoEquipoId?: string): Partido => {
@@ -219,11 +211,14 @@ const mapPartido = (partido: BackendPartido, contextoEquipoId?: string): Partido
   const esLocal = contextoEquipoId && local && local.id === contextoEquipoId;
   const esVisitante = contextoEquipoId && visitante && visitante.id === contextoEquipoId;
 
-  const estado = mapEstadoPartido(partido.estado);
+  const estado = normalizarEstadoPartido(partido.estado);
 
+  // Partir el ISO en la 'T' devuelve el día y la hora EN UTC. En Argentina (UTC-3) eso mostraba
+  // todos los partidos 3 horas más tarde, y los nocturnos directamente al día siguiente: un
+  // partido del viernes 21:00 figuraba como sábado 00:00. Hay que convertir a hora local.
   const fechaOriginal = partido.fecha;
-  const [fechaISO, horaISO] = fechaOriginal.includes('T') ? fechaOriginal.split('T') : [fechaOriginal, undefined];
-  const hora = horaISO ? horaISO.replace('Z', '').slice(0, 5) : undefined;
+  const fecha = toLocalDatePart(fechaOriginal);
+  const hora = toLocalTimePart(fechaOriginal);
 
   let rivalNombre = visitante?.nombre ?? local?.nombre ?? partido.nombrePartido ?? 'Rival';
   if (esLocal && visitante?.nombre) {
@@ -249,8 +244,9 @@ const mapPartido = (partido: BackendPartido, contextoEquipoId?: string): Partido
 
   const mapped: Partido = {
     id: partido._id,
-    fecha: fechaISO,
+    fecha,
     hora,
+    fechaISO: fechaOriginal,
     tipoPartido: competencia ? 'liga' : 'amistoso',
     rival: rivalNombre,
     estado,
@@ -289,14 +285,30 @@ const mapPartido = (partido: BackendPartido, contextoEquipoId?: string): Partido
   return mapped;
 };
 
-export const getPartidos = async ({ equipoId, estado, competenciaId, temporadaId, faseId, tipo = 'todos' }: PartidoQuery): Promise<Partido[]> => {
+/** Tope del backend (`getPaginationParams`). Pedimos todo el historial del equipo de una. */
+const LIMITE_MAXIMO_PARTIDOS = 1000;
+
+export const getPartidos = async ({
+  equipoId,
+  estado,
+  competenciaId,
+  temporadaId,
+  faseId,
+  tipo = 'todos',
+  limit = LIMITE_MAXIMO_PARTIDOS,
+  page,
+}: PartidoQuery): Promise<Partido[]> => {
   const params = new URLSearchParams();
   if (equipoId) params.set('equipo', equipoId);
-  if (estado) params.set('estado', mapEstadoPartidoToBackend(estado) ?? 'programado');
+  // La ruta acepta el parámetro repetido para filtrar por varios estados a la vez.
+  if (Array.isArray(estado)) estado.forEach((valor) => params.append('estado', valor));
+  else if (estado) params.set('estado', estado);
   if (competenciaId) params.set('competencia', competenciaId);
   if (temporadaId) params.set('temporadaId', temporadaId);
   if (faseId) params.set('fase', faseId);
   if (tipo === 'amistoso') params.set('tipo', 'amistoso');
+  params.set('limit', String(Math.min(limit, LIMITE_MAXIMO_PARTIDOS)));
+  if (page) params.set('page', String(page));
 
   const response = await authFetch<BackendPartido[] | { items?: BackendPartido[] }>(`/partidos?${params.toString()}`);
   const partidosRaw = Array.isArray(response) ? response : (response?.items || []);
@@ -351,7 +363,7 @@ export const actualizarPartido = async (
   const body: Record<string, unknown> = { ...payload };
 
   if (payload.estado !== undefined) {
-    body.estado = mapEstadoPartidoToBackend(payload.estado);
+    body.estado = normalizarEstadoPartido(payload.estado);
   }
 
   if (payload.escenario !== undefined && payload.ubicacion === undefined) {
@@ -374,6 +386,13 @@ export type PermisosPartido = {
   canManageLineup: boolean;
   canManageSets: boolean;
   canSetResultado: boolean;
+  /**
+   * `stats.capture` se evalúa por equipo, así que viene uno por lado. Un DT normalmente puede
+   * cargar las estadísticas de su plantel y no las del rival: la grilla del lado que no puede
+   * escribir tiene que quedar fuera de la pantalla, no fallar recién al guardar.
+   */
+  canCaptureStatsLocal: boolean;
+  canCaptureStatsVisitante: boolean;
 };
 
 /**

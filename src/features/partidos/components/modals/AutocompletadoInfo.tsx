@@ -25,7 +25,7 @@ const AutocompletadoInfo: FC<AutocompletadoInfoProps> = ({ tipoAutocompletado })
           ? 'calculadas automáticamente desde sets.'
           : 'capturadas manualmente en sesiones previas.'
         }
-        Puedes modificarlos antes de guardar.
+        Podés modificarlos antes de guardar.
       </p>
     </div>
   );

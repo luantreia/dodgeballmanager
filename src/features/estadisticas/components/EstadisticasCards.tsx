@@ -34,13 +34,6 @@ export const EstadisticasCards: FC<EstadisticasCardsProps> = ({ estadisticas }) 
     ? ((totales.hits / totales.throws) * 100).toFixed(1)
     : 0;
 
-  console.log('🏆 Datos de equipos para calcular totales:', equiposData);
-  console.log('🎨 Renderizando tarjetas de estadísticas con totales calculados de equipos:', {
-    totales: totales,
-    efectividad: efectividadGeneral,
-    equipos: equiposData.length,
-    jugadoresTotales: estadisticas.jugadores?.length ?? 0
-  });
 
   return (
     <div className="space-y-8">

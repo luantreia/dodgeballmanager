@@ -145,12 +145,27 @@ export interface EquipoCompetencia {
 // TIPOS DE PARTIDOS
 // ========================================
 
-export type EstadoPartido = 'pendiente' | 'confirmado' | 'en_juego' | 'finalizado' | 'cancelado';
+/**
+ * Espejo exacto del enum de Mongoose en `overtime/src/models/Partido/Partido.js`. Es la única
+ * fuente de verdad: el filtro `?estado=` del backend mete el valor tal cual en la query de
+ * Mongo, así que un valor que no existe en el enum no da error — devuelve 0 resultados y deja
+ * una sección de la UI vacía sin que nadie se entere. Si agregás un estado, agregalo primero
+ * en el modelo. `'pendiente'`, `'confirmado'`, `'proximamente'` y `'en_curso'` NO son estados
+ * de Partido (los dos últimos son de Competencia, de ahí venía la confusión).
+ */
+export type EstadoPartido = 'programado' | 'en_juego' | 'finalizado' | 'cancelado';
 
 export interface Partido {
   id: string;
+  /** Fecha local `YYYY-MM-DD`, ya convertida desde el UTC del backend. Para mostrar. */
   fecha: string;
+  /** Hora local `HH:mm`. Para mostrar. */
   hora?: string;
+  /**
+   * El instante original del backend, sin recortar. Para comparar y ordenar: `fecha` sola se
+   * parsea como medianoche UTC y hace que el partido de esta tarde quede "en el pasado".
+   */
+  fechaISO?: string;
   tipoPartido?: 'liga' | 'amistoso';
   rival?: string;
   equipoLocal?: {

@@ -13,6 +13,8 @@ import {
   obtenerEstadisticasJugadorSet,
   crearEstadisticaJugadorSet,
   actualizarEstadisticaJugadorSet,
+  getMisPermisosPartido,
+  type PermisosPartido,
   type VisibilidadEstadistica,
 } from '../../services/partidoService';
 
@@ -60,6 +62,18 @@ const ModalCapturaSetEstadisticas = ({
   const [rowsVisitante, setRowsVisitante] = useState<Row[]>([]);
   const [mapJpToStatId, setMapJpToStatId] = useState<Record<string, string>>({});
   const [visibilidad, setVisibilidad] = useState<VisibilidadEstadistica>('organizacion');
+  const [permisos, setPermisos] = useState<PermisosPartido | null>(null);
+  /**
+   * Marca que hay números cargados que todavía no se guardaron, para que cerrar por backdrop o
+   * Escape pida confirmación. En un celular el fondo del modal se toca sin querer todo el
+   * tiempo, y perder una planilla entera de un set por un roce es el peor final posible.
+   */
+  const [hayCambiosSinGuardar, setHayCambiosSinGuardar] = useState(false);
+
+  // Mientras no sepamos los permisos asumimos que puede: el `null` inicial no tiene que ocultar
+  // la grilla propia durante el primer render. El backend valida igual en cada request.
+  const puedeCapturarLocal = permisos?.canCaptureStatsLocal ?? true;
+  const puedeCapturarVisitante = permisos?.canCaptureStatsVisitante ?? true;
 
   const setsOrdenados = useMemo(() => [...sets].sort((a, b) => a.numeroSet - b.numeroSet), [sets]);
 
@@ -86,6 +100,30 @@ const ModalCapturaSetEstadisticas = ({
     if (!isOpen) return;
     void cargarSets();
   }, [isOpen, cargarSets]);
+
+  useEffect(() => {
+    if (!isOpen || !partidoId) {
+      setPermisos(null);
+      return;
+    }
+    let cancelado = false;
+    getMisPermisosPartido(partidoId)
+      .then((resp) => {
+        if (!cancelado) setPermisos(resp);
+      })
+      .catch(() => {
+        if (!cancelado) setPermisos(null);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [isOpen, partidoId]);
+
+  // Abrir el modal de nuevo, o cambiar de set, arranca de cero: lo que había sin guardar ya se
+  // descartó (o se guardó) antes de llegar acá.
+  useEffect(() => {
+    setHayCambiosSinGuardar(false);
+  }, [isOpen, numeroSetSeleccionado]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -203,6 +241,7 @@ const ModalCapturaSetEstadisticas = ({
   }, [partido?.equipoLocal, partido?.equipoVisitante, rowsLocal, rowsVisitante]);
 
   const cambiarEstadistica = useCallback((equipoId: string, idx: number, campo: CampoNumerico, delta: number) => {
+    setHayCambiosSinGuardar(true);
     const localId = extractEquipoId(partido?.equipoLocal);
     if (equipoId === localId) {
       setRowsLocal((prev) => {
@@ -224,6 +263,7 @@ const ModalCapturaSetEstadisticas = ({
   }, [partido?.equipoLocal]);
 
   const cambiarSurvive = useCallback((equipoId: string, idx: number, value: boolean) => {
+    setHayCambiosSinGuardar(true);
     const localId = extractEquipoId(partido?.equipoLocal);
     if (equipoId === localId) {
       setRowsLocal((prev) => {
@@ -243,6 +283,7 @@ const ModalCapturaSetEstadisticas = ({
   }, [partido?.equipoLocal]);
 
   const onAsignarJugador = useCallback((equipo: 'local' | 'visitante', index: number, jugadorId: string) => {
+    setHayCambiosSinGuardar(true);
     const setter = equipo === 'local' ? setRowsLocal : setRowsVisitante;
     setter((prev) => {
       const next = [...prev];
@@ -297,48 +338,82 @@ const ModalCapturaSetEstadisticas = ({
         });
         
         addToast({ type: 'success', title: 'Solicitud enviada', message: 'Se solicitó la actualización de estadísticas' });
+        setHayCambiosSinGuardar(false);
         onClose();
         return;
       }
 
-      const process = async (rows: Row[], equipoId: string) => {
-        for (const r of rows) {
-          if (!r?.jugadorId || !r?.jugadorPartidoId) continue;
-          const existingId = r.statId || mapJpToStatId[r.jugadorPartidoId];
-          if (existingId) {
-            await actualizarEstadisticaJugadorSet(existingId, {
-              ...r.estadisticas,
-              visibilidadObjetivo: visibilidad,
-            });
-          } else {
-            // Doble chequeo: consultar existencia por (set, jugadorPartido) para evitar E11000
-            const existentes = await obtenerEstadisticasJugadorSet({ set: setId, jugadorPartido: r.jugadorPartidoId });
-            const yaExiste = Array.isArray(existentes) && existentes.length > 0 ? existentes[0] : null;
-            if (yaExiste?._id) {
-              await actualizarEstadisticaJugadorSet(yaExiste._id, {
-                ...r.estadisticas,
-                visibilidadObjetivo: visibilidad,
-              });
-              setMapJpToStatId((prev) => ({ ...prev, [r.jugadorPartidoId as string]: yaExiste!._id }));
-            } else {
-              const creado = await crearEstadisticaJugadorSet({
-                set: setId,
-                jugadorPartido: r.jugadorPartidoId,
-                jugador: r.jugadorId,
-                equipo: equipoId,
-                ...r.estadisticas,
-                visibilidadObjetivo: visibilidad,
-              });
-              if (creado && creado._id) {
-                setMapJpToStatId((prev) => ({ ...prev, [r.jugadorPartidoId as string]: creado._id }));
-              }
-            }
-          }
+      // Fila ya validada: el filtrado de abajo garantiza que jugador y jugadorPartido existen.
+      type FilaCompleta = Row & { jugadorId: string; jugadorPartidoId: string };
+      const guardarFila = async (r: FilaCompleta, equipoId: string) => {
+        const existingId = r.statId || mapJpToStatId[r.jugadorPartidoId];
+        if (existingId) {
+          await actualizarEstadisticaJugadorSet(existingId, {
+            ...r.estadisticas,
+            visibilidadObjetivo: visibilidad,
+          });
+          return;
+        }
+        // Doble chequeo: consultar existencia por (set, jugadorPartido) para evitar E11000
+        const existentes = await obtenerEstadisticasJugadorSet({ set: setId, jugadorPartido: r.jugadorPartidoId });
+        const yaExiste = Array.isArray(existentes) && existentes.length > 0 ? existentes[0] : null;
+        if (yaExiste?._id) {
+          await actualizarEstadisticaJugadorSet(yaExiste._id, {
+            ...r.estadisticas,
+            visibilidadObjetivo: visibilidad,
+          });
+          setMapJpToStatId((prev) => ({ ...prev, [r.jugadorPartidoId]: yaExiste._id }));
+          return;
+        }
+        const creado = await crearEstadisticaJugadorSet({
+          set: setId,
+          jugadorPartido: r.jugadorPartidoId,
+          jugador: r.jugadorId,
+          equipo: equipoId,
+          ...r.estadisticas,
+          visibilidadObjetivo: visibilidad,
+        });
+        if (creado && creado._id) {
+          setMapJpToStatId((prev) => ({ ...prev, [r.jugadorPartidoId]: creado._id }));
         }
       };
-      await process(rowsLocal, localId);
-      await process(rowsVisitante, visitId);
-      addToast({ type: 'success', title: 'Guardado', message: 'Estadísticas del set guardadas' });
+
+      // En paralelo y no en un `for` con `await` adentro: eran hasta 24 round-trips encadenados
+      // contra un backend con cold starts, es decir minutos de "Guardando…" en una red de
+      // gimnasio. Y con `allSettled` en vez de dejar que la primera excepción corte todo: antes
+      // un jugador que fallaba abortaba el resto y el toast genérico no decía qué había quedado
+      // guardado y qué no.
+      const filas: Array<{ row: FilaCompleta; equipoId: string; nombre: string }> = [];
+      const agregar = (rows: Row[], equipoId: string, opciones: Array<{ value: string; label: string }>) => {
+        rows.forEach((r) => {
+          if (!r?.jugadorId || !r?.jugadorPartidoId) return;
+          filas.push({
+            row: r as FilaCompleta,
+            equipoId,
+            nombre: opciones.find((o) => o.value === r.jugadorId)?.label ?? 'jugador',
+          });
+        });
+      };
+      if (puedeCapturarLocal) agregar(rowsLocal, localId, opcionesLocal);
+      if (puedeCapturarVisitante) agregar(rowsVisitante, visitId, opcionesVisitante);
+
+      const resultados = await Promise.allSettled(
+        filas.map(({ row, equipoId }) => guardarFila(row, equipoId))
+      );
+      const fallidos = resultados
+        .map((resultado, i) => (resultado.status === 'rejected' ? filas[i].nombre : null))
+        .filter((nombre): nombre is string => nombre !== null);
+
+      if (fallidos.length > 0) {
+        addToast({
+          type: 'error',
+          title: `No se guardaron ${fallidos.length} de ${filas.length}`,
+          message: `Falló: ${fallidos.join(', ')}. El resto quedó guardado; reintentá.`,
+        });
+      } else {
+        addToast({ type: 'success', title: 'Guardado', message: 'Estadísticas del set guardadas' });
+        setHayCambiosSinGuardar(false);
+      }
       await Promise.resolve(onRefresh?.());
       // refrescar stats para obtener ids creados
       const data = await obtenerEstadisticasJugadorSet({ set: setId });
@@ -355,10 +430,17 @@ const ModalCapturaSetEstadisticas = ({
     } finally {
       setGuardando(false);
     }
-  }, [addToast, numeroSetSeleccionado, onRefresh, partido?.equipoLocal, partido?.equipoVisitante, rowsLocal, rowsVisitante, sets, mapJpToStatId, esCompetencia, onClose, partidoId, visibilidad]);
+  }, [addToast, numeroSetSeleccionado, onRefresh, partido?.equipoLocal, partido?.equipoVisitante, rowsLocal, rowsVisitante, sets, mapJpToStatId, esCompetencia, onClose, partidoId, visibilidad, puedeCapturarLocal, puedeCapturarVisitante, opcionesLocal, opcionesVisitante]);
 
   return (
-    <ModalBase isOpen={isOpen} onClose={onClose} bodyClassName="p-0" size="xl" title="Captura de estadísticas por set">
+    <ModalBase
+      isOpen={isOpen}
+      onClose={onClose}
+      size="xl"
+      title="Captura de estadísticas por set"
+      hasUnsavedChanges={hayCambiosSinGuardar}
+      unsavedMessage="Cargaste estadísticas que todavía no guardaste. ¿Cerrar y perderlas?"
+    >
 
       <div className="space-y-4 px-1 pb-6">
         <div className="flex flex-wrap items-center gap-3">
@@ -437,6 +519,8 @@ const ModalCapturaSetEstadisticas = ({
                   token={token}
                   opcionesJugadoresLocal={opcionesLocal}
                   opcionesJugadoresVisitante={opcionesVisitante}
+                  puedeEditarLocal={puedeCapturarLocal}
+                  puedeEditarVisitante={puedeCapturarVisitante}
                 />
               );
             })()}

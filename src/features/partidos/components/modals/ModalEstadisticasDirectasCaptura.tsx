@@ -41,6 +41,8 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
   const [loading, setLoading] = useState<boolean>(true);
   const [guardando, setGuardando] = useState<boolean>(false);
   const [statsByJp, setStatsByJp] = useState<Record<string, { _id?: string; throws: number; hits: number; outs: number; catches: number }>>({});
+  /** Números cargados sin guardar: cerrar por backdrop o Escape pide confirmación. */
+  const [hayCambiosSinGuardar, setHayCambiosSinGuardar] = useState(false);
 
   const equipoLocalId = useMemo(() => extractEquipoId(partido?.equipoLocal), [partido]);
   const equipoVisitanteId = useMemo(() => extractEquipoId(partido?.equipoVisitante), [partido]);
@@ -99,6 +101,7 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
   );
 
   const cambiarEstadistica = (jugadorPartidoId: string, campo: 'throws' | 'hits' | 'outs' | 'catches', delta: number) => {
+    setHayCambiosSinGuardar(true);
     setStatsByJp((prev) => {
       const actual = prev[jugadorPartidoId] ?? { throws: 0, hits: 0, outs: 0, catches: 0 };
       const nextVal = Math.max(0, (actual[campo] ?? 0) + delta);
@@ -163,6 +166,7 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
         }
       });
       await Promise.all(tareas);
+      setHayCambiosSinGuardar(false);
       await Promise.resolve(onRefresh?.());
       onClose();
     } finally {
@@ -171,7 +175,14 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
   };
 
   return (
-    <ModalBase title="Captura de estadísticas directas" onClose={onClose} size="xl" isOpen>
+    <ModalBase
+      title="Captura de estadísticas directas"
+      onClose={onClose}
+      size="xl"
+      isOpen
+      hasUnsavedChanges={hayCambiosSinGuardar}
+      unsavedMessage="Cargaste estadísticas que todavía no guardaste. ¿Cerrar y perderlas?"
+    >
       {loading ? (
         <div className="text-center py-8">
           <p className="text-gray-600">Cargando jugadores y estadísticas...</p>

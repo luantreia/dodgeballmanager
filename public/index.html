@@ -1,13 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es-AR">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <!-- viewport-fit=cover para que el layout llegue hasta los bordes en pantallas con notch;
+         maximum-scale queda libre a propósito: limitar el zoom rompe la accesibilidad. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1f2937" />
+    <!-- Sin esto, agregar la app a la pantalla de inicio en iOS abre Safari con toda su barra
+         en vez de una ventana propia, y el DT pierde alto de pantalla al costado de la cancha. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Overtime DT" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- El nombre del meta era "Overtime-DT", que no es ningún meta que el navegador entienda:
+         la descripción real de la página quedaba vacía. -->
     <meta
-      name="Overtime-DT"
-      content="Panel de Entrenadores y Directores Técnicos."
+      name="description"
+      content="Panel de entrenadores y directores técnicos de Overtime Dodgeball."
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <!--

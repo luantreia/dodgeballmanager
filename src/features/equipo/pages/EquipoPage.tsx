@@ -43,6 +43,8 @@ const EquipoPage = () => {
       youtube: '',
     },
   });
+  /** La URL del escudo no cargó como imagen: se avisa al lado de la vista previa. */
+  const [logoInvalido, setLogoInvalido] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [miembros, setMiembros] = useState<TeamMember[]>([]);
   const [miembroUsers, setMiembroUsers] = useState<Map<string, { nombre?: string; email?: string }>>(new Map());
@@ -467,24 +469,62 @@ const EquipoPage = () => {
             placeholder="Resumen del equipo, logros o estilo de juego"
           />
 
-          <Input
-            id="logoUrl"
-            name="logoUrl"
-            label="URL del logo"
-            type="url"
-            value={formData.logoUrl}
-            onChange={handleChange as any}
-            placeholder="https://..."
-            helperText={
-              <>
-                Subí la imagen a{' '}
-                <a href="https://postimages.org/" target="_blank" rel="noopener noreferrer" className="underline">
-                  postimages.org
-                </a>{' '}
-                y pegá el link "Direct link". Usá una imagen cuadrada y de buena resolución para que se vea bien en las tarjetas compartibles.
-              </>
-            }
-          />
+          {/* Todavía no hay subida de archivos: el backend no tiene endpoint de upload ni storage
+              configurado (Render borra el disco en cada deploy, así que hace falta decidir un
+              proveedor). Mientras tanto, al menos la vista previa evita el caso peor de este
+              flujo: pegar un link que no es una imagen —la página de postimages en vez del
+              "Direct link"— y enterarse recién cuando el escudo sale roto en las tarjetas. */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            <div className="flex-1">
+              <Input
+                id="logoUrl"
+                name="logoUrl"
+                label="URL del escudo"
+                type="url"
+                value={formData.logoUrl}
+                onChange={handleChange as any}
+                placeholder="https://..."
+                helperText={
+                  <>
+                    Subí la imagen a{' '}
+                    <a href="https://postimages.org/" target="_blank" rel="noopener noreferrer" className="underline">
+                      postimages.org
+                    </a>{' '}
+                    y pegá el link "Direct link" (el que termina en .jpg o .png). Usá una imagen
+                    cuadrada y de buena resolución para que se vea bien en las tarjetas
+                    compartibles.
+                  </>
+                }
+              />
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-xs font-medium text-slate-500">Vista previa</span>
+              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                {formData.logoUrl ? (
+                  <img
+                    src={formData.logoUrl}
+                    alt="Vista previa del escudo"
+                    className="h-full w-full object-contain"
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none';
+                      setLogoInvalido(true);
+                    }}
+                    onLoad={(event) => {
+                      event.currentTarget.style.display = '';
+                      setLogoInvalido(false);
+                    }}
+                  />
+                ) : (
+                  <span className="text-xs text-slate-400">Sin escudo</span>
+                )}
+              </div>
+              {logoInvalido && formData.logoUrl ? (
+                <span className="max-w-[8rem] text-center text-[11px] text-rose-600">
+                  Ese link no carga como imagen
+                </span>
+              ) : null}
+            </div>
+          </div>
 
           <div>
             <p className="mb-2 text-sm font-medium text-slate-700">Redes sociales</p>

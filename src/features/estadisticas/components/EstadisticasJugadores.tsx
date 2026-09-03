@@ -27,11 +27,6 @@ export const renderEstadisticasJugadores = (
   estadisticas: EstadisticasJugadoresData,
   _partido: unknown,
 ): ReactNode => {
-  console.log('🎾 renderEstadisticasJugadores recibió:', {
-    jugadoresLength: estadisticas.jugadores?.length || 0,
-    tieneJugadores: !!estadisticas.jugadores,
-    primerJugador: estadisticas.jugadores?.[0] || 'Sin jugadores'
-  });
 
   return (
     <div>

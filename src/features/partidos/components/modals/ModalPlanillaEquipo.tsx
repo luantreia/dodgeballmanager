@@ -79,6 +79,11 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   const [modoNuevo, setModoNuevo] = useState<PlanillaModo>('sets');
   const [setActivoId, setSetActivoId] = useState<string | null>(null);
   const [slots, setSlots] = useState<Slot[]>(slotsVacios);
+  /**
+   * Hay números en la grilla que todavía no se guardaron. En mobile el backdrop del modal se
+   * toca sin querer todo el tiempo y cerrar sin avisar tiraba la planilla entera del set.
+   */
+  const [hayCambiosSinGuardar, setHayCambiosSinGuardar] = useState(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -228,6 +233,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   };
 
   const asignarJugador = (index: number, presenteId: string): void => {
+    setHayCambiosSinGuardar(true);
     setSlots((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], presenteId: presenteId || undefined };
@@ -240,6 +246,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     campo: 'throws' | 'hits' | 'outs' | 'catches',
     delta: number,
   ): void => {
+    setHayCambiosSinGuardar(true);
     setSlots((prev) => {
       const next = [...prev];
       const actual = next[index];
@@ -255,6 +262,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   };
 
   const cambiarSurvive = (index: number, value: boolean): void => {
+    setHayCambiosSinGuardar(true);
     setSlots((prev) => {
       const next = [...prev];
       next[index] = {
@@ -303,6 +311,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
 
       const completa = await obtenerPlanilla(planilla._id);
       setPlanilla(completa);
+      setHayCambiosSinGuardar(false);
       addToast({ type: 'success', title: 'Planilla guardada', message: 'Los datos oficiales no se modificaron' });
     } catch (error) {
       addToast({
@@ -366,7 +375,15 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     : 'Captura propia del equipo, no afecta los datos oficiales';
 
   return (
-    <ModalBase title="Mi planilla" subtitle={subtitulo} onClose={onClose} size="xl" isOpen>
+    <ModalBase
+      title="Mi planilla"
+      subtitle={subtitulo}
+      onClose={onClose}
+      size="xl"
+      isOpen
+      hasUnsavedChanges={hayCambiosSinGuardar}
+      unsavedMessage="Cargaste datos en la planilla que todavía no guardaste. ¿Cerrar y perderlos?"
+    >
       {loading ? (
         <div className="py-10 text-center text-gray-600">Cargando planilla...</div>
       ) : !planilla ? (

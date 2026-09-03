@@ -20,6 +20,14 @@ export interface ModalProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'
 }
 
 /**
+ * Cuántos modales hay abiertos a la vez. El scroll del body se bloquea al abrir el primero y
+ * se libera recién al cerrar el último: sin esto, cerrar un modal anidado (p. ej. la captura
+ * de estadísticas que se abre desde el modal de administración del partido) devolvía el scroll
+ * al fondo mientras seguía habiendo un modal arriba.
+ */
+let modalesAbiertos = 0;
+
+/**
  * Componente Modal reutilizable mejorado
  */
 const Modal = ({
@@ -49,11 +57,15 @@ const Modal = ({
     };
 
     document.addEventListener('keydown', handleEscape);
+    modalesAbiertos += 1;
     document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      modalesAbiertos = Math.max(0, modalesAbiertos - 1);
+      if (modalesAbiertos === 0) {
+        document.body.style.overflow = 'unset';
+      }
     };
   }, [isOpen, closeOnEscape, onClose]);
 
@@ -113,8 +125,13 @@ const Modal = ({
 
   const headerClasses = 'px-6 py-4 border-b border-gray-200 dark:border-gray-700';
 
+  // `flex min-h-0 flex-1 flex-col` no es decorativo: sin el `min-h-0` este div se niega a
+  // encogerse por debajo de su contenido, el `overflow-hidden` del contenedor lo recorta y el
+  // `overflow-y-auto` de adentro nunca llega a activarse. Resultado: en un modal más alto que
+  // el viewport el footer —y con él el botón de guardar— queda inalcanzable, sobre todo en
+  // mobile. Tampoco va padding acá: lo define `bodyClassName` para que se pueda anular.
   const bodyClasses = [
-    'px-6 py-4',
+    'flex min-h-0 flex-1 flex-col',
     'overflow-x-hidden',
     bodyClassName
   ].filter(Boolean).join(' ');

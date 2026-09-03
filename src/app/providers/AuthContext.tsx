@@ -31,6 +31,23 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const TOKEN_STORAGE_KEY = 'overtime_token';
 const REFRESH_TOKEN_STORAGE_KEY = 'overtime_refresh_token';
 
+/**
+ * Todo lo que la app persiste por sesión vive bajo este prefijo y se borra junto con los
+ * tokens. Es un panel que rota entre DTs del mismo club en un celular compartido: si al
+ * cerrar sesión queda el equipo seleccionado del usuario anterior, el siguiente entra
+ * mirando —y editando— datos que no son suyos.
+ */
+const SESSION_STORAGE_PREFIX = 'overtime_';
+
+const limpiarSesionPersistida = () => {
+  const claves: string[] = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const clave = localStorage.key(i);
+    if (clave?.startsWith(SESSION_STORAGE_PREFIX)) claves.push(clave);
+  }
+  claves.forEach((clave) => localStorage.removeItem(clave));
+};
+
 const getStoredToken = () => localStorage.getItem(TOKEN_STORAGE_KEY);
 const getStoredRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
 
@@ -69,11 +86,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setError(null);
     } catch (err) {
       console.error(err);
-      setUser(null);
-      setStoredToken(null);
-      setStoredRefreshToken(null);
-      setToken(null);
-      setRefreshToken(null);
+      // Solo un rechazo de credenciales cierra la sesión. El backend vive en el plan free de
+      // Render: un cold start devuelve 502/504 o directamente corta la conexión, y tratar eso
+      // como "token inválido" expulsaba al usuario cada vez que abría la app tras un rato.
+      const status = (err as { status?: number })?.status;
+      if (status === 401 || status === 403) {
+        limpiarSesionPersistida();
+        setUser(null);
+        setToken(null);
+        setRefreshToken(null);
+      } else {
+        setError('No pudimos verificar tu sesión. Revisá tu conexión y reintentá.');
+      }
     } finally {
       setLoading(false);
     }
@@ -100,9 +124,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } catch (err) {
       console.error(err);
       setError('Credenciales inválidas o servicio no disponible');
+      limpiarSesionPersistida();
       setUser(null);
-      setStoredToken(null);
-      setStoredRefreshToken(null);
       setToken(null);
       setRefreshToken(null);
       throw err;
@@ -123,9 +146,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setError(null);
     } catch (err) {
       console.error(err);
+      limpiarSesionPersistida();
       setUser(null);
-      setStoredToken(null);
-      setStoredRefreshToken(null);
       setToken(null);
       setRefreshToken(null);
       throw err;
@@ -135,8 +157,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const logout = useCallback(() => {
-    setStoredToken(null);
-    setStoredRefreshToken(null);
+    limpiarSesionPersistida();
     setUser(null);
     setToken(null);
     setRefreshToken(null);

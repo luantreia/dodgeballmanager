@@ -21,7 +21,6 @@ type DistribucionEquiposChartProps = {
 export const DistribucionEquiposChart: FC<DistribucionEquiposChartProps> = ({ estadisticas, modoEstadisticasUI }) => {
   // Usar las estadísticas de equipos calculadas desde el backend
   const equiposData = estadisticas.equipos || [];
-  console.log('📊 Estructura del primer equipo:', equiposData[0] || 'Sin equipos');
 
   // Si no hay equipos, mostrar mensaje
   if (equiposData.length === 0) {
@@ -53,7 +52,6 @@ export const DistribucionEquiposChart: FC<DistribucionEquiposChartProps> = ({ es
     fill: COLORS[index % COLORS.length]
   }));
 
-  console.log('🍰 Datos para gráfico de torta:', pieData);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow">

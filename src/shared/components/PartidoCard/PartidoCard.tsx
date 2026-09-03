@@ -1,5 +1,5 @@
 import type { KeyboardEvent, ReactNode } from 'react';
-import type { Partido } from '../../utils/types/types';
+import type { EstadoPartido, Partido } from '../../utils/types/types';
 import { formatDate, formatDateTime } from '../../utils/formatDate';
 
 export interface PartidoCardProps {
@@ -9,15 +9,11 @@ export interface PartidoCardProps {
   onClick?: () => void;
 }
 
-const badgeStyles = {
-  pendiente: {
-    label: 'Programado',
-    className: 'bg-slate-100 text-slate-600',
-  },
-  confirmado: {
-    label: 'Confirmado',
-    className: 'bg-sky-100 text-sky-700',
-  },
+// Un badge por estado real del modelo, ni uno más: las entradas de más ('pendiente',
+// 'confirmado', 'proximamente') eran ramas muertas que sugerían estados que el backend nunca
+// devuelve. `Record<EstadoPartido, …>` hace que agregar un estado al modelo rompa la
+// compilación acá en vez de mostrar un badge en blanco.
+const badgeStyles: Record<EstadoPartido, { label: string; className: string }> = {
   programado: {
     label: 'Programado',
     className: 'bg-slate-100 text-slate-600',
@@ -34,21 +30,22 @@ const badgeStyles = {
     label: 'Cancelado',
     className: 'bg-red-100 text-red-600',
   },
-  proximamente: {
-    label: 'Próximamente',
-    className: 'bg-sky-100 text-sky-700',
-  }
-} as const;
+};
 
 const PartidoCard = ({ partido, variante = 'proximo', actions, onClick }: PartidoCardProps) => {
-  const fechaTexto = partido.fecha && partido.hora
+  // `fechaISO` es el instante completo del backend; `fecha`+`hora` ya vienen en hora local, así
+  // que concatenarlas produce un string sin zona que el navegador interpreta como local. Las
+  // dos ramas muestran lo mismo — la segunda es el fallback para datos ya mapeados sin ISO.
+  const fechaTexto = partido.fechaISO
+    ? formatDateTime(partido.fechaISO)
+    : partido.fecha && partido.hora
     ? formatDateTime(`${partido.fecha}T${partido.hora}`)
     : partido.fecha
     ? formatDate(partido.fecha)
     : 'Fecha no disponible';
 
-  const estado = partido.estado || 'programado';
-  const badge = badgeStyles[estado as keyof typeof badgeStyles] || badgeStyles.programado;
+  const estado: EstadoPartido = partido.estado ?? 'programado';
+  const badge = badgeStyles[estado] ?? badgeStyles.programado;
   const mostrarMarcador =
     estado === 'finalizado' ||
     estado === 'en_juego' ||

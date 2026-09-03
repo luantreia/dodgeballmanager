@@ -10,6 +10,11 @@ import {
 import type { Competencia } from '../../../../shared/utils/types/types';
 import { getParticipaciones as getCompetencias } from '../../../competencias/services/equipoCompetenciaService';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
+import {
+  formatDateTime,
+  fromDatetimeLocalValue,
+  toDatetimeLocalValue,
+} from '../../../../shared/utils/formatDate';
 
 interface ModalInformacionPartidoProps {
   partidoId: string | null;
@@ -56,7 +61,7 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
       const detalle = await getPartidoDetallado(partidoId);
       setPartido(detalle);
       setDatosEdicion({
-        fecha: detalle.fecha ? new Date(detalle.fecha).toISOString().slice(0, 16) : '',
+        fecha: toDatetimeLocalValue(detalle.fecha),
         ubicacion: detalle.ubicacion || '',
         estado: detalle.estado || 'programado',
         nombrePartido: detalle.nombrePartido || '',
@@ -108,7 +113,7 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
       const { fecha, ...rest } = datosEdicion;
       const payload = {
         ...rest,
-        fecha: fecha ? new Date(fecha).toISOString() : undefined,
+        fecha: fromDatetimeLocalValue(fecha),
       };
       await editarPartido(partidoId, payload);
       await cargar();
@@ -149,7 +154,7 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
       title="Detalles del partido"
       subtitle={modoSoloLectura ? 'Información de competencia (solo lectura)' : 'Información básica y edición rápida'}
       size="lg"
-      bodyClassName="p-0"
+     
     >
       <div className="space-y-4 px-6 pb-6">
         {loading ? (
@@ -351,7 +356,7 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
             ) : (
               <div className="space-y-2">
                 <p><strong>Nombre:</strong> {partido.nombrePartido || 'No especificado'}</p>
-                <p><strong>Fecha:</strong> {partido.fecha ? new Date(partido.fecha).toLocaleString() : 'No especificada'}</p>
+                <p><strong>Fecha:</strong> {partido.fecha ? formatDateTime(partido.fecha) : 'No especificada'}</p>
                 <p><strong>Ubicación:</strong> {partido.ubicacion || 'No especificada'}</p>
                 <p><strong>Estado:</strong> {partido.estado || 'No especificado'}</p>
                 <p><strong>Modalidad:</strong> {partido.modalidad || 'No especificada'}</p>

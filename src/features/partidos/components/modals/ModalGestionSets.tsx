@@ -156,7 +156,7 @@ const ModalGestionSets = ({ partidoId, isOpen, onClose, onAbrirCaptura, esCompet
   };
 
   return (
-    <ModalBase isOpen={isOpen} onClose={onClose} title="Gestionar sets" size="lg" bodyClassName="p-0">
+    <ModalBase isOpen={isOpen} onClose={onClose} title="Gestionar sets" size="lg">
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-sm text-slate-600">Crear, editar y eliminar sets del partido.</p>

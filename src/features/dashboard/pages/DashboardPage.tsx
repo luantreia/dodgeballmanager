@@ -35,7 +35,10 @@ const DashboardPage = () => {
       try {
         setLoading(true);
         const [partidos, solicitudesResp, stats] = await Promise.all([
-          getPartidos({ equipoId, estado: 'pendiente' }),
+          // Incluye 'en_juego': un partido que ya arrancó sigue siendo el próximo del DT hasta
+          // que se cierra, y filtrando sólo por 'programado' desaparecía del dashboard justo
+          // cuando más lo necesita.
+          getPartidos({ equipoId, estado: ['programado', 'en_juego'] }),
           getSolicitudesEdicion({ estado: 'pendiente' }),
           // .catch: si el resumen falla no debe arrastrar al resto del Promise.all. Antes
           // un 404 acá dejaba el dashboard entero sin partidos ni notificaciones.
@@ -44,15 +47,25 @@ const DashboardPage = () => {
 
         if (isCancelled) return;
 
-        const ahora = Date.now();
-        const limiteSieteDias = ahora + (7 * 24 * 60 * 60 * 1000);
+        // Contra `fechaISO`, no contra `fecha`: `fecha` es sólo el día (`YYYY-MM-DD`) y el
+        // navegador lo parsea como medianoche UTC, así que el partido de esta tarde daba
+        // "anterior a ahora" y quedaba fuera de "próximos partidos" — justo el que importa.
+        const instante = (partido: Partido) =>
+          new Date(partido.fechaISO ?? `${partido.fecha}T${partido.hora ?? '00:00'}`).getTime();
+
+        // El corte de abajo es el arranque del día de hoy, no `ahora`: un partido que empezó
+        // hace media hora todavía se está jugando y tiene que seguir a la vista.
+        const inicioDeHoy = new Date();
+        inicioDeHoy.setHours(0, 0, 0, 0);
+        const desde = inicioDeHoy.getTime();
+        const limiteSieteDias = Date.now() + 7 * 24 * 60 * 60 * 1000;
         const proximosSieteDias = partidos.filter((partido) => {
-          const t = new Date(partido.fecha as any).getTime();
-          return Number.isFinite(t) && t >= ahora && t <= limiteSieteDias;
+          const t = instante(partido);
+          return Number.isFinite(t) && t >= desde && t <= limiteSieteDias;
         });
 
         const partidosOrdenados = [...proximosSieteDias]
-          .sort((a, b) => new Date(a.fecha as any).getTime() - new Date(b.fecha as any).getTime())
+          .sort((a, b) => instante(a) - instante(b))
           .slice(0, 5);
         setProximosPartidos(partidosOrdenados);
         const count = (solicitudesResp.solicitudes || []).filter((s) => s.tipo === 'jugador-equipo-crear' && (s.datosPropuestos as any)?.equipoId === equipoId).length;
@@ -62,7 +75,7 @@ const DashboardPage = () => {
       } catch (err) {
         console.error(err);
         if (!isCancelled) {
-          setError('No pudimos cargar el resumen del equipo. Intenta nuevamente.');
+          setError('No pudimos cargar el resumen del equipo. Intentá de nuevo.');
         }
       } finally {
         if (!isCancelled) {

@@ -12,6 +12,52 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: BodyType;
 };
 
+/**
+ * Un único refresh en vuelo para toda la app. Una pantalla dispara varias llamadas en paralelo
+ * (partidos + solicitudes + estadísticas), así que al vencer el access token todas daban 401 a
+ * la vez y cada una arrancaba su propio refresh. Si el backend rota el refresh token, el
+ * segundo intento invalida el primero y el usuario termina afuera sin haber hecho nada. Con
+ * esta promesa compartida, el primero refresca y el resto espera su resultado.
+ */
+let refreshEnCurso: Promise<string | null> | null = null;
+
+const refrescarToken = async (): Promise<string | null> => {
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (!refreshToken) return null;
+
+  try {
+    const resp = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!resp.ok) {
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      return null;
+    }
+
+    const data = (await resp.json()) as { accessToken?: string; refreshToken?: string };
+    if (data.accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+    if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    return data.accessToken ?? null;
+  } catch (_) {
+    // Un error de red no prueba que el token sea inválido (el backend está en el plan free de
+    // Render y se duerme), así que acá no se borra nada: se reintenta en la próxima llamada.
+    return null;
+  }
+};
+
+const refrescarTokenCompartido = (): Promise<string | null> => {
+  if (!refreshEnCurso) {
+    refreshEnCurso = refrescarToken().finally(() => {
+      refreshEnCurso = null;
+    });
+  }
+  return refreshEnCurso;
+};
+
 const serializeBody = (body: BodyType): BodyInit | null | undefined => {
   if (body === undefined) return undefined;
   if (body === null) return null;
@@ -59,34 +105,9 @@ export const authFetch = async <TResponse>(
   let response = await doRequest();
 
   if (useAuth && response.status === 401) {
-    // intento de refresh
-    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-    if (refreshToken) {
-      try {
-        const refreshResp = await fetch(`${API_BASE_URL}/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
-        });
-        if (refreshResp.ok) {
-          const data = (await refreshResp.json()) as { accessToken?: string; refreshToken?: string };
-          if (data.accessToken) {
-            localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-          }
-          if (data.refreshToken) {
-            localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-          }
-          // reintentar con nuevo token
-          response = await doRequest(`Bearer ${data.accessToken}`);
-        } else {
-          // limpiar tokens
-          localStorage.removeItem(ACCESS_TOKEN_KEY);
-          localStorage.removeItem(REFRESH_TOKEN_KEY);
-        }
-      } catch (_) {
-        localStorage.removeItem(ACCESS_TOKEN_KEY);
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
-      }
+    const nuevoToken = await refrescarTokenCompartido();
+    if (nuevoToken) {
+      response = await doRequest(`Bearer ${nuevoToken}`);
     }
   }
 

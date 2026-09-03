@@ -74,7 +74,7 @@ const JugadoresPage = () => {
       setShowContratosModal(true);
     } catch (err) {
       console.error(err);
-      setContratosError('No pudimos cargar los contratos inactivos. Intenta nuevamente.');
+      setContratosError('No pudimos cargar los contratos inactivos. Intentá de nuevo.');
       addToast({ type: 'error', title: 'Error', message: 'No pudimos cargar los contratos inactivos' });
       setShowContratosModal(true);
     } finally {

@@ -20,7 +20,6 @@ type ComparativaEquiposTableProps = {
 export const ComparativaEquiposTable: FC<ComparativaEquiposTableProps> = ({ estadisticas, modoEstadisticasUI }) => {
   // Usar las estadísticas de equipos calculadas desde el backend
   const equiposData = estadisticas?.equipos ?? [];
-  console.log('🏆 Datos de equipos para tabla:', equiposData);
 
   // Si no hay equipos, mostrar mensaje
   if (equiposData.length === 0) {

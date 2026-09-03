@@ -83,7 +83,7 @@ export const ModalCrearPartido = ({ isOpen, equipoId, onClose, onSuccess }: Moda
         }
       } catch (_error) {
         if (!controller.signal.aborted) {
-          setEquiposError('No pudimos cargar equipos rivales. Intenta nuevamente.');
+          setEquiposError('No pudimos cargar equipos rivales. Intentá de nuevo.');
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -158,7 +158,7 @@ export const ModalCrearPartido = ({ isOpen, equipoId, onClose, onSuccess }: Moda
     } catch (error) {
       console.error(error);
       const detail = (error as any)?.message;
-      setCrearError(detail ? `No pudimos crear el partido: ${detail}` : 'No pudimos crear el partido. Intenta nuevamente.');
+      setCrearError(detail ? `No pudimos crear el partido: ${detail}` : 'No pudimos crear el partido. Intentá de nuevo.');
     } finally {
       setCrearLoading(false);
     }

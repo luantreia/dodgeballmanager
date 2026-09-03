@@ -22,6 +22,13 @@ export interface ModalBaseProps {
   overlayClassName?: string;
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
+  /**
+   * Marcá el modal como "tiene cambios sin guardar" y cerrar por backdrop o Escape pide
+   * confirmación. En mobile el backdrop se toca sin querer todo el tiempo: sin esto, una
+   * planilla entera de estadísticas se pierde con un roce.
+   */
+  hasUnsavedChanges?: boolean;
+  unsavedMessage?: string;
 }
 
 /**
@@ -41,13 +48,22 @@ const ModalBase: React.FC<ModalBaseProps> = ({
   className = '',
   contentClassName = '',
   scrollable = true,
-  maxHeightClass = 'max-h-[90vh]',
-  bodyClassName = 'p-0',
+  // `dvh` y no `vh`: en mobile el 100vh incluye la barra de direcciones, así que un 90vh
+  // real se come el borde inferior del modal justo donde vive el botón de guardar.
+  maxHeightClass = 'max-h-[90dvh]',
+  bodyClassName = 'px-4 py-3 sm:px-6 sm:py-4',
   isOpen = true,
   overlayClassName,
   closeOnBackdrop,
   closeOnEscape,
+  hasUnsavedChanges = false,
+  unsavedMessage = 'Tenés cambios sin guardar. ¿Querés cerrar y descartarlos?',
 }) => {
+  const handleClose = () => {
+    if (hasUnsavedChanges && !window.confirm(unsavedMessage)) return;
+    onClose();
+  };
+
   const mergedClassName = [
     'relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200/70',
     'dark:bg-slate-900 dark:ring-slate-700/60',
@@ -83,7 +99,7 @@ const ModalBase: React.FC<ModalBaseProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       size={size}
       className={mergedClassName}
       showCloseButton={showCloseButton}

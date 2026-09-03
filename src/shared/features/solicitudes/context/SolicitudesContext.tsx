@@ -7,6 +7,7 @@ import {
   ISolicitudFiltros,
 } from '../types/solicitudesEdicion';
 import { ISolicitudOpciones, ISolicitudLoadingState } from '../types/solicitudesEdicion';
+import { useAuth } from '../../../../app/providers/AuthContext';
 import {
   getSolicitudesEdicion,
   getSolicitudEdicionById,
@@ -385,19 +386,33 @@ export const SolicitudesProvider: React.FC<SolicitudesProviderProps> = ({ childr
   );
 
   /**
-   * Cargar contador de pendientes al montar
+   * Cargar contador de pendientes al montar y cada vez que cambia la sesión.
+   *
+   * Antes esto corría una sola vez con `[]`: en la pantalla de login pedía las solicitudes sin
+   * token —401 y un error en consola— y, peor, después de iniciar sesión nunca se volvía a
+   * ejecutar, así que el contador se quedaba en cero hasta recargar la página a mano.
    */
+  const { token } = useAuth();
+
   useEffect(() => {
+    if (!token) {
+      dispatch({ type: 'SET_PENDIENTES_COUNT', payload: 0 });
+      return;
+    }
+    let cancelado = false;
     const cargarPendientes = async () => {
       try {
         const count = await contarSolicitudesPendientes();
-        dispatch({ type: 'SET_PENDIENTES_COUNT', payload: count });
+        if (!cancelado) dispatch({ type: 'SET_PENDIENTES_COUNT', payload: count });
       } catch (error) {
         console.error('Error al cargar pendientes:', error);
       }
     };
-    cargarPendientes();
-  }, []);
+    void cargarPendientes();
+    return () => {
+      cancelado = true;
+    };
+  }, [token]);
 
   const value: SolicitudesContextValue = useMemo(
     () => ({

@@ -61,7 +61,7 @@ const SelectorSet: FC<SelectorSetProps> = ({
             className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
                        focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           >
-            <option value="" disabled>-- Seleccione un set --</option>
+            <option value="" disabled>-- Elegí un set --</option>
             {opcionesSets.map(op => (
               <option key={op.value} value={op.value}>
                 {op.label}

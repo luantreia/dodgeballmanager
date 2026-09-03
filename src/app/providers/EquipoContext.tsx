@@ -9,6 +9,7 @@ import {
 import { getEquiposDelUsuario } from '../../features/equipo/services/equipoService';
 import type { Equipo } from '../../shared/utils/types/types';
 import { useToast } from '../../shared/components/Toast/ToastProvider';
+import { useAuth } from './AuthContext';
 
 type EquipoContextValue = {
   equipos: Equipo[];
@@ -27,8 +28,21 @@ export const EquipoProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [equipoSeleccionado, setEquipoSeleccionado] = useState<Equipo | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const { addToast } = useToast();
+  // El token es la señal de "hay sesión y es esta". Sin esta dependencia el provider cargaba
+  // los equipos una sola vez al montar la app: en la pantalla de login eso daba 401 y dejaba
+  // `equipos` vacío para siempre, así que recién logueado `RequireEquipo` mandaba al
+  // onboarding a un DT que ya tenía equipo, y solo se arreglaba recargando la página a mano.
+  const { token, user } = useAuth();
+  const usuarioId = user?.id ?? null;
 
   const cargarEquipos = useCallback(async () => {
+    if (!token) {
+      setEquipos([]);
+      setEquipoSeleccionado(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const equiposUsuario = await getEquiposDelUsuario();
@@ -52,11 +66,13 @@ export const EquipoProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } finally {
       setLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, token]);
 
+  // `usuarioId` además del token: garantiza que un cambio de cuenta en el mismo dispositivo
+  // vuelva a pedir los equipos en vez de reusar los del usuario anterior.
   useEffect(() => {
     void cargarEquipos();
-  }, [cargarEquipos]);
+  }, [cargarEquipos, usuarioId]);
 
   const seleccionarEquipo = useCallback(
     (equipoId: string) => {
