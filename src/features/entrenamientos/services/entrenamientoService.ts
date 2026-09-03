@@ -71,6 +71,9 @@ export const listarEntrenamientos = async (equipoId: string): Promise<Entrenamie
 export const obtenerEntrenamiento = (id: string) =>
   authFetch<EntrenamientoDetalle>(`${BASE}/${id}`);
 
+/** El backend puede crear el entrenamiento pero fallar al convocar: eso llega como `aviso`. */
+export type EntrenamientoCreado = EntrenamientoResumen & { convocados: number; aviso: string | null };
+
 export const crearEntrenamiento = (payload: {
   equipo: string;
   fecha: string;
@@ -79,7 +82,7 @@ export const crearEntrenamiento = (payload: {
   tipo?: EntrenamientoTipo;
   titulo?: string;
   notas?: string;
-}) => authFetch<EntrenamientoResumen>(BASE, { method: 'POST', body: payload });
+}) => authFetch<EntrenamientoCreado>(BASE, { method: 'POST', body: payload });
 
 export const editarEntrenamiento = (
   id: string,

@@ -98,14 +98,20 @@ const EntrenamientosPage = () => {
 
     setCreando(true);
     try {
-      await crearEntrenamiento({ equipo: equipoId, fecha: iso, lugar, tipo });
+      const creado = await crearEntrenamiento({ equipo: equipoId, fecha: iso, lugar, tipo });
       setLugar('');
       await cargar();
-      addToast({
-        type: 'success',
-        title: 'Entrenamiento creado',
-        message: 'Se convocó a todo el plantel. Marcá las excepciones al tomar asistencia.',
-      });
+      addToast(
+        creado.aviso
+          ? { type: 'info', title: 'Entrenamiento creado', message: creado.aviso }
+          : {
+              type: 'success',
+              title: 'Entrenamiento creado',
+              // La cantidad, no "todo el plantel": se convoca a quienes tenían contrato vigente
+              // ESA fecha, que puede no ser el plantel completo de hoy.
+              message: `Se convocó a ${creado.convocados} jugador${creado.convocados === 1 ? '' : 'es'} con contrato vigente. Marcá las excepciones al tomar asistencia.`,
+            },
+      );
     } catch (error) {
       addToast({
         type: 'error',
