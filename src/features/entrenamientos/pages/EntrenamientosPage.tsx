@@ -17,6 +17,7 @@ import {
   type ResumenJugador,
 } from '../services/entrenamientoService';
 import ModalAsistencia from '../components/ModalAsistencia';
+import SeccionTests from '../components/SeccionTests';
 
 const TIPOS: Array<{ valor: EntrenamientoTipo; label: string }> = [
   { valor: 'general', label: 'General' },
@@ -54,6 +55,12 @@ const EntrenamientosPage = () => {
   const [creando, setCreando] = useState(false);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [aEliminar, setAEliminar] = useState<EntrenamientoResumen | null>(null);
+
+  /**
+   * Pestañas y no una ruta nueva: el menú ya tiene ocho ítems y los tests son el complemento
+   * del entrenamiento, no una sección aparte de la app. Además comparten el mismo plantel.
+   */
+  const [pestania, setPestania] = useState<'sesiones' | 'tests'>('sesiones');
 
   const [fecha, setFecha] = useState(() => toDatetimeLocalValue(new Date().toISOString()));
   const [lugar, setLugar] = useState('');
@@ -151,9 +158,36 @@ const EntrenamientosPage = () => {
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold text-slate-900">Entrenamientos</h1>
         <p className="text-sm text-slate-500">
-          Citá al plantel, tomá asistencia y mirá quién sostiene la semana.
+          Citá al plantel, tomá asistencia y evaluá cómo evolucionan.
         </p>
       </header>
+
+      <div className="flex gap-1 border-b border-slate-200" role="tablist">
+        {([
+          ['sesiones', 'Sesiones y asistencia'],
+          ['tests', 'Tests'],
+        ] as const).map(([clave, label]) => (
+          <button
+            key={clave}
+            type="button"
+            role="tab"
+            aria-selected={pestania === clave}
+            onClick={() => setPestania(clave)}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition [touch-action:manipulation] ${
+              pestania === clave
+                ? 'border-brand-600 text-brand-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {pestania === 'tests' ? (
+        <SeccionTests equipoId={equipoSeleccionado.id} />
+      ) : (
+      <>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
         <h2 className="text-base font-semibold text-slate-900">Nuevo entrenamiento</h2>
@@ -301,6 +335,9 @@ const EntrenamientosPage = () => {
           </ul>
         )}
       </section>
+
+      </>
+      )}
 
       {abierto && (
         <ModalAsistencia
