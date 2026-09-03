@@ -38,10 +38,14 @@ export const generarInvitacion = async (
   });
 
 /**
- * El canje de la invitación vive en el portal público (`/claim/:token`), que es
- * otra app. Configurá REACT_APP_PUBLIC_URL con su dominio en cada entorno.
+ * El canje de la invitación vive en Overtime-Manager (`/claim/:token`), que es la app del
+ * jugador. Antes apuntaba al portal público: el jugador creaba su cuenta ahí y quedaba parado
+ * en la app de los hinchas, sin acceso a nada de lo suyo.
+ *
+ * Configurá REACT_APP_MANAGER_URL con el dominio de Manager en cada entorno. Public sigue
+ * redirigiendo su ruta vieja, así que las invitaciones ya enviadas no se rompen.
  */
 export const armarLinkInvitacion = (token: string): string => {
-  const base = process.env.REACT_APP_PUBLIC_URL || 'http://localhost:3000';
+  const base = process.env.REACT_APP_MANAGER_URL || 'http://localhost:3001';
   return `${base.replace(/\/$/, '')}/claim/${token}`;
 };

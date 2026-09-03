@@ -1,24 +1,34 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import DashboardPage from './features/dashboard/pages/DashboardPage';
-import EquipoPage from './features/equipo/pages/EquipoPage';
-import JugadoresPage from './features/jugadores/pages/JugadoresPage';
-import CompetenciasPage from './features/competencias/pages/CompetenciasPage';
-import PartidosPage from './features/partidos/pages/PartidosPage';
-import EstadisticasPage from './features/estadisticas/pages/EstadisticasPage';
-import NotificacionesPage from './features/notificaciones/pages/NotificacionesPage';
-import PerfilPage from './features/perfil/pages/PerfilPage';
-import LoginPage from './features/auth/pages/LoginPage';
-import RegistroPage from './features/auth/pages/RegistroPage';
-import OlvidePasswordPage from './features/auth/pages/OlvidePasswordPage';
-import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
-import VerificarEmailPage from './features/auth/pages/VerificarEmailPage';
 import EmailVerificacionBanner from './shared/components/EmailVerificacionBanner';
-import OnboardingPage from './features/onboarding/pages/OnboardingPage';
 import ProtectedRoute from './app/routes/ProtectedRoute';
 import RequireEquipo from './app/routes/RequireEquipo';
 import Navbar from './app/layout/Navbar';
 import IndicadorSinConexion from './shared/components/IndicadorSinConexion';
 import { ErrorBoundary } from './shared/components/ui';
+
+/**
+ * Cada página en su propio chunk.
+ *
+ * Con todo en un bundle único, entrar a ver el plantel descargaba también Recharts, que sólo
+ * usa la pantalla de estadísticas. En una red de gimnasio eso son segundos de pantalla en
+ * blanco por algo que el DT no va a mirar. Cada ruta ahora pesa lo suyo y nada más.
+ */
+const DashboardPage = lazy(() => import('./features/dashboard/pages/DashboardPage'));
+const EquipoPage = lazy(() => import('./features/equipo/pages/EquipoPage'));
+const JugadoresPage = lazy(() => import('./features/jugadores/pages/JugadoresPage'));
+const CompetenciasPage = lazy(() => import('./features/competencias/pages/CompetenciasPage'));
+const PartidosPage = lazy(() => import('./features/partidos/pages/PartidosPage'));
+const EntrenamientosPage = lazy(() => import('./features/entrenamientos/pages/EntrenamientosPage'));
+const EstadisticasPage = lazy(() => import('./features/estadisticas/pages/EstadisticasPage'));
+const NotificacionesPage = lazy(() => import('./features/notificaciones/pages/NotificacionesPage'));
+const PerfilPage = lazy(() => import('./features/perfil/pages/PerfilPage'));
+const LoginPage = lazy(() => import('./features/auth/pages/LoginPage'));
+const RegistroPage = lazy(() => import('./features/auth/pages/RegistroPage'));
+const OlvidePasswordPage = lazy(() => import('./features/auth/pages/OlvidePasswordPage'));
+const ResetPasswordPage = lazy(() => import('./features/auth/pages/ResetPasswordPage'));
+const VerificarEmailPage = lazy(() => import('./features/auth/pages/VerificarEmailPage'));
+const OnboardingPage = lazy(() => import('./features/onboarding/pages/OnboardingPage'));
 
 /**
  * Rutas que se muestran a pantalla completa, sin navbar ni footer. Antes el login y el registro
@@ -33,6 +43,14 @@ const RUTAS_SIN_CHROME = [
   '/reset-password',
   '/verificar-email',
 ];
+
+/** Placeholder mientras baja el chunk de la ruta. Ocupa alto para que no salte el layout. */
+const CargandoRuta = () => (
+  <div className="flex flex-1 items-center justify-center py-16" role="status" aria-live="polite">
+    <span className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-transparent" />
+    <span className="sr-only">Cargando…</span>
+  </div>
+);
 
 const App = () => {
   const { pathname } = useLocation();
@@ -104,6 +122,16 @@ const App = () => {
         }
       />
       <Route
+        path="/entrenamientos"
+        element={
+          <ProtectedRoute>
+            <RequireEquipo>
+              <EntrenamientosPage />
+            </RequireEquipo>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/estadisticas"
         element={
           <ProtectedRoute>
@@ -141,7 +169,7 @@ const App = () => {
     return (
       <ErrorBoundary>
         <IndicadorSinConexion />
-        {rutas}
+        <Suspense fallback={<CargandoRuta />}>{rutas}</Suspense>
       </ErrorBoundary>
     );
   }
@@ -153,7 +181,9 @@ const App = () => {
       <IndicadorSinConexion />
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8">
-        <ErrorBoundary>{rutas}</ErrorBoundary>
+        <ErrorBoundary>
+          <Suspense fallback={<CargandoRuta />}>{rutas}</Suspense>
+        </ErrorBoundary>
       </main>
 
       <footer className="border-t border-slate-200 bg-white/60 py-4">

@@ -8,6 +8,7 @@ import CrearJugadorSection from '../components/CrearJugadorSection';
 import SolicitudesPendientesSection from '../components/SolicitudesPendientesSection';
 import ModalBase from '../../../shared/components/ModalBase/ModalBase';
 import JugadoresListSection from '../components/JugadoresListSection';
+import SeccionRatings from '../components/SeccionRatings';
 
 const JugadoresPage = () => {
   const { addToast } = useToast();
@@ -129,6 +130,10 @@ const JugadoresPage = () => {
           onSolicitudSuccess={refreshData}
         />
       )}
+
+      {/* Debajo del plantel y no arriba: el rating es contexto sobre los jugadores que ya
+          conocés, no la razon por la que entras a esta pantalla. */}
+      <SeccionRatings equipoId={equipoSeleccionado.id} />
 
       {showContratosModal ? (
         <ModalBase isOpen onClose={handleCloseContratosModal} title="Contratos no activos" size="xl">

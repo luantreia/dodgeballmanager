@@ -1,3 +1,5 @@
+import type { PartidoEstado } from '../../types/modelos.generado';
+
 // =====================================================================================
 // TYPES CONSOLIDADOS - overtime-gestion-dt
 // Ubicación: shared/utils/types/types.ts
@@ -146,14 +148,18 @@ export interface EquipoCompetencia {
 // ========================================
 
 /**
- * Espejo exacto del enum de Mongoose en `overtime/src/models/Partido/Partido.js`. Es la única
- * fuente de verdad: el filtro `?estado=` del backend mete el valor tal cual en la query de
- * Mongo, así que un valor que no existe en el enum no da error — devuelve 0 resultados y deja
- * una sección de la UI vacía sin que nadie se entere. Si agregás un estado, agregalo primero
- * en el modelo. `'pendiente'`, `'confirmado'`, `'proximamente'` y `'en_curso'` NO son estados
- * de Partido (los dos últimos son de Competencia, de ahí venía la confusión).
+ * Ya no es una copia a mano del enum de Mongoose: es el enum de Mongoose.
+ *
+ * `PartidoEstado` sale de `modelos.generado.ts`, que produce `scripts/generarTipos.js` en el
+ * repo del backend leyendo el schema. Antes esto era un espejo escrito a mano, y espejarlo mal
+ * es exactamente lo que pasó: aparecieron `'pendiente'`, `'confirmado'`, `'proximamente'` y
+ * `'en_curso'`, ninguno de los cuales existe en el modelo. Y el filtro `?estado=` del backend
+ * mete el valor tal cual en la query de Mongo, así que un estado inexistente no da error —
+ * devuelve 0 resultados y deja una sección de la app vacía sin que nadie se entere.
+ *
+ * Para agregar un estado: se agrega al schema y se corre `npm run tipos` en el backend.
  */
-export type EstadoPartido = 'programado' | 'en_juego' | 'finalizado' | 'cancelado';
+export type EstadoPartido = PartidoEstado;
 
 export interface Partido {
   id: string;

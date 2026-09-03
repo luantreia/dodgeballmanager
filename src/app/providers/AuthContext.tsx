@@ -13,6 +13,7 @@ import {
   getProfile,
 } from '../../features/auth/services/authService';
 import type { Usuario } from '../../shared/utils/types/types';
+import { identificarUsuario } from '../../shared/observabilidad/sentry';
 
 type AuthContextValue = {
   user: Usuario | null;
@@ -110,6 +111,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setLoading(false);
     }
   }, [handleProfileLoad, token]);
+
+  /**
+   * Un efecto que sigue al estado, en vez de avisarle a Sentry en cada uno de los siete lugares
+   * donde `user` cambia (login, registro, carga de perfil, logout y los tres catch). Una sola
+   * fuente no se puede desincronizar: si mañana aparece otra transición, esta queda cubierta.
+   */
+  useEffect(() => {
+    identificarUsuario(user ? { id: user.id, rol: user.rol } : null);
+  }, [user]);
 
   const login = useCallback(async (email: string, password: string) => {
     try {

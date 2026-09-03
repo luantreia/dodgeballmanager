@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import CompetenciaCard from '../../../shared/components/CompetenciaCard';
+import TablaPosiciones from '../components/TablaPosiciones';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getParticipaciones } from '../services/equipoCompetenciaService';
 import type { EquipoCompetencia } from '../../../shared/utils/types/types';
@@ -180,15 +181,28 @@ const CompetenciasPage = () => {
       {loading ? (
         <p className="text-sm text-slate-500">Cargando participaciones…</p>
       ) : (
-        <section className="grid gap-4 md:grid-cols-2">
-          {participaciones.map((participacion) => (
-            <CompetenciaCard key={participacion.id} participacion={participacion} />
-          ))}
+        <section className="space-y-4">
           {participaciones.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
               Aún no tenés participaciones registradas.
             </p>
           ) : null}
+
+          {/* Cada competencia con su tabla debajo. Antes eran dos columnas de tarjetas sueltas:
+              el DT veía en qué competencias está inscripto, pero no dónde está parado en cada
+              una — que es la pregunta que realmente se hace. */}
+          {participaciones.map((participacion) => (
+            <div key={participacion.id} className="space-y-2">
+              <CompetenciaCard participacion={participacion} />
+              {participacion.competencia?.id && equipoSeleccionado ? (
+                <TablaPosiciones
+                  competenciaId={participacion.competencia.id}
+                  competenciaNombre={participacion.competencia.nombre}
+                  equipoId={equipoSeleccionado.id}
+                />
+              ) : null}
+            </div>
+          ))}
         </section>
       )}
     </div>

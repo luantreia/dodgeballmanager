@@ -8,6 +8,10 @@ import { AuthProvider } from './app/providers/AuthContext';
 import { EquipoProvider } from './app/providers/EquipoContext';
 import { ToastProvider } from './shared/components/Toast/ToastProvider';
 import { SolicitudesProvider } from './app/providers/SolicitudesContext';
+import { iniciarObservabilidad } from './shared/observabilidad/sentry';
+
+// Antes del primer render: si el SDK arranca despues, los errores de montaje se pierden.
+iniciarObservabilidad();
 
 const container = document.getElementById('root');
 

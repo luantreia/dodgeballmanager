@@ -13,6 +13,7 @@ const links = [
   { to: '/jugadores', label: 'Jugadores' },
   { to: '/competencias', label: 'Competencias' },
   { to: '/partidos', label: 'Partidos' },
+  { to: '/entrenamientos', label: 'Entrenamientos' },
   { to: '/estadisticas', label: 'Estadísticas' },
   { to: '/notificaciones', label: 'Notificaciones' },
   { to: '/perfil', label: 'Perfil' },
