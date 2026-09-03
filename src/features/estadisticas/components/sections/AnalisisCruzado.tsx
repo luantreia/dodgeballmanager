@@ -38,7 +38,9 @@ const METRICAS: Array<{ clave: ClaveMetrica; label: string; porcentaje?: boolean
   { clave: 'outs', label: 'Outs' },
   { clave: 'catches', label: 'Catches' },
   { clave: 'sets', label: 'Sets jugados' },
-  { clave: 'hitPct', label: 'Efectividad (hits/throws)', porcentaje: true },
+  // Puede pasar de 100%: un solo tiro puede quemar a más de un rival (un "doble"),
+  // así que hits y throws no están acotados uno por el otro.
+  { clave: 'hitPct', label: 'Hits por throw', porcentaje: true },
   { clave: 'survivePct', label: 'Supervivencia', porcentaje: true },
   { clave: 'outsPorSet', label: 'Outs por set', decimales: 2 },
 ];
@@ -55,11 +57,25 @@ type Acumulador = {
 
 const VACIO = (): Acumulador => ({ throws: 0, hits: 0, outs: 0, catches: 0, survives: 0, sets: 0 });
 
+/**
+ * Las fechas de partido se guardan a medianoche UTC. Formatearlas con `new Date()` las
+ * corre un día hacia atrás en Argentina (UTC-3): un partido del 26/05 se mostraba como
+ * 25/05. Se leen los componentes del propio string ISO, sin pasar por la zona horaria.
+ */
 const etiquetaFecha = (iso: string | null): string => {
   if (!iso) return 'Sin fecha';
-  const d = new Date(iso);
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return 'Sin fecha';
+  return `${m[3]}/${m[2]}`;
 };
+
+/**
+ * Etiqueta de un partido. Incluye la modalidad porque un equipo juega dos veces contra
+ * el mismo rival el mismo día —uno de foam y otro de cloth— y sin ella las dos filas se
+ * fusionaban en una, sumando estadísticas de dos partidos distintos bajo un solo título.
+ */
+const etiquetaPartido = (fila: FilaPlanilla): string =>
+  `${etiquetaFecha(fila.fecha)} vs ${fila.rival} · ${fila.modalidad}`;
 
 const valorDimension = (fila: FilaPlanilla, clave: ClaveDimension): string => {
   switch (clave) {
@@ -68,7 +84,7 @@ const valorDimension = (fila: FilaPlanilla, clave: ClaveDimension): string => {
     case 'categoria': return fila.categoria;
     case 'modalidad': return fila.modalidad;
     case 'resultadoSet': return fila.resultadoSet;
-    case 'partido': return `${etiquetaFecha(fila.fecha)} vs ${fila.rival}`;
+    case 'partido': return etiquetaPartido(fila);
     default: return '—';
   }
 };
@@ -103,6 +119,8 @@ const formatear = (valor: number | null, metrica: ClaveMetrica): string => {
 
 interface Props {
   equipoId: string;
+  /** Se llama al tocar una fila cuando las filas son partidos, para abrir su detalle. */
+  onAbrirPartido?: (partidoId: string) => void;
 }
 
 const SIN_COLUMNAS = '__ninguna__';
@@ -115,7 +133,7 @@ const MAX_BARRAS = 12;
 // no un juicio de valor sobre el jugador.
 const COLORES = ['#2563eb', '#0d9488', '#a16207', '#7c3aed', '#be123c', '#0369a1'];
 
-const AnalisisCruzado: React.FC<Props> = ({ equipoId }) => {
+const AnalisisCruzado: React.FC<Props> = ({ equipoId, onAbrirPartido }) => {
   const [filas, setFilas] = useState<FilaPlanilla[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -185,7 +203,13 @@ const AnalisisCruzado: React.FC<Props> = ({ equipoId }) => {
 
     const clavesColumna = [...totalesColumna.keys()].sort((a, b) => a.localeCompare(b));
 
-    return { celdas, clavesFila, clavesColumna, totalesFila, totalesColumna, total };
+    // Etiqueta de partido -> id, para poder abrir el detalle desde la fila.
+    const partidoPorEtiqueta = new Map<string, string>();
+    if (dimFila === 'partido') {
+      for (const f of filas) partidoPorEtiqueta.set(etiquetaPartido(f), f.partidoId);
+    }
+
+    return { celdas, clavesFila, clavesColumna, totalesFila, totalesColumna, total, partidoPorEtiqueta };
   }, [filas, dimFila, dimColumna, metrica]);
 
   const seriesGrafico = useMemo(
@@ -296,7 +320,17 @@ const AnalisisCruzado: React.FC<Props> = ({ equipoId }) => {
               <tbody className="divide-y divide-slate-100 tabular-nums">
                 {tabla.clavesFila.map((kf) => (
                   <tr key={kf} className="hover:bg-slate-50/60">
-                    <td className="sticky left-0 bg-white px-2 py-2 font-medium text-slate-900">{kf}</td>
+                    <td className="sticky left-0 bg-white px-2 py-2 font-medium text-slate-900">
+                      {dimFila === 'partido' && onAbrirPartido && tabla.partidoPorEtiqueta.get(kf) ? (
+                        <button
+                          type="button"
+                          onClick={() => onAbrirPartido(tabla.partidoPorEtiqueta.get(kf)!)}
+                          className="rounded text-left text-blue-700 underline decoration-blue-300 underline-offset-2 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        >
+                          {kf}
+                        </button>
+                      ) : kf}
+                    </td>
                     {tabla.clavesColumna.map((kc) => {
                       const v = calcular(tabla.celdas.get(kf)?.get(kc), metrica);
                       // Un sombreado suave da la lectura de un vistazo sin necesidad
@@ -384,6 +418,7 @@ const AnalisisCruzado: React.FC<Props> = ({ equipoId }) => {
             {filas.length} registros de {new Set(filas.map((f) => f.partidoId)).size} partidos.
             Los porcentajes se calculan sobre los totales de cada celda, no promediando
             porcentajes: un jugador con 1 de 1 y otro con 2 de 10 dan 3 de 11, no 75%.
+            «Hits por throw» puede pasar de 100%: un mismo tiro puede quemar a más de un rival.
           </p>
         </div>
       )}

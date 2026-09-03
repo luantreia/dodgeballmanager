@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useEquipo } from '../../../app/providers/EquipoContext';
+import { useToken } from '../../../app/providers/AuthContext';
+import { ModalPartidoAdmin } from '../../partidos/components';
 import { getResumenOficialEquipo, type ResumenOficialEquipo } from '../services/estadisticasService';
 import EstadisticaCard from '../../../shared/components/EstadisticaCard';
 import { ChartBarIcon, ShieldCheckIcon, TrophyIcon } from '@heroicons/react/24/outline';
@@ -23,8 +25,10 @@ import AnalisisCruzado from '../components/sections/AnalisisCruzado';
 const EstadisticasPage = () => {
   const { equipoSeleccionado } = useEquipo();
   const { addToast } = useToast();
+  const token = useToken();
   const [oficial, setOficial] = useState<ResumenOficialEquipo | null>(null);
   const [loading, setLoading] = useState(false);
+  const [partidoAbierto, setPartidoAbierto] = useState<string | null>(null);
 
   useEffect(() => {
     const equipoId = equipoSeleccionado?.id;
@@ -134,11 +138,24 @@ const EstadisticasPage = () => {
           equipo, sin verificar, y no se suman a ninguna cifra de arriba. */}
       <SeccionMisPlanillas equipoId={equipoSeleccionado.id} />
 
-      <AnalisisCruzado equipoId={equipoSeleccionado.id} />
+      <AnalisisCruzado
+        equipoId={equipoSeleccionado.id}
+        onAbrirPartido={setPartidoAbierto}
+      />
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
         <SeccionTop5estadisticasDirectas equipoId={equipoSeleccionado.id} />
       </section>
+
+      {partidoAbierto && (
+        <ModalPartidoAdmin
+          partidoId={partidoAbierto}
+          token={token ?? ''}
+          equipoId={equipoSeleccionado.id}
+          onClose={() => setPartidoAbierto(null)}
+          onPartidoEliminado={() => setPartidoAbierto(null)}
+        />
+      )}
     </div>
   );
 };
