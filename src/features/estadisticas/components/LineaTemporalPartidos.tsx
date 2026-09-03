@@ -57,8 +57,11 @@ const MESES = [
  *
  * Un eje horizontal obliga a arrastrar para leer y comprime los períodos densos justo donde
  * más hay para ver; en un celular sostenido con una mano es peor todavía. Vertical se lee con
- * el pulgar, cada partido tiene lugar para su marcador y sus badges, y los meses sin partidos
- * simplemente no aparecen — que es información, no un hueco.
+ * el pulgar y los meses sin partidos simplemente no aparecen — que es información, no un hueco.
+ *
+ * Cada partido ocupa un solo renglón. El estado de los datos lo comunica el color del punto,
+ * que ya estaba ahí de todos modos; ponerlo además como badge de texto costaba dos renglones
+ * más por partido y hacía que veinte partidos no entraran en ninguna pantalla.
  */
 const LineaTemporalPartidos = ({ partidos, onAbrir }: Props) => {
   const grupos = useMemo(() => {
@@ -91,10 +94,10 @@ const LineaTemporalPartidos = ({ partidos, onAbrir }: Props) => {
   return (
     // Región con nombre: además de la accesibilidad, separa la línea del panel de filtros,
     // donde los mismos nombres de rival vuelven a aparecer como chips.
-    <div className="space-y-6" role="region" aria-label="Línea temporal de partidos">
+    <div className="space-y-4" role="region" aria-label="Línea temporal de partidos">
       {grupos.map((grupo) => (
         <section key={grupo.clave}>
-          <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+          <h4 className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">
             {grupo.titulo}
             <span className="ml-2 font-medium normal-case tracking-normal text-slate-400">
               · {grupo.partidos.length} {grupo.partidos.length === 1 ? 'partido' : 'partidos'}
@@ -102,7 +105,7 @@ const LineaTemporalPartidos = ({ partidos, onAbrir }: Props) => {
           </h4>
 
           {/* La línea vertical es el borde izquierdo del contenedor. */}
-          <ol className="space-y-2 border-l-2 border-slate-200 pl-4">
+          <ol className="space-y-1 border-l-2 border-slate-200 pl-3">
             {grupo.partidos.map((partido) => {
               const marca = marcaDe(partido);
               const fecha = new Date(partido.fecha);
@@ -115,57 +118,55 @@ const LineaTemporalPartidos = ({ partidos, onAbrir }: Props) => {
                   {/* El punto se apoya sobre la línea, por eso el -left que compensa el pl-4. */}
                   <span
                     aria-hidden
-                    className={`absolute -left-[1.3rem] top-4 h-3 w-3 rounded-full border-2 ring-4 ${marca.punto} ${marca.anillo}`}
+                    className={`absolute -left-[1.15rem] top-[0.6rem] h-2.5 w-2.5 rounded-full border-2 ring-2 ${marca.punto} ${marca.anillo}`}
                   />
 
+                  {/* Una sola línea por partido. La versión anterior apilaba título, subtítulo y
+                      una fila de badges: tres renglones por partido hacían que veinte partidos
+                      ocuparan varias pantallas y la línea dejara de leerse como una línea. Lo
+                      que sacaba más lugar —el estado de los datos— ahora lo dice el color del
+                      punto, que ya estaba ahí, y queda como `title` para quien necesite el texto. */}
                   <button
                     type="button"
                     onClick={() => onAbrir(partido)}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-brand-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 [touch-action:manipulation]"
+                    title={`${marca.etiqueta}${partido.competencia ? ` · ${partido.competencia.nombre}` : ' · Amistoso'}`}
+                    className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left transition hover:border-brand-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 [touch-action:manipulation]"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900">
-                          <span className="text-slate-400">{partido.esLocal ? 'vs' : '@'}</span>{' '}
-                          {partido.rival?.nombre ?? 'Rival'}
-                        </p>
-                        <p className="mt-0.5 truncate text-xs text-slate-500">
-                          {fecha.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
-                          {' · '}
-                          {partido.competencia?.nombre ?? 'Amistoso'}
-                          {partido.fase ? ` · ${partido.fase.nombre}` : ''}
-                        </p>
-                      </div>
+                    <span className="w-10 shrink-0 text-[11px] tabular-nums text-slate-400">
+                      {fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                    </span>
 
-                      {hayMarcador && (
-                        <span
-                          className={`shrink-0 rounded-lg px-2 py-1 text-sm font-bold tabular-nums ${
-                            empate
-                              ? 'bg-slate-100 text-slate-700'
-                              : ganó
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-rose-50 text-rose-700'
-                          }`}
-                        >
-                          {partido.marcadorEquipo}–{partido.marcadorRival}
-                        </span>
-                      )}
-                    </div>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
+                      <span className="text-slate-400">{partido.esLocal ? 'vs' : '@'}</span>{' '}
+                      {partido.rival?.nombre ?? 'Rival'}
+                    </span>
 
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${marca.texto}`}>
-                        {marca.etiqueta}
+                    <span className="shrink-0 text-[10px] font-medium text-slate-400">
+                      {partido.modalidad}
+                    </span>
+
+                    {partido.datos.oficial.existe && partido.datos.planilla && (
+                      <span
+                        title="Este partido tiene estadísticas oficiales y planilla propia"
+                        className="shrink-0 rounded border border-dashed border-slate-300 px-1 text-[10px] font-medium text-slate-500"
+                      >
+                        2
                       </span>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
-                        {partido.modalidad}
+                    )}
+
+                    {hayMarcador && (
+                      <span
+                        className={`w-12 shrink-0 rounded px-1.5 py-0.5 text-center text-xs font-bold tabular-nums ${
+                          empate
+                            ? 'bg-slate-100 text-slate-700'
+                            : ganó
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-rose-50 text-rose-700'
+                        }`}
+                      >
+                        {partido.marcadorEquipo}–{partido.marcadorRival}
                       </span>
-                      {/* Sólo cuando hay dos fuentes: es el caso en que se puede elegir cuál manda. */}
-                      {partido.datos.oficial.existe && partido.datos.planilla && (
-                        <span className="rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                          2 fuentes
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </button>
                 </li>
               );

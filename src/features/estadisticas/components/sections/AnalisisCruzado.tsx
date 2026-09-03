@@ -1,14 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import {
-  getFilasPlanillas,
-  type FilaPlanilla,
-} from '../../../partidos/services/planillaEquipoService';
+import type { FilaAnalitica } from '../../services/filasService';
 
 /**
- * Análisis cruzado de las planillas del equipo.
+ * Análisis cruzado de los partidos filtrados.
  *
  * Es una tabla dinámica de ejes fijos: en vez de arrastrar campos como en un pivot
  * completo, se elige qué va en las filas, qué en las columnas y qué métrica se mide.
@@ -16,10 +13,14 @@ import {
  * sets que perdemos?"— sin sumar una librería de pivot (jQuery, drag & drop de
  * escritorio, agregadores a configurar) a una app que se usa desde el teléfono.
  *
- * Los datos son las planillas propias del equipo. No son oficiales.
+ * Come del mismo conjunto de filas que el resto de la pantalla, ya filtrado por las facetas y
+ * con la fuente resuelta por partido. Antes se pedía sus propios datos, y sólo de las planillas:
+ * podía estar contradiciendo a las cifras de arriba sin que nadie lo notara.
  */
 
-type ClaveDimension = 'jugador' | 'rival' | 'categoria' | 'modalidad' | 'resultadoSet' | 'partido';
+type ClaveDimension =
+  | 'jugador' | 'rival' | 'categoria' | 'modalidad' | 'resultadoSet' | 'partido'
+  | 'competencia' | 'temporada' | 'fase' | 'resultadoPartido' | 'fuente';
 
 const DIMENSIONES: Array<{ clave: ClaveDimension; label: string }> = [
   { clave: 'jugador', label: 'Jugador' },
@@ -28,6 +29,11 @@ const DIMENSIONES: Array<{ clave: ClaveDimension; label: string }> = [
   { clave: 'modalidad', label: 'Modalidad' },
   { clave: 'resultadoSet', label: 'Resultado del set' },
   { clave: 'partido', label: 'Partido' },
+  { clave: 'competencia', label: 'Competencia' },
+  { clave: 'temporada', label: 'Temporada' },
+  { clave: 'fase', label: 'Fase' },
+  { clave: 'resultadoPartido', label: 'Resultado del partido' },
+  { clave: 'fuente', label: 'Fuente del dato' },
 ];
 
 type ClaveMetrica = 'throws' | 'hits' | 'outs' | 'catches' | 'sets' | 'hitPct' | 'survivePct' | 'outsPorSet';
@@ -74,17 +80,26 @@ const etiquetaFecha = (iso: string | null): string => {
  * el mismo rival el mismo día —uno de foam y otro de cloth— y sin ella las dos filas se
  * fusionaban en una, sumando estadísticas de dos partidos distintos bajo un solo título.
  */
-const etiquetaPartido = (fila: FilaPlanilla): string =>
+const etiquetaPartido = (fila: FilaAnalitica): string =>
   `${etiquetaFecha(fila.fecha)} vs ${fila.rival} · ${fila.modalidad}`;
 
-const valorDimension = (fila: FilaPlanilla, clave: ClaveDimension): string => {
+const valorDimension = (fila: FilaAnalitica, clave: ClaveDimension): string => {
   switch (clave) {
-    case 'jugador': return fila.jugador;
+    // Las filas sin jugador (partidos sin estadísticas) se descartan antes de llegar acá; el
+    // fallback existe sólo para que el tipo cierre.
+    case 'jugador': return fila.jugador ?? 'Sin jugador';
     case 'rival': return fila.rival;
     case 'categoria': return fila.categoria;
     case 'modalidad': return fila.modalidad;
     case 'resultadoSet': return fila.resultadoSet;
     case 'partido': return etiquetaPartido(fila);
+    // Dimensiones que sólo existen desde que el pivot come del dataset unificado: antes las
+    // filas venían de las planillas y no traían competencia, temporada ni fase.
+    case 'competencia': return fila.competencia;
+    case 'temporada': return fila.temporada;
+    case 'fase': return fila.fase;
+    case 'resultadoPartido': return fila.resultadoPartido;
+    case 'fuente': return fila.fuente === 'planilla' ? 'Mi planilla' : 'Oficial';
     default: return '—';
   }
 };
@@ -118,7 +133,12 @@ const formatear = (valor: number | null, metrica: ClaveMetrica): string => {
 };
 
 interface Props {
-  equipoId: string;
+  /**
+   * Las filas ya vienen filtradas por el panel de facetas: el pivot analiza lo mismo que
+   * muestran las tarjetas de arriba. Antes se las pedia solo, y solo de las planillas, asi
+   * que podia estar contradiciendo al resto de la pantalla sin que se notara.
+   */
+  filas: FilaAnalitica[];
   /** Se llama al tocar una fila cuando las filas son partidos, para abrir su detalle. */
   onAbrirPartido?: (partidoId: string) => void;
 }
@@ -133,32 +153,14 @@ const MAX_BARRAS = 12;
 // no un juicio de valor sobre el jugador.
 const COLORES = ['#2563eb', '#0d9488', '#a16207', '#7c3aed', '#be123c', '#0369a1'];
 
-const AnalisisCruzado: React.FC<Props> = ({ equipoId, onAbrirPartido }) => {
-  const [filas, setFilas] = useState<FilaPlanilla[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }) => {
+  // Los partidos sin estadisticas aportan una fila sin jugador para el conteo de victorias;
+  // en un pivot por jugador solo agregarian una categoria vacia.
+  const filas = useMemo(() => filasCrudas.filter((f) => f.jugadorId !== null), [filasCrudas]);
 
   const [dimFila, setDimFila] = useState<ClaveDimension>('jugador');
   const [dimColumna, setDimColumna] = useState<ClaveDimension | typeof SIN_COLUMNAS>('resultadoSet');
   const [metrica, setMetrica] = useState<ClaveMetrica>('hitPct');
-
-  useEffect(() => {
-    let cancelado = false;
-    const cargar = async (): Promise<void> => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getFilasPlanillas(equipoId);
-        if (!cancelado) setFilas(data.filas);
-      } catch (e) {
-        if (!cancelado) setError(e instanceof Error ? e.message : 'No se pudo cargar el análisis');
-      } finally {
-        if (!cancelado) setLoading(false);
-      }
-    };
-    void cargar();
-    return () => { cancelado = true; };
-  }, [equipoId]);
 
   const tabla = useMemo(() => {
     const celdas = new Map<string, Map<string, Acumulador>>();
@@ -166,7 +168,7 @@ const AnalisisCruzado: React.FC<Props> = ({ equipoId, onAbrirPartido }) => {
     const totalesColumna = new Map<string, Acumulador>();
     const total = VACIO();
 
-    const sumar = (acc: Acumulador, f: FilaPlanilla) => {
+    const sumar = (acc: Acumulador, f: FilaAnalitica) => {
       acc.throws += f.throws;
       acc.hits += f.hits;
       acc.outs += f.outs;
@@ -257,18 +259,14 @@ const AnalisisCruzado: React.FC<Props> = ({ equipoId, onAbrirPartido }) => {
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500">
-          Cruzá cualquier par de dimensiones sobre tus planillas. Por ejemplo: jugador contra
-          resultado del set, para ver quién sostiene el nivel cuando el set se pierde.
+          Cruzá cualquier par de dimensiones sobre los partidos filtrados. Por ejemplo: jugador
+          contra resultado del set, para ver quién sostiene el nivel cuando el set se pierde.
         </p>
       </header>
 
-      {loading ? (
-        <p className="px-6 py-5 text-sm text-slate-500">Cargando…</p>
-      ) : error ? (
-        <p className="px-6 py-5 text-sm text-rose-700">{error}</p>
-      ) : filas.length === 0 ? (
+      {filas.length === 0 ? (
         <p className="px-6 py-5 text-sm text-slate-500">
-          Todavía no hay planillas cargadas para analizar.
+          Los partidos filtrados todavía no tienen estadísticas para cruzar.
         </p>
       ) : (
         <div className="space-y-5 px-6 py-5">

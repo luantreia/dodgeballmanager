@@ -63,11 +63,14 @@ const Harness = () => {
 describe('Línea temporal con filtros', () => {
   it('marca cada partido según los datos que tiene', () => {
     render(<Harness />);
+    const linea = screen.getByRole('region', { name: /línea temporal/i });
 
-    expect(screen.getByText('Verificada')).toBeInTheDocument();
-    expect(screen.getByText('Usando mi planilla')).toBeInTheDocument();
+    // El estado va en el `title` del renglón: en pantalla lo comunica el color del punto, para
+    // no gastar dos renglones más por partido.
+    expect(within(linea).getByTitle(/^Verificada/)).toBeInTheDocument();
+    expect(within(linea).getByTitle(/^Usando mi planilla/)).toBeInTheDocument();
     // Sólo el segundo tiene las dos fuentes.
-    expect(screen.getAllByText('2 fuentes')).toHaveLength(1);
+    expect(within(linea).getAllByTitle(/estadísticas oficiales y planilla propia/)).toHaveLength(1);
   });
 
   it('agrupa por mes usando la fecha local, no la UTC', () => {

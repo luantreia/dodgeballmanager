@@ -80,7 +80,16 @@ const valorDe = (partido: PartidoTimeline, clave: ClaveFaceta): ValorFaceta => {
 
 export type Filtros = Record<ClaveFaceta, Set<string>>;
 
-const filtrosVacios = (): Filtros => ({
+/** Snapshot de un estado de filtros, para guardarlo como segmento y compararlo con otro. */
+export type EstadoFiltros = { filtros: Filtros; desde: string; hasta: string };
+
+export const clonarFiltros = (filtros: Filtros): Filtros =>
+  FACETAS.reduce((acc, { clave }) => {
+    acc[clave] = new Set(filtros[clave]);
+    return acc;
+  }, {} as Filtros);
+
+export const filtrosVacios = (): Filtros => ({
   modalidad: new Set(),
   categoria: new Set(),
   organizacion: new Set(),
@@ -107,6 +116,51 @@ const enRango = (partido: PartidoTimeline, desde: string, hasta: string): boolea
   if (desde && t < new Date(`${desde}T00:00:00`).getTime()) return false;
   if (hasta && t > new Date(`${hasta}T23:59:59.999`).getTime()) return false;
   return true;
+};
+
+/**
+ * El mismo filtrado que usa la pantalla, como función pura.
+ *
+ * Los segmentos que se comparan entre sí no son otra cosa que este filtrado aplicado con
+ * distintos estados guardados. Que sea la misma función es lo que garantiza que "lo que ves"
+ * y "lo que comparás" signifiquen exactamente lo mismo.
+ */
+export const aplicarFiltros = (
+  partidos: PartidoTimeline[],
+  { filtros, desde, hasta }: EstadoFiltros,
+): PartidoTimeline[] =>
+  partidos.filter(
+    (partido) =>
+      enRango(partido, desde, hasta) && FACETAS.every((f) => pasaFaceta(partido, f.clave, filtros)),
+  );
+
+/**
+ * Nombre legible de un estado de filtros, para etiquetar un segmento sin que el usuario tenga
+ * que escribirlo: "Foam · Masculino · desde 2026-01-01". Necesita los partidos para traducir
+ * los ids de competencia, rival y demás a sus nombres.
+ */
+export const describirFiltros = (
+  partidos: PartidoTimeline[],
+  { filtros, desde, hasta }: EstadoFiltros,
+): string => {
+  const etiquetas: string[] = [];
+
+  for (const { clave } of FACETAS) {
+    const seleccion = filtros[clave];
+    if (seleccion.size === 0) continue;
+    const nombres = new Set<string>();
+    for (const partido of partidos) {
+      const { valor, label } = valorDe(partido, clave);
+      if (seleccion.has(valor)) nombres.add(label);
+    }
+    if (nombres.size > 0) etiquetas.push([...nombres].join('/'));
+  }
+
+  if (desde && hasta) etiquetas.push(`${desde} a ${hasta}`);
+  else if (desde) etiquetas.push(`desde ${desde}`);
+  else if (hasta) etiquetas.push(`hasta ${hasta}`);
+
+  return etiquetas.length > 0 ? etiquetas.join(' · ') : 'Todos los partidos';
 };
 
 export type OpcionFaceta = { valor: string; label: string; cantidad: number; seleccionada: boolean };
@@ -239,12 +293,7 @@ export const useFiltrosPartidos = (partidos: PartidoTimeline[]): ResultadoFiltro
   );
 
   const partidosFiltrados = useMemo(
-    () =>
-      partidos.filter(
-        (partido) =>
-          enRango(partido, desde, hasta) &&
-          FACETAS.every((f) => pasaFaceta(partido, f.clave, filtros)),
-      ),
+    () => aplicarFiltros(partidos, { filtros, desde, hasta }),
     [partidos, filtros, desde, hasta],
   );
 

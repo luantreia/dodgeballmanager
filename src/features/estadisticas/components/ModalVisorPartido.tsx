@@ -90,46 +90,93 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
     };
   }, [fuente, partido._id, oficial.existe, planilla, addToast]);
 
-  /** Filas del equipo propio, sumando todos los sets. El visor es del equipo, no del partido. */
+  /**
+   * `null` = totales del partido; un número = ese set. Se guarda el número de set y no su id
+   * porque el selector tiene que sobrevivir al cambio de fuente: el set 2 de lo oficial y el
+   * set 2 de la planilla son el mismo set 2 del partido, aunque sean documentos distintos.
+   */
+  const [setElegido, setSetElegido] = useState<number | null>(null);
+
+  /** Números de set disponibles en la fuente que se está mirando. */
+  const setsDisponibles = useMemo<number[]>(() => {
+    if (fuente === 'oficial') {
+      return (sets ?? []).map((s) => s.numeroSet).sort((a, b) => a - b);
+    }
+    return (planillaCompleta?.sets ?? []).map((s) => s.numeroSet).sort((a, b) => a - b);
+  }, [fuente, sets, planillaCompleta]);
+
+  // Si la fuente nueva no tiene el set que estaba elegido, se vuelve a totales en vez de
+  // mostrar una tabla vacía sin explicación.
+  useEffect(() => {
+    if (setElegido !== null && !setsDisponibles.includes(setElegido)) setSetElegido(null);
+  }, [setsDisponibles, setElegido]);
+
+  /** Filas del equipo propio. El visor es del equipo, no del partido. */
   const filas = useMemo<Fila[]>(() => {
+    const acumular = (
+      acc: Map<string, Fila>,
+      nombre: string,
+      stat: { throws?: number; hits?: number; outs?: number; catches?: number },
+    ) => {
+      const fila = acc.get(nombre) ?? { nombre, throws: 0, hits: 0, outs: 0, catches: 0, sets: 0 };
+      fila.throws += stat.throws ?? 0;
+      fila.hits += stat.hits ?? 0;
+      fila.outs += stat.outs ?? 0;
+      fila.catches += stat.catches ?? 0;
+      fila.sets += 1;
+      acc.set(nombre, fila);
+      return acc;
+    };
+
+    const ordenar = (acc: Map<string, Fila>) =>
+      [...acc.values()].sort((a, b) => b.hits - a.hits || a.nombre.localeCompare(b.nombre, 'es'));
+
     if (fuente === 'oficial') {
       if (!sets) return [];
       const acc = new Map<string, Fila>();
       for (const set of sets) {
+        if (setElegido !== null && set.numeroSet !== setElegido) continue;
         for (const stat of set.estadisticas ?? []) {
           // Sólo el propio equipo: el otro lado puede tener estadísticas que no son asunto
           // de este panel, y mezclarlas haría que los totales no cierren con nada.
           if (stat.equipo?._id && String(stat.equipo._id) !== String(equipoId)) continue;
-          const nombre = nombreDeJugador(stat.jugador);
-          const fila = acc.get(nombre) ?? { nombre, throws: 0, hits: 0, outs: 0, catches: 0, sets: 0 };
-          fila.throws += stat.throws ?? 0;
-          fila.hits += stat.hits ?? 0;
-          fila.outs += stat.outs ?? 0;
-          fila.catches += stat.catches ?? 0;
-          fila.sets += 1;
-          acc.set(nombre, fila);
+          acumular(acc, nombreDeJugador(stat.jugador), stat);
         }
       }
-      return [...acc.values()].sort((a, b) => b.hits - a.hits || a.nombre.localeCompare(b.nombre, 'es'));
+      return ordenar(acc);
     }
 
     if (!planillaCompleta) return [];
-    const totales = totalizarPorPresente(planillaCompleta);
-    return planillaCompleta.presentes
-      .map((presente) => {
-        const t = totales[presente._id];
-        const j = presente.jugador;
-        const nombre =
-          !j || typeof j === 'string'
-            ? 'Jugador'
-            : j.alias || [j.nombre, j.apellido].filter(Boolean).join(' ').trim() || 'Jugador';
-        return t
-          ? { nombre, throws: t.throws, hits: t.hits, outs: t.outs, catches: t.catches, sets: t.sets }
-          : null;
-      })
-      .filter((f): f is Fila => f !== null)
-      .sort((a, b) => b.hits - a.hits || a.nombre.localeCompare(b.nombre, 'es'));
-  }, [fuente, sets, planillaCompleta, equipoId]);
+
+    const nombrePresente = (presenteId: string): string => {
+      const presente = planillaCompleta.presentes.find((p) => p._id === presenteId);
+      const j = presente?.jugador;
+      if (!j || typeof j === 'string') return 'Jugador';
+      return j.alias || [j.nombre, j.apellido].filter(Boolean).join(' ').trim() || 'Jugador';
+    };
+
+    if (setElegido === null) {
+      const totales = totalizarPorPresente(planillaCompleta);
+      return Object.entries(totales)
+        .map(([presenteId, t]) => ({
+          nombre: nombrePresente(presenteId),
+          throws: t.throws,
+          hits: t.hits,
+          outs: t.outs,
+          catches: t.catches,
+          sets: t.sets,
+        }))
+        .sort((a, b) => b.hits - a.hits || a.nombre.localeCompare(b.nombre, 'es'));
+    }
+
+    const idDelSet = planillaCompleta.sets.find((s) => s.numeroSet === setElegido)?._id ?? null;
+    const acc = new Map<string, Fila>();
+    for (const stat of planillaCompleta.estadisticas) {
+      if (stat.planillaSet !== idDelSet) continue;
+      acumular(acc, nombrePresente(stat.planillaPresente), stat);
+    }
+    return ordenar(acc);
+  }, [fuente, sets, planillaCompleta, equipoId, setElegido]);
 
   const cambiarFuente = useCallback(
     async (nueva: FuenteDatos) => {
@@ -225,6 +272,41 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Totales o un set puntual. Los totales son lo primero porque es la pregunta habitual
+            ("cómo nos fue"); el set a set es para reconstruir qué pasó adentro del partido. */}
+        {!sinDatos && setsDisponibles.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-xs font-medium text-slate-500">Ver:</span>
+            <button
+              type="button"
+              onClick={() => setSetElegido(null)}
+              aria-pressed={setElegido === null}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition [touch-action:manipulation] ${
+                setElegido === null
+                  ? 'bg-slate-800 text-white'
+                  : 'border border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              Totales
+            </button>
+            {setsDisponibles.map((numero) => (
+              <button
+                key={numero}
+                type="button"
+                onClick={() => setSetElegido(numero)}
+                aria-pressed={setElegido === numero}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition [touch-action:manipulation] ${
+                  setElegido === numero
+                    ? 'bg-slate-800 text-white'
+                    : 'border border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                Set {numero}
+              </button>
+            ))}
           </div>
         )}
 
