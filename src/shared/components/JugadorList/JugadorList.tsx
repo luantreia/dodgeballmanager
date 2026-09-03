@@ -9,10 +9,25 @@ export interface JugadorListProps {
   onVerContratosNoActivos?: () => void;
 }
 
+/**
+ * Un color y una etiqueta por vigencia. 'vigente' y 'vencido' son los dos que antes se
+ * confundían en un solo "activo": un contrato vencido sigue estando aceptado, pero el jugador
+ * ya no está en el equipo, y pintarlo de verde era decir lo contrario.
+ */
 const estadoColorMap: Record<Jugador['estado'], string> = {
-  activo: 'bg-emerald-100 text-emerald-700',
+  vigente: 'bg-emerald-100 text-emerald-700',
+  vencido: 'bg-slate-200 text-slate-600',
+  futuro: 'bg-sky-100 text-sky-700',
   pendiente: 'bg-amber-100 text-amber-700',
   baja: 'bg-rose-100 text-rose-700',
+};
+
+const ETIQUETA_VIGENCIA: Record<Jugador['estado'], string> = {
+  vigente: 'Vigente',
+  vencido: 'Vencido',
+  futuro: 'Aún no empieza',
+  pendiente: 'Pendiente',
+  baja: 'Dado de baja',
 };
 
 const JugadorList = ({
@@ -36,7 +51,7 @@ const JugadorList = ({
             onClick={onVerContratosNoActivos}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
           >
-            Ver contratos no activos
+            Ver contratos vencidos y bajas
           </button>
         ) : null}
       </header>
@@ -61,7 +76,7 @@ const JugadorList = ({
                 <td className="px-6 py-4">#{jugador.numeroCamiseta ?? '—'}</td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${estadoColorMap[jugador.estado]}`}>
-                    {jugador.estado}
+                    {ETIQUETA_VIGENCIA[jugador.estado]}
                   </span>
                 </td>
                 <td className="px-6 py-4">

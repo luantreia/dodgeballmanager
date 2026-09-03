@@ -52,7 +52,14 @@ export interface Equipo {
 // TIPOS DE JUGADORES
 // ========================================
 
-export type EstadoJugador = 'activo' | 'pendiente' | 'baja';
+/**
+ * La vigencia DERIVADA de un contrato, tal como la calcula el backend en `GET /jugador-equipo`.
+ *
+ * No es el `estado` crudo del contrato. `estado` dice qué pasó con el vínculo ('aceptado' se
+ * aprobó, 'baja' se cortó a propósito); esto dice si el jugador está hoy en el equipo, que es lo
+ * que la pantalla necesita responder. Un contrato puede estar 'aceptado' y a la vez 'vencido'.
+ */
+export type EstadoJugador = 'vigente' | 'vencido' | 'futuro' | 'pendiente' | 'baja';
 
 export interface Jugador {
   id: string;

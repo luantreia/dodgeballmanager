@@ -136,7 +136,7 @@ const JugadoresPage = () => {
       <SeccionRatings equipoId={equipoSeleccionado.id} />
 
       {showContratosModal ? (
-        <ModalBase isOpen onClose={handleCloseContratosModal} title="Contratos no activos" size="xl">
+        <ModalBase isOpen onClose={handleCloseContratosModal} title="Contratos vencidos y bajas" size="xl">
           <p className="mt-1 text-sm text-slate-500">
             Contratos marcados como baja, rechazados o pendientes para este equipo.
           </p>
@@ -146,7 +146,7 @@ const JugadoresPage = () => {
           ) : contratosError ? (
             <p className="mt-4 text-sm text-rose-600">{contratosError}</p>
           ) : contratosNoActivos.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">No hay contratos no activos registrados.</p>
+            <p className="mt-4 text-sm text-slate-500">Todos los contratos del equipo están vigentes.</p>
           ) : (
             <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
               <div className="overflow-x-auto">
