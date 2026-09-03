@@ -22,8 +22,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Configuración de entorno. Hoy sólo tienen URLs, pero un .env versionado es el lugar donde
-# tarde o temprano alguien commitea una credencial sin darse cuenta.
-.env
-.env.*
-!.env.example
+# OJO: .env, .env.development y .env.production SÍ van versionados.
+# En CRA todo lo que empieza con REACT_APP_ se inlinea en el bundle público, así que no son
+# secretos: son configuración de build que Vercel necesita para compilar. Desversionarlos
+# rompió producción (REACT_APP_API_URL quedó indefinida y el login pegaba contra el propio
+# dominio de Vercel, 405). Los secretos de verdad van en los .env*.local de arriba.
