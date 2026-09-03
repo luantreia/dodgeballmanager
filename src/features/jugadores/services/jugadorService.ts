@@ -46,6 +46,6 @@ export const generarInvitacion = async (
  * redirigiendo su ruta vieja, así que las invitaciones ya enviadas no se rompen.
  */
 export const armarLinkInvitacion = (token: string): string => {
-  const base = process.env.REACT_APP_MANAGER_URL || 'http://localhost:3001';
+  const base = process.env.REACT_APP_MANAGER_URL || 'http://localhost:3002';
   return `${base.replace(/\/$/, '')}/claim/${token}`;
 };
