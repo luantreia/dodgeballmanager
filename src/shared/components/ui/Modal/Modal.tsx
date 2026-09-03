@@ -50,14 +50,20 @@ const Modal = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    modalesAbiertos += 1;
+    // El nivel de este modal en la pila. El listener de Escape vive en `document`, así que con
+    // dos modales abiertos —una confirmación de borrado sobre el modal que la abrió— los dos
+    // recibían la tecla y se cerraban juntos: cancelabas la confirmación y perdías también la
+    // pantalla de atrás. Sólo reacciona el de más arriba.
+    const miNivel = modalesAbiertos;
+
     const handleEscape = (e: KeyboardEvent) => {
-      if (closeOnEscape && e.key === 'Escape') {
+      if (closeOnEscape && e.key === 'Escape' && miNivel === modalesAbiertos) {
         onClose();
       }
     };
 
     document.addEventListener('keydown', handleEscape);
-    modalesAbiertos += 1;
     document.body.style.overflow = 'hidden';
 
     return () => {

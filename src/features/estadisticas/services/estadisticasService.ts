@@ -285,3 +285,36 @@ export const recalcularEstadisticasEquipoPartido = (partidoId: string, equipoId:
       creadoPor: 'usuario',
     },
   });
+
+/**
+ * Todos los sets del partido con sus estadísticas y el nombre de cada jugador, en UNA consulta.
+ *
+ * `getResumenEstadisticasAutomaticas` hace 1 + N requests (una por set) y además descarta los
+ * nombres, así que no sirve para el visor. Existía este endpoint que resuelve todo junto, pero
+ * devolvía 500 en cada llamada por un `populate` sobre un campo que no es referencia;
+ * arreglado eso, es el camino corto.
+ */
+export interface SetConEstadisticas {
+  _id: string;
+  numeroSet: number;
+  estadoSet?: string;
+  ganadorSet?: 'local' | 'visitante' | 'empate' | 'pendiente';
+  estadisticas: Array<{
+    _id: string;
+    jugador?: { _id?: string; nombre?: string; apellido?: string; numero?: number } | null;
+    equipo?: { _id?: string; nombre?: string; escudo?: string } | null;
+    throws?: number;
+    hits?: number;
+    outs?: number;
+    catches?: number;
+    survive?: boolean;
+    estadoPublicacion?: string;
+  }>;
+}
+
+export const getSetsConEstadisticas = async (partidoId: string): Promise<SetConEstadisticas[]> => {
+  const resp = await authFetch<{ partido: string; sets: SetConEstadisticas[] }>(
+    `/estadisticas/jugador-set/resumen-partido/${partidoId}`,
+  );
+  return resp.sets ?? [];
+};

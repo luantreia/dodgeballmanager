@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
+import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
 import { ListaJugadores } from './ListaJugadores';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 import {
@@ -16,6 +17,9 @@ import {
   guardarEstadisticas,
   solicitarOficializacion,
   cancelarOficializacion,
+  eliminarPlanilla,
+  eliminarSet,
+  quitarPresente,
   totalizarPorPresente,
   type PlanillaCompleta,
   type PlanillaModo,
@@ -84,6 +88,18 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
    * toca sin querer todo el tiempo y cerrar sin avisar tiraba la planilla entera del set.
    */
   const [hayCambiosSinGuardar, setHayCambiosSinGuardar] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
+  /**
+   * Un solo `ConfirmModal` para los tres borrados (planilla, set y presente). Todos destruyen
+   * estadísticas ya cargadas y ninguno se puede deshacer, así que ninguno se dispara directo
+   * desde el click.
+   */
+  const [confirmacion, setConfirmacion] = useState<{
+    titulo: string;
+    mensaje: React.ReactNode;
+    confirmLabel: string;
+    accion: () => Promise<void>;
+  } | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -370,6 +386,86 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     }
   };
 
+  /**
+   * Estos tres borrados existían en el backend y en `planillaEquipoService` desde siempre, pero
+   * no había ningún botón que los llamara: una planilla cargada por error no se podía deshacer
+   * desde la app, y vaciarla tampoco servía porque guardar exige al menos un jugador asignado.
+   */
+  const recargarPlanilla = async (planillaId: string): Promise<void> => {
+    const completa = await obtenerPlanilla(planillaId);
+    setPlanilla(completa);
+  };
+
+  const borrarPlanilla = async (): Promise<void> => {
+    if (!planilla) return;
+    setEliminando(true);
+    try {
+      await eliminarPlanilla(planilla._id);
+      // Antes de cerrar: si no, la guardia de cambios sin guardar pregunta por datos que
+      // acaban de dejar de existir.
+      setHayCambiosSinGuardar(false);
+      await Promise.resolve(onRefresh?.());
+      addToast({
+        type: 'success',
+        title: 'Planilla eliminada',
+        message: 'Se borraron sus sets, presentes y estadísticas. Los datos oficiales no se tocaron.',
+      });
+      onClose();
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'No se pudo eliminar la planilla',
+        message: error instanceof Error ? error.message : 'Error inesperado',
+      });
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  const borrarSet = async (setId: string): Promise<void> => {
+    if (!planilla) return;
+    setEliminando(true);
+    try {
+      await eliminarSet(planilla._id, setId);
+      const completa = await obtenerPlanilla(planilla._id);
+      setPlanilla(completa);
+      // Si el set borrado era el que estaba en pantalla hay que mover el foco a otro, o la
+      // grilla queda apuntando a un set que ya no existe.
+      setSetActivoId((prev) => (prev === setId ? completa.sets[0]?._id ?? null : prev));
+      addToast({ type: 'success', title: 'Set eliminado', message: 'Se borraron sus estadísticas.' });
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'No se pudo eliminar el set',
+        message: error instanceof Error ? error.message : 'Error inesperado',
+      });
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  const borrarPresente = async (presenteId: string): Promise<void> => {
+    if (!planilla) return;
+    setEliminando(true);
+    try {
+      await quitarPresente(planilla._id, presenteId);
+      await recargarPlanilla(planilla._id);
+      addToast({
+        type: 'success',
+        title: 'Jugador quitado',
+        message: 'Se borraron también sus estadísticas en esta planilla.',
+      });
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'No se pudo quitar al jugador',
+        message: error instanceof Error ? error.message : 'Error inesperado',
+      });
+    } finally {
+      setEliminando(false);
+    }
+  };
+
   const subtitulo = equipoNombre
     ? `${equipoNombre} · captura propia, no afecta los datos oficiales`
     : 'Captura propia del equipo, no afecta los datos oficiales';
@@ -469,20 +565,52 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
 
           {planilla.modo === 'sets' && (
             <div className="flex flex-wrap items-center gap-2">
-              {planilla.sets.map((s) => (
-                <button
-                  key={s._id}
-                  type="button"
-                  onClick={() => setSetActivoId(s._id)}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                    setActivoId === s._id
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Set {s.numeroSet}
-                </button>
-              ))}
+              {/* El botón de borrar va al lado del de seleccionar, no adentro: un <button>
+                  anidado en otro es HTML inválido y el click interior no se puede detener. */}
+              {planilla.sets.map((s) => {
+                const activo = setActivoId === s._id;
+                return (
+                  <span
+                    key={s._id}
+                    className={`inline-flex items-stretch overflow-hidden rounded-md ${
+                      activo ? 'bg-blue-600' : 'bg-gray-100'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setSetActivoId(s._id)}
+                      className={`px-3 py-1.5 text-sm font-medium transition ${
+                        activo ? 'text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Set {s.numeroSet}
+                    </button>
+                    {editable && (
+                      <button
+                        type="button"
+                        disabled={eliminando}
+                        aria-label={`Eliminar el set ${s.numeroSet}`}
+                        title={`Eliminar el set ${s.numeroSet}`}
+                        onClick={() =>
+                          setConfirmacion({
+                            titulo: `Eliminar el set ${s.numeroSet}`,
+                            mensaje: `Se borran las estadísticas que cargaste en este set. Los demás sets de la planilla no se tocan. No se puede deshacer.`,
+                            confirmLabel: 'Eliminar set',
+                            accion: () => borrarSet(s._id),
+                          })
+                        }
+                        className={`px-2 text-sm font-bold transition disabled:opacity-40 ${
+                          activo
+                            ? 'text-blue-100 hover:bg-blue-700 hover:text-white'
+                            : 'text-gray-400 hover:bg-gray-200 hover:text-rose-600'
+                        }`}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </span>
+                );
+              })}
               {editable && (
                 <button
                   type="button"
@@ -568,6 +696,40 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
             </div>
           )}
 
+          {/* Los presentes sólo se veían como opciones del desplegable de la grilla, así que no
+              había dónde sacar a alguien que se cargó de más (el autocompletado trae el plantel
+              entero, incluida gente que no fue al partido). */}
+          {editable && planilla.presentes.length > 0 && (
+            <details className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-gray-700">
+                Jugadores en la planilla ({planilla.presentes.length})
+              </summary>
+              <ul className="mt-3 divide-y divide-gray-200">
+                {planilla.presentes.map((presente) => (
+                  <li key={presente._id} className="flex items-center justify-between gap-3 py-1.5">
+                    <span className="text-sm text-gray-800">{nombrePresente(presente)}</span>
+                    <button
+                      type="button"
+                      disabled={eliminando}
+                      onClick={() =>
+                        setConfirmacion({
+                          titulo: `Quitar a ${nombrePresente(presente)}`,
+                          mensaje:
+                            'Sale de esta planilla y se borran todas las estadísticas que le hayas cargado, en todos los sets. Su ficha de jugador y el plantel del equipo no se tocan.',
+                          confirmLabel: 'Quitar de la planilla',
+                          accion: () => borrarPresente(presente._id),
+                        })
+                      }
+                      className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-40"
+                    >
+                      Quitar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+
           {Object.keys(totales).length > 0 && (
             <details className="rounded-lg border border-gray-200 bg-gray-50 p-3">
               <summary className="cursor-pointer text-sm font-semibold text-gray-700">
@@ -604,28 +766,85 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
             </details>
           )}
 
-          {editable && (
-            <div className="flex flex-wrap justify-end gap-3 border-t border-gray-200 pt-4">
+          {/* El pie ya no depende de `editable`: la planilla se puede eliminar también mientras
+              espera oficialización (el backend lo permite), y con la oficializada hay que
+              explicar por qué no se puede en vez de esconder el botón y dejar al usuario
+              buscándolo. */}
+          <div className="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-4">
+            {planilla.estado === 'oficializada' ? (
+              <p className="text-xs text-gray-500">
+                Una planilla oficializada no se puede eliminar: las estadísticas oficiales salieron
+                de acá y perderían su origen documentado.
+              </p>
+            ) : (
               <button
                 type="button"
-                onClick={oficializar}
-                disabled={guardando}
-                className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                disabled={eliminando || guardando}
+                onClick={() =>
+                  setConfirmacion({
+                    titulo: 'Eliminar la planilla',
+                    mensaje: (
+                      <>
+                        <p>
+                          Se borra la planilla completa: sus sets, los jugadores presentes y todas
+                          las estadísticas que cargaste. No se puede deshacer.
+                        </p>
+                        <p className="mt-2">
+                          Los datos oficiales del partido no se tocan
+                          {planilla.estado === 'pendiente_oficializacion'
+                            ? ', y la solicitud de oficialización pendiente queda sin efecto.'
+                            : '.'}
+                        </p>
+                      </>
+                    ),
+                    confirmLabel: 'Eliminar planilla',
+                    accion: borrarPlanilla,
+                  })
+                }
+                className="rounded-lg border border-rose-200 px-4 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
               >
-                Pedir que sea oficial
+                {eliminando ? 'Eliminando...' : 'Eliminar planilla'}
               </button>
-              <button
-                type="button"
-                onClick={guardar}
-                disabled={guardando}
-                className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
-              >
-                {guardando ? 'Guardando...' : 'Guardar'}
-              </button>
-            </div>
-          )}
+            )}
+
+            {editable && (
+              <div className="ml-auto flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={oficializar}
+                  disabled={guardando}
+                  className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Pedir que sea oficial
+                </button>
+                <button
+                  type="button"
+                  onClick={guardar}
+                  disabled={guardando}
+                  className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {guardando ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmacion !== null}
+        variant="danger"
+        title={confirmacion?.titulo}
+        message={confirmacion?.mensaje}
+        confirmLabel={confirmacion?.confirmLabel}
+        cancelLabel="Cancelar"
+        onCancel={() => setConfirmacion(null)}
+        onConfirm={async () => {
+          const accion = confirmacion?.accion;
+          setConfirmacion(null);
+          await accion?.();
+        }}
+      />
     </ModalBase>
   );
 };

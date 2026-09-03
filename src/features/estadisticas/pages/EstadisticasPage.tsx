@@ -9,6 +9,7 @@ import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { SeccionTop5estadisticasDirectas } from '../components/sections/SeccionTop5estadisticasDirectas';
 import SeccionMisPlanillas from '../components/sections/SeccionMisPlanillas';
 import AnalisisCruzado from '../components/sections/AnalisisCruzado';
+import SeccionLineaTemporal from '../components/sections/SeccionLineaTemporal';
 
 /**
  * Estadísticas del equipo.
@@ -133,6 +134,12 @@ const EstadisticasPage = () => {
           </div>
         )}
       </section>
+
+      <SeccionLineaTemporal
+        equipoId={equipoSeleccionado.id}
+        equipoNombre={equipoSeleccionado.nombre}
+        token={token ?? ''}
+      />
 
       {/* Debajo de las métricas oficiales y visualmente separadas: son datos propios del
           equipo, sin verificar, y no se suman a ninguna cifra de arriba. */}
