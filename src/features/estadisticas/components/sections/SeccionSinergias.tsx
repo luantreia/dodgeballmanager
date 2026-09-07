@@ -106,7 +106,13 @@ const SeccionSinergias = ({ sets }: Props) => {
 
   const conSinergia = useMemo(() => grupos.filter((g) => g.sinergia !== null), [grupos]);
   const mejores = conSinergia.slice(0, 3);
-  const peores = conSinergia.slice(-3).reverse();
+  /**
+   * Los peores salen de lo que quedó después de los mejores, no de los últimos tres a secas.
+   * Con menos de seis grupos las dos puntas se solapan, y ver a la misma dupla destacada como
+   * la mejor y señalada como la peor al mismo tiempo no es un caso raro —pasa apenas los filtros
+   * se ajustan un poco— sino la forma más rápida de que el panel pierda credibilidad.
+   */
+  const peores = conSinergia.slice(Math.max(3, conSinergia.length - 3)).reverse();
   const inseparables = grupos.length - conSinergia.length;
 
   const tamanosDisponibles = useMemo(() => {
@@ -196,7 +202,7 @@ const SeccionSinergias = ({ sets }: Props) => {
           ) : (
             <>
               {mejores.length > 0 && (
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className={`grid gap-4 ${peores.length > 0 ? 'lg:grid-cols-2' : ''}`}>
                   <div>
                     <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Mejores químicas
@@ -207,16 +213,18 @@ const SeccionSinergias = ({ sets }: Props) => {
                       ))}
                     </div>
                   </div>
-                  <div>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      A revisar
-                    </h3>
-                    <div className="space-y-2">
-                      {peores.map((g) => (
-                        <TarjetaGrupo key={g.clave} grupo={g} tono="malo" />
-                      ))}
+                  {peores.length > 0 && (
+                    <div>
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        A revisar
+                      </h3>
+                      <div className="space-y-2">
+                        {peores.map((g) => (
+                          <TarjetaGrupo key={g.clave} grupo={g} tono="malo" />
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
