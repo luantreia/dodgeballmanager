@@ -9,6 +9,7 @@ import {
   type OrdenSinergia,
 } from '../../utils/sinergias';
 import { formatearPorcentaje } from '../../utils/metricas';
+import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
 
 type Props = {
   sets: SetAnalitico[];
@@ -51,6 +52,59 @@ const colorSinergia = (valor: number | null): string => {
 const NombresGrupo = ({ nombres }: { nombres: string[] }) => (
   <span className="font-medium text-slate-900">{nombres.join(' + ')}</span>
 );
+
+const EtiquetaInseparables = () => (
+  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+    Inseparables
+  </span>
+);
+
+/**
+ * La misma fila de la tabla, para pantallas donde la tabla no entra.
+ *
+ * Diez columnas necesitan 720px; un teléfono tiene 375. Convertida en scroll horizontal, la
+ * columna de sinergia —la única razón de ser de la sección— quedaba fuera de la pantalla y sin
+ * ninguna señal de que existiera. Acá el número que importa va arriba y grande, y el resto
+ * ordenado debajo en pares etiqueta/valor.
+ */
+const TarjetaFilaGrupo = ({ grupo }: { grupo: GrupoSinergia }) => {
+  const dato = (label: string, valor: string) => (
+    <div>
+      <dt className="text-[11px] text-slate-500">{label}</dt>
+      <dd className="tabular-nums text-slate-800">{valor}</dd>
+    </div>
+  );
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <NombresGrupo nombres={grupo.nombres} />
+          {grupo.sinergia === null && (
+            <div className="mt-1">
+              <EtiquetaInseparables />
+            </div>
+          )}
+        </div>
+        <span className={`shrink-0 text-lg font-bold tabular-nums ${colorSinergia(grupo.sinergia)}`}>
+          {formatearSinergia(grupo.sinergia)}
+        </span>
+      </div>
+
+      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+        {dato('Juntos', `${grupo.setsJuntos} sets · ${formatearPorcentaje(grupo.porcentajeJuntos)}`)}
+        {dato(
+          'Separados',
+          `${grupo.setsSeparados} sets · ${formatearPorcentaje(grupo.porcentajeSeparados)}`,
+        )}
+        {dato('Efectividad', formatearPorcentaje(grupo.efectividad, 1))}
+        {dato('Hits por set', grupo.hitsPorSet === null ? '—' : grupo.hitsPorSet.toFixed(1))}
+        {dato('Catches', String(grupo.catches))}
+        {dato('Supervivencia', formatearPorcentaje(grupo.supervivencia))}
+      </dl>
+    </div>
+  );
+};
 
 /**
  * Tarjeta de titular: un grupo destacado, arriba de la tabla.
@@ -228,7 +282,16 @@ const SeccionSinergias = ({ sets }: Props) => {
                 </div>
               )}
 
-              <div className="overflow-x-auto">
+              {/* Tarjetas en mobile, tabla desde `sm`. La tabla necesita 720px para sus diez
+                  columnas: forzarla en 375px la convierte en un carrusel donde la columna de
+                  sinergia queda fuera de cuadro. */}
+              <div className="space-y-2 sm:hidden">
+                {grupos.map((g) => (
+                  <TarjetaFilaGrupo key={g.clave} grupo={g} />
+                ))}
+              </div>
+
+              <TablaScroll className="hidden sm:block">
                 <table className="w-full min-w-[720px] text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -250,8 +313,8 @@ const SeccionSinergias = ({ sets }: Props) => {
                         <td className="sticky left-0 bg-white px-2 py-2">
                           <NombresGrupo nombres={g.nombres} />
                           {g.sinergia === null && (
-                            <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                              Inseparables
+                            <span className="ml-2">
+                              <EtiquetaInseparables />
                             </span>
                           )}
                         </td>
@@ -280,7 +343,7 @@ const SeccionSinergias = ({ sets }: Props) => {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TablaScroll>
             </>
           )}
 

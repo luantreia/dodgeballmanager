@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { FilaAnalitica } from '../services/filasService';
 import type { PartidoTimeline } from '../services/timelineService';
 import { aplicarFiltros, type EstadoFiltros } from '../hooks/useFiltrosPartidos';
+import TablaScroll from '../../../shared/components/TablaScroll/TablaScroll';
 import {
   calcularMetricasEquipo,
   calcularMetricasJugadores,
@@ -126,7 +127,7 @@ const ComparadorSegmentos = ({ segmentos, partidos, filas, onQuitar, onLimpiar }
         </p>
       )}
 
-      <div className="overflow-x-auto">
+      <TablaScroll>
         <table className="w-full min-w-[520px] text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-left">
@@ -167,14 +168,14 @@ const ComparadorSegmentos = ({ segmentos, partidos, filas, onQuitar, onLimpiar }
             ))}
           </tbody>
         </table>
-      </div>
+      </TablaScroll>
 
       {jugadores.length > 0 && (
         <details className="mt-4 rounded-lg border border-slate-200 bg-slate-50/60 p-3" open>
           <summary className="cursor-pointer text-sm font-semibold text-slate-700">
             Efectividad por jugador
           </summary>
-          <div className="mt-2 overflow-x-auto">
+          <TablaScroll className="mt-2">
             <table className="w-full min-w-[520px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -215,7 +216,7 @@ const ComparadorSegmentos = ({ segmentos, partidos, filas, onQuitar, onLimpiar }
                 ))}
               </tbody>
             </table>
-          </div>
+          </TablaScroll>
         </details>
       )}
     </section>

@@ -440,6 +440,36 @@ const ModalCapturaSetEstadisticas = ({
       title="Captura de estadísticas por set"
       hasUnsavedChanges={hayCambiosSinGuardar}
       unsavedMessage="Cargaste estadísticas que todavía no guardaste. ¿Cerrar y perderlas?"
+      /**
+       * Guardar va en el pie fijo, no al final del contenido. El cuerpo de este modal son doce
+       * tarjetas de jugador apiladas —seis por equipo, cuatro contadores cada una—: en un
+       * teléfono eso es varias pantallas de scroll, y el botón quedaba enterrado al fondo. El
+       * que lo usa está parado al costado de la cancha con una mano ocupada.
+       */
+      footer={
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-slate-500">
+            {numeroSetSeleccionado ? `Set ${numeroSetSeleccionado}` : 'Ningún set seleccionado'}
+            {hayCambiosSinGuardar ? ' · cambios sin guardar' : ''}
+          </p>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!numeroSetSeleccionado) {
+                addToast({ type: 'info', title: 'Elegí un set', message: 'Seleccioná un set antes de guardar' });
+                return;
+              }
+              await guardar();
+            }}
+            disabled={guardando || !numeroSetSeleccionado}
+            className="min-h-[2.75rem] w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold
+                       text-white shadow-sm transition [touch-action:manipulation]
+                       hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          >
+            {guardando ? 'Guardando…' : 'Guardar estadísticas del set'}
+          </button>
+        </div>
+      }
     >
 
       <div className="space-y-4 px-1 pb-6">
@@ -549,22 +579,6 @@ const ModalCapturaSetEstadisticas = ({
               </div>
             ) : null}
 
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!numeroSetSeleccionado) {
-                    addToast({ type: 'info', title: 'Elegí un set', message: 'Seleccioná un set antes de guardar' });
-                    return;
-                  }
-                  await guardar();
-                }}
-                disabled={guardando || !numeroSetSeleccionado}
-                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {guardando ? 'Guardando…' : 'Guardar estadísticas del set'}
-              </button>
-            </div>
           </div>
         )}
       </div>

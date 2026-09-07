@@ -50,7 +50,9 @@ const ModalBase: React.FC<ModalBaseProps> = ({
   scrollable = true,
   // `dvh` y no `vh`: en mobile el 100vh incluye la barra de direcciones, así que un 90vh
   // real se come el borde inferior del modal justo donde vive el botón de guardar.
-  maxHeightClass = 'max-h-[90dvh]',
+  // En mobile el modal ocupa la pantalla entera (lo resuelve `Modal`), así que el 90% queda
+  // sólo para escritorio, donde un diálogo pegado a los bordes se ve mal.
+  maxHeightClass = 'max-h-[100dvh] sm:max-h-[90dvh]',
   bodyClassName = 'px-4 py-3 sm:px-6 sm:py-4',
   isOpen = true,
   overlayClassName,
@@ -73,8 +75,11 @@ const ModalBase: React.FC<ModalBaseProps> = ({
     .filter(Boolean)
     .join(' ');
 
+  // `pr-12` reserva la columna del botón de cerrar, que va posicionado en absoluto encima de
+  // esta franja. Sin eso, en un teléfono el título se le mete abajo: "Captura de estadísticas
+  // por set" a 24px no entra en 375px de ancho y terminaba partido bajo la X.
   const mergedHeaderClassName = [
-    'mb-0.5 sm:mb-1 border-b border-slate-200/70 pb-1 sm:pb-2 dark:border-slate-700/60',
+    'shrink-0 mb-0.5 sm:mb-1 border-b border-slate-200/70 pb-1 pr-12 sm:pb-2 sm:pr-14 dark:border-slate-700/60',
     headerClassName,
   ]
     .filter(Boolean)
@@ -89,8 +94,18 @@ const ModalBase: React.FC<ModalBaseProps> = ({
     .filter(Boolean)
     .join(' ');
 
+  /**
+   * El pie no scrollea: es hermano del cuerpo dentro de un flex column, y el cuerpo es el único
+   * que crece y desborda. Por eso todo lo que sea "guardar" tiene que vivir acá y no al final
+   * del contenido — en la captura de un set, el contenido son doce tarjetas de jugador apiladas
+   * y el botón quedaba a varias pantallas de scroll de distancia.
+   *
+   * `bg-white` explícito: al quedar sobre el contenido que pasa por debajo, sin fondo propio se
+   * transparentaba.
+   */
   const mergedFooterClassName = [
-    'mt-2 sm:mt-4 border-t border-slate-200/70 pt-2 sm:pt-4 dark:border-slate-700/60',
+    'shrink-0 mt-2 sm:mt-4 border-t border-slate-200/70 bg-white pt-2 sm:pt-4',
+    'dark:border-slate-700/60 dark:bg-slate-900',
     footerClassName,
   ]
     .filter(Boolean)
@@ -110,8 +125,10 @@ const ModalBase: React.FC<ModalBaseProps> = ({
     >
       {(title || subtitle) && (
         <div className={mergedHeaderClassName}>
+          {/* 24px de título en 375px de pantalla consumen dos renglones para decir "Mi
+              planilla". Baja a 18px en mobile y recupera el tamaño en escritorio. */}
           {title && (
-            <h2 className="text-2xl font-semibold leading-tight text-slate-900 dark:text-white">
+            <h2 className="text-lg font-semibold leading-tight text-slate-900 sm:text-2xl dark:text-white">
               {title}
             </h2>
           )}

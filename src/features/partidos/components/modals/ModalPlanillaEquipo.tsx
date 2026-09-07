@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
+import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
 import { ListaJugadores } from './ListaJugadores';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 import {
@@ -735,7 +736,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
               <summary className="cursor-pointer text-sm font-semibold text-gray-700">
                 Totales del partido según esta planilla
               </summary>
-              <div className="mt-3 overflow-x-auto">
+              <TablaScroll className="mt-3">
                 <table className="w-full min-w-[420px] text-sm">
                   <thead>
                     <tr className="border-b border-gray-300 text-left text-xs uppercase tracking-wide text-gray-500">
@@ -762,7 +763,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                     })}
                   </tbody>
                 </table>
-              </div>
+              </TablaScroll>
             </details>
           )}
 
@@ -770,7 +771,15 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
               espera oficialización (el backend lo permite), y con la oficializada hay que
               explicar por qué no se puede en vez de esconder el botón y dejar al usuario
               buscándolo. */}
-          <div className="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-4">
+          {/* Pegada al fondo del área scrolleable, no al final del contenido. Una planilla de
+              seis jugadores por varios sets es larga: en un teléfono había que recorrerla entera
+              para llegar a "Guardar", y el que la carga suele estar al costado de la cancha. El
+              margen negativo la lleva hasta los bordes del modal para que la franja tape todo el
+              ancho y el contenido no se vea pasar por los costados. */}
+          <div className="sticky bottom-0 z-10 -mx-4 -mb-3 flex flex-wrap items-center gap-3
+                          border-t border-gray-200 bg-white px-4 py-3
+                          pb-[calc(0.75rem+env(safe-area-inset-bottom))]
+                          sm:-mx-6 sm:-mb-4 sm:px-6 sm:pb-3">
             {planilla.estado === 'oficializada' ? (
               <p className="text-xs text-gray-500">
                 Una planilla oficializada no se puede eliminar: las estadísticas oficiales salieron
@@ -808,12 +817,17 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
             )}
 
             {editable && (
-              <div className="ml-auto flex flex-wrap gap-3">
+              // En mobile los dos botones ocupan el ancho completo y van apilados: lado a lado
+              // quedaban en ~150px cada uno, y "Pedir que sea oficial" —que es irreversible—
+              // terminaba pegado a "Guardar", que es la acción de todos los días.
+              <div className="ml-auto flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-3">
                 <button
                   type="button"
                   onClick={oficializar}
                   disabled={guardando}
-                  className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                  className="min-h-[2.75rem] rounded-lg border border-gray-300 px-4 py-2 font-medium
+                             text-gray-700 transition [touch-action:manipulation]
+                             hover:bg-gray-50 disabled:opacity-50"
                 >
                   Pedir que sea oficial
                 </button>
@@ -821,7 +835,9 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                   type="button"
                   onClick={guardar}
                   disabled={guardando}
-                  className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                  className="min-h-[2.75rem] rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white
+                             transition [touch-action:manipulation]
+                             hover:bg-blue-700 disabled:opacity-50"
                 >
                   {guardando ? 'Guardando...' : 'Guardar'}
                 </button>

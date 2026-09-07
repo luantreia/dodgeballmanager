@@ -35,8 +35,14 @@ const FILAS: FilaAnalitica[] = [
 
 const SETS = construirSets(FILAS);
 
+/**
+ * La fila de la tabla cuyo nombre accesible contiene ese texto.
+ *
+ * Una fila expone como nombre la concatenación de sus celdas, así que buscar por el nombre del
+ * grupo la encuentra sin tener que trepar el DOM desde la celda.
+ */
 const filaDe = (nombre: string) =>
-  within(screen.getByRole('table')).getByText(nombre).closest('tr')!;
+  within(screen.getByRole('table')).getByRole('row', { name: new RegExp(nombre.replace(/\+/g, '\\+')) });
 
 describe('SeccionSinergias', () => {
   it('muestra la sinergia de una dupla junto a su muestra', () => {
@@ -100,7 +106,7 @@ describe('SeccionCondicionesSet', () => {
     render(<SeccionCondicionesSet sets={SETS} />);
 
     // 10 sets en total, 6 ganados.
-    const total = screen.getByText('Total').closest('tr')!;
+    const total = within(screen.getByRole('table')).getByRole('row', { name: /^Total/ });
     const celdas = within(total).getAllByRole('cell');
     expect(celdas[1]).toHaveTextContent('10');
     expect(celdas[3]).toHaveTextContent('6');

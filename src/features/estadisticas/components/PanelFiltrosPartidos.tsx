@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { FACETAS, type ResultadoFiltros } from '../hooks/useFiltrosPartidos';
 
 type Props = {
@@ -11,8 +12,15 @@ type Props = {
  * Cada faceta va colapsada en un `<details>`: son ocho, y desplegadas todas juntas en un
  * celular tapan el resultado, que es lo que uno quiere mirar mientras filtra. Se despliegan
  * solas las que tienen algo elegido.
+ *
+ * En escritorio el panel vive en una columna al costado y está siempre a la vista. En mobile no
+ * hay costado: el panel se apila ARRIBA del contenido, y entre el rango de fechas y ocho facetas
+ * ocupaba la pantalla entera — había que scrollear varios dedos para ver el primer número. Por
+ * eso en mobile arranca plegado detrás de un botón que resume qué hay filtrado, y desde `lg` se
+ * muestra entero sin botón. La pregunta puede estar plegada; la respuesta no.
  */
 const PanelFiltrosPartidos = ({ filtros, totalPartidos }: Props) => {
+  const [abiertoEnMobile, setAbiertoEnMobile] = useState(false);
   const {
     opciones,
     desde,
@@ -28,7 +36,7 @@ const PanelFiltrosPartidos = ({ filtros, totalPartidos }: Props) => {
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
-      <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <header className="flex flex-wrap items-center justify-between gap-2 lg:mb-3">
         <div>
           <h3 className="text-sm font-semibold text-slate-900">Filtros</h3>
           <p className="text-xs text-slate-500">
@@ -37,17 +45,36 @@ const PanelFiltrosPartidos = ({ filtros, totalPartidos }: Props) => {
               : `${partidosFiltrados.length} de ${totalPartidos} partidos`}
           </p>
         </div>
-        {hayFiltros && (
+        <div className="flex items-center gap-2">
+          {hayFiltros && (
+            <button
+              type="button"
+              onClick={limpiarTodo}
+              className="min-h-[2.75rem] rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-600 transition [touch-action:manipulation] hover:border-slate-300 hover:text-slate-900"
+            >
+              Limpiar todo
+            </button>
+          )}
           <button
             type="button"
-            onClick={limpiarTodo}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+            onClick={() => setAbiertoEnMobile((v) => !v)}
+            aria-expanded={abiertoEnMobile}
+            className="flex min-h-[2.75rem] items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition [touch-action:manipulation] hover:border-slate-300 lg:hidden"
           >
-            Limpiar todo
+            {abiertoEnMobile ? 'Ocultar' : 'Filtrar'}
+            {hayFiltros && !abiertoEnMobile && (
+              <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                ON
+              </span>
+            )}
+            <span aria-hidden className="text-slate-400">
+              {abiertoEnMobile ? '▲' : '▼'}
+            </span>
           </button>
-        )}
+        </div>
       </header>
 
+      <div className={`${abiertoEnMobile ? 'mt-3' : 'hidden'} lg:mt-0 lg:block`}>
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         <label className="text-xs font-medium text-slate-600">
           Desde
@@ -132,6 +159,7 @@ const PanelFiltrosPartidos = ({ filtros, totalPartidos }: Props) => {
             </details>
           );
         })}
+      </div>
       </div>
     </section>
   );

@@ -3,6 +3,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import type { FilaAnalitica } from '../../services/filasService';
+import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
+import { useEsMobile } from '../../../../shared/hooks/useEsMobile';
 
 /**
  * Análisis cruzado de los partidos filtrados.
@@ -157,6 +159,7 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
   // Los partidos sin estadisticas aportan una fila sin jugador para el conteo de victorias;
   // en un pivot por jugador solo agregarian una categoria vacia.
   const filas = useMemo(() => filasCrudas.filter((f) => f.jugadorId !== null), [filasCrudas]);
+  const esMobile = useEsMobile();
 
   const [dimFila, setDimFila] = useState<ClaveDimension>('jugador');
   const [dimColumna, setDimColumna] = useState<ClaveDimension | typeof SIN_COLUMNAS>('resultadoSet');
@@ -300,7 +303,7 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
             </label>
           </div>
 
-          <div className="overflow-x-auto">
+          <TablaScroll>
             <table className="w-full min-w-[520px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -368,7 +371,7 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
                 </tr>
               </tfoot>
             </table>
-          </div>
+          </TablaScroll>
 
           {datosGrafico.length > 0 && (
             <div>
@@ -381,10 +384,12 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
                   <BarChart data={datosGrafico} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 11, fill: '#64748b' }} />
+                    {/* Ver la nota del mismo eje en SeccionCondicionesSet: 110px fijos son un
+                        tercio de la pantalla de un teléfono. */}
                     <YAxis
                       type="category"
                       dataKey="nombre"
-                      width={110}
+                      width={esMobile ? 84 : 110}
                       tick={{ fontSize: 11, fill: '#334155' }}
                     />
                     <Tooltip

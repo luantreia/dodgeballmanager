@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import ModalBase from '../../../shared/components/ModalBase/ModalBase';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { formatDateTime } from '../../../shared/utils/formatDate';
+import TablaScroll from '../../../shared/components/TablaScroll/TablaScroll';
 import { getSetsConEstadisticas, type SetConEstadisticas } from '../services/estadisticasService';
 import {
   obtenerPlanilla,
@@ -321,7 +322,7 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
             No hay estadísticas de tu equipo en esta fuente.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <TablaScroll>
             <table className="w-full min-w-[420px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -346,7 +347,7 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
                 ))}
               </tbody>
             </table>
-          </div>
+          </TablaScroll>
         )}
 
         {fuente === 'oficial' && oficial.existe && !oficial.verificada && (

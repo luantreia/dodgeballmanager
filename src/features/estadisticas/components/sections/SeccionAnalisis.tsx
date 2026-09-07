@@ -216,7 +216,7 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
           <button
             type="button"
             onClick={agregarSegmento}
-            className="w-full rounded-lg border border-brand-300 bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700 transition hover:bg-brand-100"
+            className="min-h-[2.75rem] w-full rounded-lg border border-brand-300 bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700 transition [touch-action:manipulation] hover:bg-brand-100"
           >
             + Guardar como segmento para comparar
           </button>

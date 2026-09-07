@@ -5,6 +5,7 @@ import {
   calcularMetricasJugadores,
   formatearPorcentaje,
 } from '../utils/metricas';
+import TablaScroll from '../../../shared/components/TablaScroll/TablaScroll';
 
 type Props = {
   filas: FilaAnalitica[];
@@ -78,8 +79,54 @@ const EstadisticasFiltradas = ({ filas, descripcion }: Props) => {
           Ninguno de estos partidos tiene estadísticas cargadas todavía.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full min-w-[560px] text-sm">
+        <>
+          {/* En mobile, una tarjeta por jugador. Las ocho columnas necesitan 560px y en un
+              teléfono dejaban visible el nombre y poco más: hits y efectividad, que son las que
+              se miran, caían fuera de la pantalla sin ningún indicio de que estuvieran ahí. */}
+          <ul className="space-y-2 sm:hidden">
+            {jugadores.map((jugador) => (
+              <li
+                key={jugador.jugadorId}
+                className="rounded-xl border border-slate-200 bg-white p-3"
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-medium text-slate-900">{jugador.jugador}</span>
+                  <span className="shrink-0 text-xs text-slate-500">
+                    {jugador.partidos} PJ · {jugador.sets} sets
+                  </span>
+                </div>
+                <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-xs">
+                  <div>
+                    <dt className="text-[11px] text-slate-500">Hits</dt>
+                    <dd className="font-semibold tabular-nums text-slate-900">{jugador.hits}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] text-slate-500">Efectividad</dt>
+                    <dd className="tabular-nums text-slate-800">
+                      {formatearPorcentaje(jugador.efectividad, 1)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] text-slate-500">Throws</dt>
+                    <dd className="tabular-nums text-slate-800">{jugador.throws}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] text-slate-500">Catches</dt>
+                    <dd className="tabular-nums text-slate-800">{jugador.catches}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] text-slate-500">Supervivencia</dt>
+                    <dd className="tabular-nums text-slate-800">
+                      {formatearPorcentaje(jugador.supervivencia)}
+                    </dd>
+                  </div>
+                </dl>
+              </li>
+            ))}
+          </ul>
+
+          <TablaScroll className="hidden rounded-xl border border-slate-200 bg-white sm:block">
+            <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                 <th className="px-3 py-2">Jugador</th>
@@ -111,7 +158,8 @@ const EstadisticasFiltradas = ({ filas, descripcion }: Props) => {
               ))}
             </tbody>
           </table>
-        </div>
+          </TablaScroll>
+        </>
       )}
     </section>
   );

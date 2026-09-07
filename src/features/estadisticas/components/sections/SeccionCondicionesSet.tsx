@@ -13,6 +13,8 @@ import {
 import { resumirSets, type SetAnalitico } from '../../utils/setsAnaliticos';
 import { calcularCondicion, FACTORES } from '../../utils/condicionesSet';
 import { formatearPorcentaje } from '../../utils/metricas';
+import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
+import { useEsMobile } from '../../../../shared/hooks/useEsMobile';
 
 type Props = {
   sets: SetAnalitico[];
@@ -37,6 +39,7 @@ const selectClase =
  */
 const SeccionCondicionesSet = ({ sets }: Props) => {
   const [claveFactor, setClaveFactor] = useState(FACTORES[0].clave);
+  const esMobile = useEsMobile();
 
   const factor = FACTORES.find((f) => f.clave === claveFactor) ?? FACTORES[0];
   const tramos = useMemo(() => calcularCondicion(sets, factor), [sets, factor]);
@@ -106,10 +109,12 @@ const SeccionCondicionesSet = ({ sets }: Props) => {
                   unit="%"
                   tick={{ fontSize: 11, fill: '#64748b' }}
                 />
+                {/* En un teléfono de 375px, 120px de eje se llevaban un tercio del ancho y las
+                    barras quedaban en muñones de los que no se podía leer nada. */}
                 <YAxis
                   type="category"
                   dataKey="tramo"
-                  width={120}
+                  width={esMobile ? 84 : 120}
                   tick={{ fontSize: 11, fill: '#334155' }}
                 />
                 <Tooltip
@@ -147,7 +152,7 @@ const SeccionCondicionesSet = ({ sets }: Props) => {
             </ResponsiveContainer>
           </div>
 
-          <div className="overflow-x-auto">
+          <TablaScroll>
             <table className="w-full min-w-[420px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -192,7 +197,7 @@ const SeccionCondicionesSet = ({ sets }: Props) => {
                 </tr>
               </tfoot>
             </table>
-          </div>
+          </TablaScroll>
 
           <p className="text-xs text-slate-500">
             Esto es asociación, no causa: los catches ganan sets casi por definición —el que ataja
