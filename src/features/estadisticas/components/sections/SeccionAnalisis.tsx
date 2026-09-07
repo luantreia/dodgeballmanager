@@ -8,6 +8,9 @@ import LineaTemporalPartidos from '../LineaTemporalPartidos';
 import EstadisticasFiltradas from '../EstadisticasFiltradas';
 import ComparadorSegmentos, { type Segmento } from '../ComparadorSegmentos';
 import AnalisisCruzado from './AnalisisCruzado';
+import SeccionSinergias from './SeccionSinergias';
+import SeccionCondicionesSet from './SeccionCondicionesSet';
+import { construirSets } from '../../utils/setsAnaliticos';
 import ModalVisorPartido from '../ModalVisorPartido';
 import ModalPlanillaEquipo from '../../../partidos/components/modals/ModalPlanillaEquipo';
 import ModalCapturaSetEstadisticas from '../../../partidos/components/modals/ModalCapturaSetEstadisticas';
@@ -24,6 +27,47 @@ type Vista =
   | { tipo: 'visor'; partido: PartidoTimeline }
   | { tipo: 'planilla'; partido: PartidoTimeline }
   | { tipo: 'captura'; partido: PartidoTimeline };
+
+/**
+ * Un bloque que arranca cerrado y se abre por decisión del que mira.
+ *
+ * Todo lo que va debajo de las tarjetas es análisis de segundo nivel: si estuviera desplegado de
+ * entrada, la pantalla abriría con tres pantallazos de tablas y el titular —qué pasó en estos
+ * partidos— quedaría enterrado. El contenido se monta recién al abrir, así que las agregaciones
+ * de las secciones cerradas no se calculan.
+ */
+const Plegable = ({
+  titulo,
+  contador,
+  children,
+}: {
+  titulo: string;
+  contador?: string;
+  children: React.ReactNode;
+}) => {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-expanded={visible}
+        className="flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-left transition hover:border-slate-300"
+      >
+        <span className="text-sm font-semibold text-slate-900">
+          {titulo}
+          {contador !== undefined && <span className="ml-2 font-normal text-slate-500">{contador}</span>}
+        </span>
+        <span aria-hidden className="text-slate-400">
+          {visible ? '▲' : '▼'}
+        </span>
+      </button>
+
+      {visible && <div className="mt-3">{children}</div>}
+    </section>
+  );
+};
 
 /**
  * La pantalla de análisis del DT: filtros facetados, estadísticas de lo filtrado, comparación
