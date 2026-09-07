@@ -71,16 +71,17 @@ const Plegable = ({
 
 /**
  * La pantalla de análisis del DT: filtros facetados, estadísticas de lo filtrado, comparación
- * entre segmentos y la línea temporal de partidos.
+ * entre segmentos, y debajo los análisis que se hacen sobre el set como unidad.
  *
  * El orden no es casual. Los filtros están arriba porque son la pregunta; las estadísticas
- * inmediatamente debajo porque son la respuesta; la línea temporal va al final y arrancada
- * colapsada, porque es el detalle al que se baja cuando algo llama la atención.
+ * inmediatamente debajo porque son la respuesta; los plegables van al final y arrancados
+ * cerrados, porque son el detalle al que se baja cuando algo llama la atención.
  *
  * Los dos datasets se piden una sola vez: `timeline` (un registro por partido, para filtrar y
  * listar) y `filas` (un registro por jugador y por set, para las métricas). Los filtros operan
  * sobre los partidos y las filas heredan la decisión por `partidoId` — así "lo que ves" y "lo
- * que se suma" no pueden separarse.
+ * que se suma" no pueden separarse. De esas mismas filas sale `setsAnaliticos`, que reagrupa por
+ * set y alimenta a las sinergias y a las condiciones del set.
  */
 const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
   const { addToast } = useToast();
@@ -91,7 +92,6 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
   const [vista, setVista] = useState<Vista>({ tipo: 'ninguna' });
   const [detalle, setDetalle] = useState<PartidoDetallado | null>(null);
   const [segmentos, setSegmentos] = useState<Segmento[]>([]);
-  const [lineaVisible, setLineaVisible] = useState(false);
 
   const filtros = useFiltrosPartidos(partidos);
 
@@ -126,6 +126,13 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
     const ids = new Set(filtros.partidosFiltrados.map((p) => p._id));
     return filas.filter((fila) => ids.has(fila.partidoId));
   }, [filas, filtros.partidosFiltrados]);
+
+  /**
+   * Las filas reagrupadas por set: la unidad que necesitan tanto las sinergias entre jugadores
+   * como las condiciones del set. Se calcula una sola vez acá y se pasa a las dos secciones, en
+   * vez de que cada una recorra las filas por su cuenta.
+   */
+  const setsAnaliticos = useMemo(() => construirSets(filasFiltradas), [filasFiltradas]);
 
   const descripcionActual = useMemo(
     () => describirFiltros(partidos, { filtros: filtros.filtros, desde: filtros.desde, hasta: filtros.hasta }),
@@ -236,34 +243,23 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
             }}
           />
 
-          <section>
-            {/* La línea arranca cerrada: es el detalle, no el titular. Abrirla es una decisión. */}
-            <button
-              type="button"
-              onClick={() => setLineaVisible((v) => !v)}
-              aria-expanded={lineaVisible}
-              className="flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-left transition hover:border-slate-300"
-            >
-              <span className="text-sm font-semibold text-slate-900">
-                Partido por partido
-                <span className="ml-2 font-normal text-slate-500">
-                  {filtros.partidosFiltrados.length}
-                </span>
-              </span>
-              <span aria-hidden className="text-slate-400">
-                {lineaVisible ? '▲' : '▼'}
-              </span>
-            </button>
+          {/* Las dos preguntas que se hacen sobre el set como unidad: con quién se juega mejor,
+              y bajo qué condiciones se gana. Las dos comen de `setsAnaliticos`, que ya heredó el
+              filtrado, así que responden sobre el mismo conjunto que las tarjetas de arriba. */}
+          <Plegable titulo="Sinergias entre jugadores" contador={`${setsAnaliticos.length} sets`}>
+            <SeccionSinergias sets={setsAnaliticos} />
+          </Plegable>
 
-            {lineaVisible && (
-              <div className="mt-3">
-                <LineaTemporalPartidos
-                  partidos={filtros.partidosFiltrados}
-                  onAbrir={(partido) => setVista({ tipo: 'visor', partido })}
-                />
-              </div>
-            )}
-          </section>
+          <Plegable titulo="Condiciones del set" contador={`${setsAnaliticos.length} sets`}>
+            <SeccionCondicionesSet sets={setsAnaliticos} />
+          </Plegable>
+
+          <Plegable titulo="Partido por partido" contador={String(filtros.partidosFiltrados.length)}>
+            <LineaTemporalPartidos
+              partidos={filtros.partidosFiltrados}
+              onAbrir={(partido) => setVista({ tipo: 'visor', partido })}
+            />
+          </Plegable>
         </div>
       </div>
 
