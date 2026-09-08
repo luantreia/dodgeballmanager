@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FC } from 'react';
 import JugadorEstadisticasCard, { type EstadoGuardadoFila } from '../common/JugadorEstadisticasCard';
+import TablaJugadoresEstadisticas from '../common/TablaJugadoresEstadisticas';
 import { getJugadoresEquipo } from '../../../jugadores/services/jugadorEquipoService';
 import { JUGADORES_POR_SET } from '../../constants/capturaSet';
 
@@ -115,6 +116,28 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
     ),
   ].slice(0, JUGADORES_POR_SET);
 
+  // Se computa una sola vez y se usa tanto para las tarjetas (mobile) como para la tabla
+  // (`sm:` para arriba) — las dos vistas muestran exactamente los mismos slots, sólo cambia el
+  // layout, así que no tiene sentido filtrar las opciones de cada select dos veces.
+  const filas = useMemo(
+    () =>
+      estadisticasCompletas.map((jugadorObj, idx) => {
+        const jugadorId = jugadorObj?.jugadorId ?? '';
+        const jugadoresSeleccionados = obtenerJugadoresSeleccionados(idx);
+        return {
+          index: idx,
+          jugadorId,
+          estadisticas: jugadorObj?.estadisticas ?? {},
+          opcionesJugadores: opcionesSelect.filter(
+            (op) => !jugadoresSeleccionados.includes(op.value) || op.value === jugadorId,
+          ),
+          estadoGuardado: estadosGuardado?.[idx],
+        };
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [estadisticasCompletas, opcionesSelect, estadosGuardado],
+  );
+
   if (loading) {
     return (
       <div className="p-4">
@@ -127,32 +150,37 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
   return (
     <div className="p-1">
       <h3 className="mb-1 text-lg font-semibold text-slate-800">{equipoNombre}</h3>
-      <div className="grid grid-cols-2 gap-1.5 xs:grid-cols-3 md:grid-cols-6">
-        {estadisticasCompletas.map((jugadorObj, idx) => {
-          const jugadorId = jugadorObj?.jugadorId ?? '';
-          const stats = jugadorObj?.estadisticas ?? {};
-          const jugadoresSeleccionados = obtenerJugadoresSeleccionados(idx);
-          const opcionesFiltradas = opcionesSelect.filter(
-            (op) => !jugadoresSeleccionados.includes(op.value) || op.value === jugadorId,
-          );
 
-          return (
-            <JugadorEstadisticasCard
-              key={`jugador-estadisticas-${idx}`}
-              index={idx}
-              jugadorId={jugadorId}
-              opcionesJugadores={opcionesFiltradas}
-              onCambiarJugador={(nuevoId: string) => onAsignarJugador(idx, nuevoId)}
-              onCambiarEstadistica={(campo: CampoNumerico, delta: number) =>
-                onCambiarEstadistica(idx, campo, delta)
-              }
-              estadisticasJugador={stats}
-              onCambiarSurvive={(value) => onCambiarSurvive?.(idx, value)}
-              estadoGuardado={estadosGuardado?.[idx]}
-              onIntercambiar={onSolicitarIntercambio ? () => onSolicitarIntercambio(idx) : undefined}
-            />
-          );
-        })}
+      {/* Tarjetas en vertical/angosto, tabla de ahí para arriba — ver el comentario de
+          `TablaJugadoresEstadisticas` sobre por qué la tabla aprovecha mejor el ancho de
+          horizontal/desktop en vez de seguir apilando contadores como si no sobrara lugar. */}
+      <div className="grid grid-cols-2 gap-1.5 xs:grid-cols-3 sm:hidden">
+        {filas.map((fila) => (
+          <JugadorEstadisticasCard
+            key={`jugador-estadisticas-${fila.index}`}
+            index={fila.index}
+            jugadorId={fila.jugadorId}
+            opcionesJugadores={fila.opcionesJugadores}
+            onCambiarJugador={(nuevoId: string) => onAsignarJugador(fila.index, nuevoId)}
+            onCambiarEstadistica={(campo: CampoNumerico, delta: number) =>
+              onCambiarEstadistica(fila.index, campo, delta)
+            }
+            estadisticasJugador={fila.estadisticas}
+            onCambiarSurvive={(value) => onCambiarSurvive?.(fila.index, value)}
+            estadoGuardado={fila.estadoGuardado}
+            onIntercambiar={onSolicitarIntercambio ? () => onSolicitarIntercambio(fila.index) : undefined}
+          />
+        ))}
+      </div>
+
+      <div className="hidden sm:block">
+        <TablaJugadoresEstadisticas
+          filas={filas}
+          onAsignarJugador={onAsignarJugador}
+          onCambiarEstadistica={onCambiarEstadistica}
+          onCambiarSurvive={onCambiarSurvive}
+          onSolicitarIntercambio={onSolicitarIntercambio}
+        />
       </div>
     </div>
   );

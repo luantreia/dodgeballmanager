@@ -973,15 +973,19 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       // Antes "Mi planilla" y "MORAN · captura propia, no afecta los datos oficiales" eran dos
       // líneas — la segunda se pliega acá al lado de la primera para no gastar esa fila entera
       // arriba de las tarjetas, que son lo que de verdad hay que ver en una pantalla chica.
+      // El título de `ModalBase` crece a `sm:text-2xl` por default (pensado para modales con
+      // mucho contenido debajo); acá se lo neutraliza envolviendo TODO en un `span` con su
+      // propio tamaño fijo, para que en horizontal (donde sobra ancho pero no alto) el título
+      // no crezca y siga ocupando lo mismo.
       title={
-        <>
+        <span className="text-base font-semibold sm:text-base">
           Mi planilla
           {equipoNombre && (
-            <span className="ml-1.5 align-middle text-xs font-normal text-slate-400 sm:text-sm">
+            <span className="ml-1.5 align-middle text-xs font-normal text-slate-400">
               · {equipoNombre}
             </span>
           )}
-        </>
+        </span>
       }
       onClose={onClose}
       size="xl"

@@ -114,38 +114,42 @@ const Modal = ({
   if (!isOpen) return null;
 
   /**
-   * El ancho máximo es una restricción de escritorio: en un teléfono el modal ocupa la pantalla
-   * entera. Por eso todos los tamaños van con prefijo `sm:` — por debajo de 640px no hay ningún
-   * `max-w` activo y el contenedor se estira a lo ancho del viewport.
+   * El ancho máximo es una restricción de escritorio real (ancho Y alto de sobra), no sólo de
+   * ancho: por eso el prefijo es `boxed:` y no `sm:` — ver el comentario de `modalClasses` sobre
+   * por qué `sm:` solo (basado únicamente en ancho) trataba un celular en horizontal como
+   * desktop. Por debajo de esa condición no hay ningún `max-w` activo y el contenedor se estira
+   * a lo ancho del viewport.
    */
   const sizes: Record<ModalSize, string> = {
-    sm: 'sm:max-w-md',
-    md: 'sm:max-w-lg',
-    lg: 'sm:max-w-2xl',
-    xl: 'sm:max-w-4xl',
-    '2xl': 'sm:max-w-6xl',
-    full: 'sm:max-w-full sm:mx-4'
+    sm: 'boxed:max-w-md',
+    md: 'boxed:max-w-lg',
+    lg: 'boxed:max-w-2xl',
+    xl: 'boxed:max-w-4xl',
+    '2xl': 'boxed:max-w-6xl',
+    full: 'boxed:max-w-full boxed:mx-4'
   };
 
   /**
-   * En mobile el modal es la pantalla: alto completo, sin bordes redondeados y sin márgenes.
-   * Antes se dibujaba como un diálogo centrado con 16px de aire alrededor y esquinas redondeadas,
-   * que en un monitor está bien pero en un teléfono regala el 10% del alto y dos franjas
-   * laterales justo donde hace falta cada pixel — la grilla de captura son seis jugadores con
-   * cuatro contadores cada uno.
+   * Pantalla completa (alto completo, sin bordes redondeados, sin márgenes) salvo que sobre
+   * ancho Y alto a la vez — condición `boxed` definida en tailwind.config.js. Antes esto era
+   * `sm:` (sólo ancho, ≥640px) y un celular en horizontal casi siempre supera esos 640px de
+   * ancho aunque tenga ~350-450px de alto: se trataba como desktop y aparecía como diálogo
+   * centrado con márgenes alrededor — regalando altura justo cuando menos sobra, para una
+   * grilla de seis jugadores con cuatro contadores cada uno.
    *
    * `dvh` y no `vh`: el 100vh de mobile incluye la barra de direcciones, así que el borde
    * inferior (donde vive el botón de guardar) queda debajo del pliegue.
    *
-   * El padding de safe-area es obligatorio acá: `index.html` declara `viewport-fit=cover`, o sea
-   * que el layout se extiende por debajo del notch y de la barra de gestos. Sin estas dos líneas
-   * el encabezado se mete abajo del notch y el pie abajo del home indicator.
+   * El padding de safe-area es obligatorio en modo pantalla completa: `index.html` declara
+   * `viewport-fit=cover`, o sea que el layout se extiende por debajo del notch y de la barra de
+   * gestos (en cualquier orientación). Sin estas dos líneas el encabezado se mete abajo del
+   * notch y el pie abajo del home indicator.
    */
   const modalClasses = [
     'relative bg-white dark:bg-gray-800 shadow-xl transform transition-all',
     'flex flex-col',
-    'h-[100dvh] w-full rounded-none sm:h-auto sm:w-auto sm:rounded-lg',
-    'pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:pt-0 sm:pb-0',
+    'h-[100dvh] w-full rounded-none boxed:h-auto boxed:w-auto boxed:rounded-lg',
+    'pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] boxed:pt-0 boxed:pb-0',
     sizes[size],
     className
   ].filter(Boolean).join(' ');
@@ -167,10 +171,11 @@ const Modal = ({
     bodyClassName
   ].filter(Boolean).join(' ');
 
-  // Sin padding en mobile: el modal ya ocupa la pantalla entera y cualquier margen sería una
-  // franja de backdrop inútil (y tocable por accidente) alrededor del contenido.
+  // Sin padding en pantalla completa: el modal ya ocupa la pantalla entera y cualquier margen
+  // sería una franja de backdrop inútil (y tocable por accidente) alrededor del contenido —
+  // `boxed:`, no `sm:`, por el mismo motivo que en `modalClasses`.
   const overlayClasses = [
-    'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4',
+    'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 boxed:p-4',
     overlayClassName
   ].filter(Boolean).join(' ');
 
@@ -223,7 +228,7 @@ const Modal = ({
                        hover:bg-gray-100 hover:text-gray-600
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50
                        dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300
-                       top-[calc(env(safe-area-inset-top)+0.5rem)] sm:top-2"
+                       top-[calc(env(safe-area-inset-top)+0.5rem)] boxed:top-2"
             aria-label="Cerrar modal"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

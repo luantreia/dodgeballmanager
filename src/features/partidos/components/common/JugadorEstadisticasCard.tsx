@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FC } from 'react';
 import SelectDropdown from '../../../../shared/components/ui/FormComponents/SelectDropdown';
+import ContadorEstadistica from './ContadorEstadistica';
 
 export type EstadisticasJugador = {
   throws: number;
@@ -48,31 +48,23 @@ const CONTROLES: Array<{ campo: CampoNumerico; label: string; abrev: string }> =
   { campo: 'catches', label: 'Catches', abrev: 'Cat' },
 ];
 
-const LONG_PRESS_DELAY = 500;
-const SUBTRACT_INTERVAL = 400;
-const FEEDBACK_DURATION = 300;
-
 /**
- * Contador de estadísticas de un jugador en un set. Es la pantalla que el DT usa parado al
- * costado de la cancha, con una mano y el partido en curso, así que las decisiones de acá son
- * todas a favor del pulgar:
+ * Contador de estadísticas de un jugador en un set, en formato tarjeta — para pantallas
+ * angostas (`sm:hidden` en `ListaJugadores`; en horizontal/desktop se usa la tabla,
+ * `TablaJugadoresEstadisticas`, que muestra los mismos controles en filas). Es la pantalla que
+ * el DT usa parado al costado de la cancha, con una mano y el partido en curso, así que las
+ * decisiones de acá son todas a favor del pulgar:
  *
- * - Tocar el número suma; mantenerlo apretado resta en cadena. Además hay un botón "−"
- *   explícito: la resta por long-press no se descubre sola y sin el botón no había forma de
- *   corregir un error con el teclado ni con un lector de pantalla.
- * - Se usan eventos de puntero en vez de mouse+touch a la vez. La versión anterior escuchaba
- *   los dos y el navegador emula los de mouse después de cada toque, así que cada gesto pasaba
- *   por los handlers dos veces.
- * - `onPointerCancel` corta el long-press: cuando el navegador se queda con el gesto para
- *   scrollear dispara ese evento, y sin escucharlo bastaba apoyar el dedo sobre un contador
- *   para scrollear la grilla para que empezara a restar solo.
- * - Los cuatro contadores van en una sola fila (`grid-cols-4`), no apilados: con seis
- *   jugadores en pantalla, cuatro filas por tarjeta eran ~270px de alto cada una y ni con
- *   scroll entraban los seis sin perder de vista al primero mientras se carga el sexto. En una
- *   fila el botón principal baja a ~36-40px de ancho — por debajo del ideal de 44px, pero sigue
- *   siendo un número de un dígito, no hace falta más para acertarle con el pulgar. El "−" y el
- *   toggle de "Sobrevive" bajan más todavía (~20-36px): son correcciones ocasionales, no la
- *   acción principal, así que ceden espacio antes que el número y el selector de jugador.
+ * - Tocar el número suma; mantenerlo apretado resta en cadena (lógica en `ContadorEstadistica`).
+ *   Además hay un botón "−" explícito: la resta por long-press no se descubre sola y sin el
+ *   botón no había forma de corregir un error con el teclado ni con un lector de pantalla.
+ * - Los cuatro contadores van en una sola fila (`grid-cols-4`), no apilados: con seis jugadores
+ *   en pantalla, cuatro filas por tarjeta eran ~270px de alto cada una y ni con scroll entraban
+ *   los seis sin perder de vista al primero mientras se carga el sexto. En una fila el botón
+ *   principal baja a ~36-40px de ancho — por debajo del ideal de 44px, pero sigue siendo un
+ *   número de un dígito, no hace falta más para acertarle con el pulgar. El "−" y el toggle de
+ *   "Sobrevive" bajan más todavía (~20-36px): son correcciones ocasionales, no la acción
+ *   principal, así que ceden espacio antes que el número y el selector de jugador.
  */
 const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
   index,
@@ -85,85 +77,6 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
   estadoGuardado,
   onIntercambiar,
 }) => {
-  const timerRef = useRef<number | null>(null);
-  const intervaloRef = useRef<number | null>(null);
-  const feedbackTimerRef = useRef<number | null>(null);
-  /**
-   * Ref y no estado: el `click` se dispara inmediatamente después del `pointerup`, y cuando
-   * esto era `useState` el handler de click leía el valor ya reseteado y sumaba +1. O sea que
-   * toda sesión de resta terminaba sumando uno: restabas 3 y quedabas en -2.
-   */
-  const huboLongPressRef = useRef(false);
-  /** Los valores frescos para el intervalo, que si no captura los del render en que arrancó. */
-  const valoresRef = useRef(estadisticasJugador);
-  valoresRef.current = estadisticasJugador;
-
-  const [feedback, setFeedback] = useState<{ campo: CampoNumerico; tipo: 'suma' | 'resta' } | null>(null);
-
-  const marcarFeedback = (campo: CampoNumerico, tipo: 'suma' | 'resta') => {
-    setFeedback({ campo, tipo });
-    if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
-    feedbackTimerRef.current = window.setTimeout(() => setFeedback(null), FEEDBACK_DURATION);
-  };
-
-  const detenerLongPress = () => {
-    if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (intervaloRef.current !== null) {
-      window.clearInterval(intervaloRef.current);
-      intervaloRef.current = null;
-    }
-  };
-
-  // Sin esto, desmontar el modal a mitad de un long-press deja el intervalo corriendo.
-  useEffect(() => () => {
-    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-    if (intervaloRef.current !== null) window.clearInterval(intervaloRef.current);
-    if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
-  }, []);
-
-  const restar = (campo: CampoNumerico) => {
-    if ((valoresRef.current[campo] ?? 0) <= 0) return false;
-    onCambiarEstadistica(campo, -1);
-    marcarFeedback(campo, 'resta');
-    return true;
-  };
-
-  const iniciarLongPress = (campo: CampoNumerico) => {
-    detenerLongPress();
-    huboLongPressRef.current = false;
-
-    timerRef.current = window.setTimeout(() => {
-      huboLongPressRef.current = true;
-      if (!restar(campo)) {
-        detenerLongPress();
-        return;
-      }
-      intervaloRef.current = window.setInterval(() => {
-        if (!restar(campo)) detenerLongPress();
-      }, SUBTRACT_INTERVAL);
-    }, LONG_PRESS_DELAY);
-  };
-
-  const handleClick = (campo: CampoNumerico) => {
-    detenerLongPress();
-    if (huboLongPressRef.current) {
-      huboLongPressRef.current = false;
-      return;
-    }
-    onCambiarEstadistica(campo, +1);
-    marcarFeedback(campo, 'suma');
-  };
-
-  const claseFeedback = (campo: CampoNumerico) => {
-    if (feedback?.campo !== campo) return 'bg-slate-100 border-slate-200';
-    return feedback.tipo === 'suma'
-      ? 'bg-emerald-200 border-emerald-300'
-      : 'bg-rose-200 border-rose-300';
-  };
-
   return (
     <div className="rounded-lg bg-white p-1 shadow-md">
       {estadoGuardado && (
@@ -221,34 +134,13 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
           return (
             <div key={campo} className="flex flex-col items-center gap-0.5">
               <span className="text-[9px] font-medium uppercase leading-none text-slate-500">{abrev}</span>
-              <button
-                type="button"
-                onPointerDown={() => iniciarLongPress(campo)}
-                onPointerUp={detenerLongPress}
-                onPointerLeave={detenerLongPress}
-                onPointerCancel={detenerLongPress}
-                onClick={() => handleClick(campo)}
-                aria-label={`${label}: ${valor}. Tocá para sumar, mantené apretado para restar`}
-                className={`flex h-9 w-full select-none items-center justify-center rounded-md border-2
-                            text-sm font-bold text-slate-800 transition-colors duration-100 ease-out
-                            [touch-action:manipulation] focus-visible:outline-none focus-visible:ring-2
-                            focus-visible:ring-brand-500/50 ${claseFeedback(campo)}`}
-              >
-                {valor}
-              </button>
-              <button
-                type="button"
-                onClick={() => restar(campo)}
-                disabled={valor <= 0}
-                aria-label={`Restar 1 a ${label}`}
-                className="flex h-5 w-full items-center justify-center rounded-md border border-slate-200
-                           bg-white text-xs font-bold leading-none text-slate-500 transition-colors
-                           [touch-action:manipulation] disabled:opacity-30
-                           hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2
-                           focus-visible:ring-brand-500/50"
-              >
-                −
-              </button>
+              <ContadorEstadistica
+                valor={valor}
+                disposicion="vertical"
+                etiquetaAria={`${label}: ${valor}. Tocá para sumar, mantené apretado para restar`}
+                etiquetaRestar={`Restar 1 a ${label}`}
+                onCambiar={(delta) => onCambiarEstadistica(campo, delta)}
+              />
             </div>
           );
         })}
