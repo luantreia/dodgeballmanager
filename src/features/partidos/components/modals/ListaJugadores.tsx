@@ -28,6 +28,8 @@ export type ListaJugadoresProps = {
   opcionesJugadores?: Array<{ value: string; label: string }>;
   /** Estado de autoguardado por slot, en el mismo orden que `estadisticasJugador`. */
   estadosGuardado?: Array<EstadoGuardadoFila | undefined>;
+  /** Pide intercambiar los números de este slot con otro — sólo tiene sentido si ya tiene jugador. */
+  onSolicitarIntercambio?: (index: number) => void;
 };
 
 export const ListaJugadores: FC<ListaJugadoresProps> = ({
@@ -40,6 +42,7 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
   token,
   opcionesJugadores,
   estadosGuardado,
+  onSolicitarIntercambio,
 }) => {
   type JugadorRelacion = {
     id: string;
@@ -146,6 +149,7 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
               estadisticasJugador={stats}
               onCambiarSurvive={(value) => onCambiarSurvive?.(idx, value)}
               estadoGuardado={estadosGuardado?.[idx]}
+              onIntercambiar={onSolicitarIntercambio ? () => onSolicitarIntercambio(idx) : undefined}
             />
           );
         })}

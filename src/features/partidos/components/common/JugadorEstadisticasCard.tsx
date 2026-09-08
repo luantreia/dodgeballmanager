@@ -77,6 +77,7 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
   onCambiarSurvive,
   estadisticasJugador = { throws: 0, hits: 0, outs: 0, catches: 0 },
   estadoGuardado,
+  onIntercambiar,
 }) => {
   const timerRef = useRef<number | null>(null);
   const intervaloRef = useRef<number | null>(null);
@@ -164,15 +165,30 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
           {ETIQUETA_ESTADO[estadoGuardado].texto}
         </p>
       )}
-      <SelectDropdown
-        label={null}
-        name={`jugador-${index}`}
-        value={jugadorId}
-        options={opcionesJugadores}
-        onChange={(e: ChangeEvent<HTMLSelectElement>) => onCambiarJugador(e.target.value)}
-        placeholder="Elegí un jugador"
-        className="mb-3 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring focus:ring-brand-200 focus:ring-opacity-50"
-      />
+      <div className="mb-3 flex items-start gap-1">
+        <SelectDropdown
+          label={null}
+          name={`jugador-${index}`}
+          value={jugadorId}
+          options={opcionesJugadores}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => onCambiarJugador(e.target.value)}
+          placeholder="Elegí un jugador"
+          className="block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring focus:ring-brand-200 focus:ring-opacity-50"
+        />
+        {/* Swap de números con otro slot — para cuando dos jugadores quedaron anotados al
+            revés y no hace falta perder ninguna de las dos capturas para corregirlo. */}
+        {jugadorId && onIntercambiar && (
+          <button
+            type="button"
+            onClick={onIntercambiar}
+            title="Intercambiar los números con otro jugador"
+            aria-label="Intercambiar los números con otro jugador"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 text-lg text-slate-500 transition [touch-action:manipulation] hover:border-slate-300 hover:bg-slate-50"
+          >
+            ⇄
+          </button>
+        )}
+      </div>
 
       <div className="flex flex-col gap-2">
         {CONTROLES.map(({ campo, label }) => {

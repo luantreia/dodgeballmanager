@@ -26,6 +26,7 @@ import {
   eliminarSet,
   quitarPresente,
   eliminarEstadisticaPresente,
+  intercambiarEstadisticas,
   totalizarPorPresente,
   type PlanillaCompleta,
   type PlanillaEstadistica,
@@ -144,6 +145,22 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     confirmLabel: string;
     accion: () => Promise<void>;
   } | null>(null);
+
+  /**
+   * Reasignar un slot que ya tenía números es ambiguo: puede ser "este jugador no jugó acá,
+   * empezá de cero" o "puse el nombre mal, esos números son del que estoy por elegir ahora".
+   * Este estado abre el diálogo que deja elegir entre las dos, en vez de asumir una.
+   */
+  const [decisionCambioJugador, setDecisionCambioJugador] = useState<{
+    index: number;
+    presenteAnterior: string;
+    nuevoPresenteId: string;
+    nombreAnterior: string;
+    nombreNuevo: string;
+  } | null>(null);
+
+  /** Índice del slot para el que se está por elegir con quién intercambiar sus números. */
+  const [intercambioAbierto, setIntercambioAbierto] = useState<number | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -524,10 +541,93 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   };
 
   /**
-   * Antes de reasignar, si el slot ya tenía un jugador CON números cargados, se avisa: el
-   * cambio borra esos números (el jugador anterior queda sin fila en este set) y el nuevo
-   * arranca de cero. Sin esto, un toque accidental en el desplegable tira datos sin que quede
-   * claro qué pasó — que es exactamente lo que reportó el usuario.
+   * Núcleo común de "mover números a otro jugador" e "intercambiar dos slots": los dos son la
+   * misma operación de backend (intercambiar los valores de dos presentes en este set), sólo
+   * cambia si uno de los dos lados arrancaba vacío o si los dos ya tenían algo cargado.
+   */
+  const ejecutarIntercambioBackend = useCallback(
+    async (presenteA: string, presenteB: string, indices: number[]) => {
+      const planillaActual = planillaRef.current;
+      if (!planillaActual) return;
+      const planillaSetId = planillaActual.modo === 'sets' ? setActivoIdRef.current : null;
+
+      setFilasGuardando((prev) => {
+        const next = { ...prev };
+        indices.forEach((i) => {
+          next[i] = 'guardando';
+        });
+        return next;
+      });
+
+      try {
+        const { presenteA: resultA, presenteB: resultB } = await intercambiarEstadisticas(planillaActual._id, {
+          planillaSet: planillaSetId,
+          presenteA,
+          presenteB,
+        });
+
+        setFilasGuardando((prev) => {
+          const next = { ...prev };
+          indices.forEach((i) => {
+            next[i] = 'guardado';
+          });
+          return next;
+        });
+
+        setPlanilla((prev) => {
+          if (!prev) return prev;
+          let siguiente: PlanillaCompleta = {
+            ...prev,
+            estadisticas: prev.estadisticas.filter(
+              (e) =>
+                !((e.planillaPresente === presenteA || e.planillaPresente === presenteB) && e.planillaSet === planillaSetId),
+            ),
+          };
+          if (resultA) siguiente = mergeEstadisticaEnPlanilla(siguiente, resultA);
+          if (resultB) siguiente = mergeEstadisticaEnPlanilla(siguiente, resultB);
+          return siguiente;
+        });
+      } catch (error) {
+        setFilasGuardando((prev) => {
+          const next = { ...prev };
+          indices.forEach((i) => {
+            next[i] = 'error';
+          });
+          return next;
+        });
+        addToast({
+          type: 'error',
+          title: 'No se pudo mover/intercambiar los números',
+          message: error instanceof Error ? error.message : 'Reintentá desde el mismo slot',
+        });
+      }
+    },
+    [addToast],
+  );
+
+  /**
+   * "Puse el nombre mal, esos números en realidad son del que estoy por elegir ahora": los
+   * números del slot NO se tocan localmente (ya son los correctos), sólo cambia a quién
+   * pertenecen — al revés que `asignarJugador`, que arranca en cero a propósito.
+   */
+  const asignarJugadorMoviendoNumeros = (index: number, presenteId: string): void => {
+    const anterior = slotsRef.current[index]?.presenteId;
+    setSlots((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], presenteId: presenteId || undefined };
+      return next;
+    });
+    if (anterior && presenteId && anterior !== presenteId) {
+      void ejecutarIntercambioBackend(anterior, presenteId, [index]);
+    }
+  };
+
+  /**
+   * Antes de reasignar, si el slot ya tenía un jugador CON números cargados, la ambigüedad se
+   * resuelve preguntando en vez de asumir: puede ser que ese jugador realmente no haya jugado
+   * acá (vaciar y empezar de cero), o que el nombre estuviera mal puesto y esos números sean
+   * del jugador nuevo (mover, sin perder nada). Sin esto, un cambio de nombre tira datos sin
+   * que quede claro qué pasó — que es justo lo que reportó el usuario.
    */
   const solicitarAsignarJugador = (index: number, presenteId: string): void => {
     const actual = slots[index];
@@ -536,15 +636,36 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       asignarJugador(index, presenteId);
       return;
     }
-    setConfirmacion({
-      titulo: 'Cambiar el jugador de este slot',
-      mensaje:
-        'Este slot ya tiene números cargados. Si cambiás el jugador se pierden: el jugador anterior queda sin esa fila en este set y el nuevo arranca en cero.',
-      confirmLabel: 'Cambiar igual',
-      accion: async () => {
-        asignarJugador(index, presenteId);
-      },
+    const presenteAnteriorObj = planilla?.presentes.find((p) => p._id === actual.presenteId);
+    const nuevoPresenteObj = planilla?.presentes.find((p) => p._id === presenteId);
+    setDecisionCambioJugador({
+      index,
+      presenteAnterior: actual.presenteId as string,
+      nuevoPresenteId: presenteId,
+      nombreAnterior: presenteAnteriorObj ? nombrePresente(presenteAnteriorObj) : 'el jugador anterior',
+      nombreNuevo: nuevoPresenteObj ? nombrePresente(nuevoPresenteObj) : 'el nuevo jugador',
     });
+  };
+
+  /** Abre el selector de con quién intercambiar los números de este slot. */
+  const solicitarIntercambio = (index: number): void => {
+    if (!slots[index]?.presenteId) return;
+    setIntercambioAbierto(index);
+  };
+
+  /** Swap explícito entre dos slots YA ocupados — ninguno de los dos cambia de jugador. */
+  const confirmarIntercambio = (indexA: number, indexB: number): void => {
+    const slotA = slotsRef.current[indexA];
+    const slotB = slotsRef.current[indexB];
+    if (!slotA?.presenteId || !slotB?.presenteId) return;
+    setIntercambioAbierto(null);
+    setSlots((prev) => {
+      const next = [...prev];
+      next[indexA] = { ...next[indexA], estadisticas: prev[indexB].estadisticas };
+      next[indexB] = { ...next[indexB], estadisticas: prev[indexA].estadisticas };
+      return next;
+    });
+    void ejecutarIntercambioBackend(slotA.presenteId, slotB.presenteId, [indexA, indexB]);
   };
 
   /**
@@ -1035,6 +1156,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                   label: nombrePresente(p),
                 }))}
                 estadosGuardado={slots.map((_, i) => filasGuardando[i])}
+                onSolicitarIntercambio={solicitarIntercambio}
                 onAsignarJugador={(index, presenteId) => {
                   if (editable) solicitarAsignarJugador(index, presenteId);
                 }}
@@ -1213,6 +1335,94 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           await accion?.();
         }}
       />
+
+      <ModalBase
+        isOpen={decisionCambioJugador !== null}
+        onClose={() => setDecisionCambioJugador(null)}
+        title="Cambiar el jugador de este slot"
+        size="sm"
+      >
+        {decisionCambioJugador && (
+          <div className="space-y-4 p-1">
+            <p className="text-sm text-slate-700">
+              Este slot ya tiene números cargados para {decisionCambioJugador.nombreAnterior}. ¿Qué
+              querés hacer al poner a {decisionCambioJugador.nombreNuevo}?
+            </p>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const { index, nuevoPresenteId } = decisionCambioJugador;
+                  setDecisionCambioJugador(null);
+                  asignarJugador(index, nuevoPresenteId);
+                }}
+                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Vaciar y empezar de cero
+                <span className="mt-0.5 block text-xs font-normal text-slate-500">
+                  {decisionCambioJugador.nombreAnterior} queda sin fila en este set; {decisionCambioJugador.nombreNuevo}{' '}
+                  arranca en cero.
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const { index, nuevoPresenteId } = decisionCambioJugador;
+                  setDecisionCambioJugador(null);
+                  asignarJugadorMoviendoNumeros(index, nuevoPresenteId);
+                }}
+                className="w-full rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-left text-sm font-medium text-blue-800 transition hover:bg-blue-100"
+              >
+                Mover estos números a {decisionCambioJugador.nombreNuevo}
+                <span className="mt-0.5 block text-xs font-normal text-blue-700">
+                  Los números no cambian, sólo el dueño. {decisionCambioJugador.nombreAnterior} queda sin fila en este
+                  set.
+                </span>
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDecisionCambioJugador(null)}
+              className="w-full rounded-lg px-4 py-2 text-center text-sm font-medium text-slate-500 hover:text-slate-700"
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
+      </ModalBase>
+
+      <ModalBase
+        isOpen={intercambioAbierto !== null}
+        onClose={() => setIntercambioAbierto(null)}
+        title="Intercambiar con otro jugador"
+        size="sm"
+      >
+        {intercambioAbierto !== null && (
+          <div className="space-y-2 p-1">
+            <p className="text-sm text-slate-700">
+              Elegí con quién intercambiar los números de este slot. Ninguno de los dos cambia de
+              jugador — sólo se cruzan los números.
+            </p>
+            {slots.map((s, i) => {
+              if (i === intercambioAbierto || !s.presenteId) return null;
+              const presente = planilla?.presentes.find((p) => p._id === s.presenteId);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => confirmarIntercambio(intercambioAbierto, i)}
+                  className="w-full rounded-lg border border-slate-200 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                >
+                  {presente ? nombrePresente(presente) : 'Jugador'}
+                </button>
+              );
+            })}
+            {slots.every((s, i) => i === intercambioAbierto || !s.presenteId) && (
+              <p className="text-xs text-slate-500">Todavía no hay otro slot con jugador asignado.</p>
+            )}
+          </div>
+        )}
+      </ModalBase>
     </ModalBase>
   );
 };
