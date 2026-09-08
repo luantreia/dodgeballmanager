@@ -136,13 +136,13 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
 
   const abrirCaptura = useCallback(
     async (partido: PartidoTimeline, fuente: FuenteDatos) => {
-      if (fuente === 'planilla' || !partido.datos.oficial.existe) {
-        setVista({ tipo: 'planilla', partido });
-        return;
-      }
+      // En los dos casos hace falta el partido con `equipoLocal`/`equipoVisitante` populados:
+      // sin esto, el selector de ganador del set en "Mi planilla" no tiene de dónde sacar los
+      // nombres reales y cae al genérico "Local"/"Visitante".
       try {
-        setDetalle(await getPartidoDetallado(partido._id));
-        setVista({ tipo: 'captura', partido });
+        const detallado = await getPartidoDetallado(partido._id);
+        setDetalle(detallado);
+        setVista({ tipo: fuente === 'planilla' || !partido.datos.oficial.existe ? 'planilla' : 'captura', partido });
       } catch (err) {
         addToast({
           type: 'error',
@@ -313,6 +313,7 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
           partidoId={vista.partido._id}
           equipoId={equipoId}
           equipoNombre={equipoNombre}
+          partido={detalle}
           onClose={cerrarYRecargar}
           onRefresh={cargar}
         />
