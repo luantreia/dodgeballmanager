@@ -142,6 +142,22 @@ export const eliminarEstadisticaPresente = (
 };
 
 /**
+ * Intercambia los números de dos presentes en el mismo set. Si uno de los dos todavía no
+ * tenía fila, esto equivale a "mover los números al otro jugador" — sirve tanto para corregir
+ * una identidad mal puesta (el que tenía los números en realidad era el otro) como para un
+ * intercambio genuino cuando los dos ya tenían algo cargado. El lado que queda en cero se
+ * borra del lado del backend en vez de dejar una fila huérfana.
+ */
+export const intercambiarEstadisticas = (
+  planillaId: string,
+  payload: { planillaSet?: string | null; presenteA: string; presenteB: string },
+) =>
+  authFetch<{ presenteA: PlanillaEstadistica | null; presenteB: PlanillaEstadistica | null }>(
+    `${BASE}/${planillaId}/estadisticas/intercambiar`,
+    { method: 'POST', body: payload },
+  );
+
+/**
  * Upsert en lote. Omitir `planillaSet` carga los totales del partido, y solo funciona
  * si la planilla está en modo 'directa'.
  */

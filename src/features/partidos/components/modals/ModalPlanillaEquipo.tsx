@@ -348,6 +348,19 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   );
 
   /**
+   * Filas de `planilla.estadisticas` de este set que ya no corresponden a ningún slot visible.
+   * Es el rastro que dejaban los cambios de jugador ANTES de este fix (o cualquier otra causa
+   * pasada) — la limpieza automática de `limpiarFilaAnterior` sólo actúa en el momento de
+   * reasignar, así que esto es lo que permite ordenar lo que ya quedó guardado de antes.
+   */
+  const filasHuerfanasDelSet = useMemo(() => {
+    if (!planilla) return [];
+    const setId = planilla.modo === 'sets' ? setActivoId : null;
+    const idsEnSlots = new Set(slots.map((s) => s.presenteId).filter(Boolean));
+    return planilla.estadisticas.filter((e) => e.planillaSet === setId && !idsEnSlots.has(e.planillaPresente));
+  }, [planilla, setActivoId, slots]);
+
+  /**
    * Guarda UNA fila de la grilla — la clave del autoguardado. El backend ya hace upsert por
    * fila (`{planillaSet, planillaPresente}`), así que mandar un array de una sola entrada no
    * pisa las demás filas de otros jugadores, ni las que esté cargando otra persona a la vez.
@@ -460,8 +473,12 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
    * personas pueden, en teoría, asignarlo a la vez en dos slots antes de sincronizarse).
    */
   const limpiarFilaAnterior = useCallback(
-    async (presenteAnterior: string) => {
-      if (slotsRef.current.some((s) => s.presenteId === presenteAnterior)) return;
+    async (presenteAnterior: string, indexQueSeReasigna: number) => {
+      // `slotsRef.current` en este punto todavía es el array VIEJO (el `setSlots` de
+      // `asignarJugador` recién se pidió, React no lo aplicó todavía) — por eso se excluye el
+      // propio índice que se está reasignando: si no, siempre "encuentra" al jugador anterior
+      // ahí mismo y esta función nunca llega a borrar nada.
+      if (slotsRef.current.some((s, i) => i !== indexQueSeReasigna && s.presenteId === presenteAnterior)) return;
       const planillaActual = planillaRef.current;
       if (!planillaActual) return;
       const planillaSetId = planillaActual.modo === 'sets' ? setActivoIdRef.current : null;
@@ -502,7 +519,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       delete next[index];
       return next;
     });
-    if (anterior && anterior !== presenteId) void limpiarFilaAnterior(anterior);
+    if (anterior && anterior !== presenteId) void limpiarFilaAnterior(anterior, index);
     if (presenteId) marcarPendienteYGuardar(index);
   };
 
@@ -527,6 +544,22 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       accion: async () => {
         asignarJugador(index, presenteId);
       },
+    });
+  };
+
+  /**
+   * Limpieza manual de una fila huérfana ya guardada — no dispara la reasignación de ningún
+   * slot, así que no pasa por `asignarJugador`. Va con confirmación: es la misma acción
+   * destructiva de siempre, sólo que el usuario la pide directamente en vez de que ocurra sola
+   * al cambiar un jugador.
+   */
+  const solicitarLimpiarHuerfana = (presenteId: string, nombre: string): void => {
+    setConfirmacion({
+      titulo: `Quitar a ${nombre} de este set`,
+      mensaje:
+        'Ya no está en ningún slot de la grilla, pero sigue sumando en "Totales del partido". Se borra su fila de estadísticas de este set puntual; no se lo saca de la planilla.',
+      confirmLabel: 'Quitar del set',
+      accion: () => limpiarFilaAnterior(presenteId, -1),
     });
   };
 
@@ -952,6 +985,35 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
             </div>
           ) : (
             <div>
+              {filasHuerfanasDelSet.length > 0 && (
+                <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-xs font-semibold text-amber-900">
+                    Estos jugadores ya no están en ningún slot de este set, pero sus números
+                    siguen sumando en "Totales del partido":
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {filasHuerfanasDelSet.map((fila) => {
+                      const presente = planilla.presentes.find((p) => p._id === fila.planillaPresente);
+                      const nombre = presente ? nombrePresente(presente) : 'Jugador';
+                      return (
+                        <li key={fila._id} className="flex items-center justify-between gap-2 text-sm text-amber-900">
+                          <span>{nombre}</span>
+                          {editable && (
+                            <button
+                              type="button"
+                              onClick={() => solicitarLimpiarHuerfana(fila.planillaPresente, nombre)}
+                              className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-rose-600 transition hover:bg-rose-100"
+                            >
+                              Quitar del set
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
               <p className="mb-1 text-xs text-slate-500">
                 {JUGADORES_POR_SET} en cancha
                 {planilla.modo === 'sets' ? ' en este set' : ''}. Elegí quiénes jugaron y cargá sus

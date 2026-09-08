@@ -30,6 +30,8 @@ export type JugadorEstadisticasCardProps = {
   /** Autoguardado de esta fila: para que el que carga sepa si ya quedó grabado o si conviene
    * esperar/reintentar antes de irse. `undefined` es "sin ediciones todavía en esta fila". */
   estadoGuardado?: EstadoGuardadoFila;
+  /** Sólo tiene sentido si el slot ya tiene un jugador asignado — swap de números con otro slot. */
+  onIntercambiar?: () => void;
 };
 
 const ETIQUETA_ESTADO: Record<EstadoGuardadoFila, { texto: string; clase: string }> = {
