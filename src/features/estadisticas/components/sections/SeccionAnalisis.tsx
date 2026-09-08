@@ -28,60 +28,35 @@ type Vista =
   | { tipo: 'planilla'; partido: PartidoTimeline }
   | { tipo: 'captura'; partido: PartidoTimeline };
 
-/**
- * Un bloque que arranca cerrado y se abre por decisión del que mira.
- *
- * Todo lo que va debajo de las tarjetas es análisis de segundo nivel: si estuviera desplegado de
- * entrada, la pantalla abriría con tres pantallazos de tablas y el titular —qué pasó en estos
- * partidos— quedaría enterrado. El contenido se monta recién al abrir, así que las agregaciones
- * de las secciones cerradas no se calculan.
- */
-const Plegable = ({
-  titulo,
-  contador,
-  children,
-}: {
-  titulo: string;
-  contador?: string;
-  children: React.ReactNode;
-}) => {
-  const [visible, setVisible] = useState(false);
+type Pestana = 'resumen' | 'sinergias' | 'sets' | 'partidos' | 'mas';
 
-  return (
-    <section>
-      <button
-        type="button"
-        onClick={() => setVisible((v) => !v)}
-        aria-expanded={visible}
-        className="flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-left transition hover:border-slate-300"
-      >
-        <span className="text-sm font-semibold text-slate-900">
-          {titulo}
-          {contador !== undefined && <span className="ml-2 font-normal text-slate-500">{contador}</span>}
-        </span>
-        <span aria-hidden className="text-slate-400">
-          {visible ? '▲' : '▼'}
-        </span>
-      </button>
-
-      {visible && <div className="mt-3">{children}</div>}
-    </section>
-  );
-};
+const PESTANAS: Array<{ id: Pestana; label: string }> = [
+  { id: 'resumen', label: 'Resumen' },
+  { id: 'sinergias', label: 'Sinergias' },
+  { id: 'sets', label: 'Sets' },
+  { id: 'partidos', label: 'Partidos' },
+  { id: 'mas', label: 'Más' },
+];
 
 /**
- * La pantalla de análisis del DT: filtros facetados, estadísticas de lo filtrado, comparación
- * entre segmentos, y debajo los análisis que se hacen sobre el set como unidad.
+ * La pantalla de análisis del DT: un shell fijo con la pregunta, y pestañas con las respuestas.
  *
- * El orden no es casual. Los filtros están arriba porque son la pregunta; las estadísticas
- * inmediatamente debajo porque son la respuesta; los plegables van al final y arrancados
- * cerrados, porque son el detalle al que se baja cuando algo llama la atención.
+ * Sigue el patrón de `CompetenciaRankedSection` en Overtime-Organizaciones: una barra
+ * `sticky top-0` con chips que despliegan su configuración en el lugar, una fila de pestañas
+ * segmentadas debajo, y sólo el contenido de la activa. Antes esto era una columna de filtros al
+ * costado más seis bloques apilados, tres de ellos plegables. En escritorio se leía bien; en un
+ * teléfono era un scroll de varias pantallas donde para comparar el resumen con las sinergias
+ * había que recordar los números en el camino. Con pestañas, cambiar de pregunta es un toque y la
+ * posición de scroll no se pierde.
  *
  * Los dos datasets se piden una sola vez: `timeline` (un registro por partido, para filtrar y
  * listar) y `filas` (un registro por jugador y por set, para las métricas). Los filtros operan
  * sobre los partidos y las filas heredan la decisión por `partidoId` — así "lo que ves" y "lo
  * que se suma" no pueden separarse. De esas mismas filas sale `setsAnaliticos`, que reagrupa por
  * set y alimenta a las sinergias y a las condiciones del set.
+ *
+ * Sólo se monta la pestaña activa, así que las agregaciones de las otras no se calculan: entrar a
+ * la pantalla ya no enumera las combinaciones de sinergias de todos los sets del historial.
  */
 const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
   const { addToast } = useToast();
@@ -92,6 +67,8 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
   const [vista, setVista] = useState<Vista>({ tipo: 'ninguna' });
   const [detalle, setDetalle] = useState<PartidoDetallado | null>(null);
   const [segmentos, setSegmentos] = useState<Segmento[]>([]);
+  const [pestana, setPestana] = useState<Pestana>('resumen');
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
 
   const filtros = useFiltrosPartidos(partidos);
 
@@ -208,23 +185,99 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
     );
   }
 
+  const hayFiltros = filtros.hayFiltros;
+
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] lg:items-start">
-        <div className="space-y-3">
-          <PanelFiltrosPartidos filtros={filtros} totalPartidos={partidos.length} />
+    <div className="space-y-4">
+      {/*
+        Shell fijo: chips de contexto que despliegan su configuración en el lugar, y las pestañas
+        debajo. Los márgenes negativos lo llevan hasta los bordes de la pantalla para que la
+        franja fija tape todo el ancho mientras el contenido pasa por debajo; `top-0` lo pega
+        arriba, así que cambiar de pestaña o de filtro nunca obliga a volver a subir.
+      */}
+      <div className="sticky top-0 z-30 -mx-4 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur sm:-mx-6">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setFiltrosAbiertos((v) => !v)}
+            aria-expanded={filtrosAbiertos}
+            className={`flex min-h-[2.75rem] items-center gap-1.5 rounded-full px-3 text-xs font-bold transition [touch-action:manipulation] ${
+              hayFiltros
+                ? 'bg-brand-600 text-white hover:bg-brand-700'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <span aria-hidden>⚙</span>
+            {filtros.partidosFiltrados.length === partidos.length
+              ? `${partidos.length} partidos`
+              : `${filtros.partidosFiltrados.length} de ${partidos.length}`}
+            <span
+              aria-hidden
+              className={`text-[9px] transition-transform ${filtrosAbiertos ? 'rotate-180' : ''}`}
+            >
+              ▾
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={agregarSegmento}
-            className="min-h-[2.75rem] w-full rounded-lg border border-brand-300 bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700 transition [touch-action:manipulation] hover:bg-brand-100"
+            className="ml-auto min-h-[2.75rem] rounded-full border border-brand-300 bg-brand-50 px-3 text-xs font-bold text-brand-700 transition [touch-action:manipulation] hover:bg-brand-100"
           >
-            + Guardar como segmento para comparar
+            + Segmento
+            {segmentos.length > 0 && (
+              <span className="ml-1.5 tabular-nums text-brand-500">{segmentos.length}</span>
+            )}
           </button>
         </div>
 
-        <div className="space-y-6">
-          <EstadisticasFiltradas filas={filasFiltradas} descripcion={descripcionActual} />
+        {filtrosAbiertos && (
+          <div className="max-h-[60dvh] overflow-y-auto border-t border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-6">
+            <PanelFiltrosPartidos filtros={filtros} />
+          </div>
+        )}
 
+        <div className="flex gap-1 overflow-x-auto border-t border-slate-200 bg-slate-100/70 px-2 py-1.5">
+          {PESTANAS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setPestana(p.id)}
+              aria-current={pestana === p.id ? 'page' : undefined}
+              className={`min-h-[2.5rem] flex-1 rounded-md px-2 text-[11px] font-bold uppercase tracking-tight transition-colors [touch-action:manipulation] ${
+                pestana === p.id ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Qué se está mirando, en palabras. En el shell no entra —el chip sólo tiene lugar para
+          el conteo— y sin esto un segmento filtrado se confunde con el total del equipo. */}
+      <p className="text-xs text-slate-500">{descripcionActual}</p>
+
+      {pestana === 'resumen' && (
+        <EstadisticasFiltradas filas={filasFiltradas} descripcion={descripcionActual} />
+      )}
+
+      {/* Las dos preguntas que se hacen sobre el set como unidad: con quién se juega mejor, y
+          bajo qué condiciones se gana. Las dos comen de `setsAnaliticos`, que ya heredó el
+          filtrado, así que responden sobre el mismo conjunto que el resumen. */}
+      {pestana === 'sinergias' && <SeccionSinergias sets={setsAnaliticos} />}
+
+      {pestana === 'sets' && <SeccionCondicionesSet sets={setsAnaliticos} />}
+
+      {pestana === 'partidos' && (
+        <LineaTemporalPartidos
+          partidos={filtros.partidosFiltrados}
+          onAbrir={(partido) => setVista({ tipo: 'visor', partido })}
+        />
+      )}
+
+      {pestana === 'mas' && (
+        <div className="space-y-6">
           <ComparadorSegmentos
             segmentos={segmentos}
             partidos={partidos}
@@ -233,8 +286,8 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
             onLimpiar={() => setSegmentos([])}
           />
 
-          {/* El pivot ahora come de las mismas filas filtradas, así que responde sobre
-              exactamente el mismo conjunto que las tarjetas de arriba. */}
+          {/* El pivot come de las mismas filas filtradas, así que responde sobre exactamente el
+              mismo conjunto que el resumen. */}
           <AnalisisCruzado
             filas={filasFiltradas}
             onAbrirPartido={(partidoId) => {
@@ -242,26 +295,8 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
               if (partido) setVista({ tipo: 'visor', partido });
             }}
           />
-
-          {/* Las dos preguntas que se hacen sobre el set como unidad: con quién se juega mejor,
-              y bajo qué condiciones se gana. Las dos comen de `setsAnaliticos`, que ya heredó el
-              filtrado, así que responden sobre el mismo conjunto que las tarjetas de arriba. */}
-          <Plegable titulo="Sinergias entre jugadores" contador={`${setsAnaliticos.length} sets`}>
-            <SeccionSinergias sets={setsAnaliticos} />
-          </Plegable>
-
-          <Plegable titulo="Condiciones del set" contador={`${setsAnaliticos.length} sets`}>
-            <SeccionCondicionesSet sets={setsAnaliticos} />
-          </Plegable>
-
-          <Plegable titulo="Partido por partido" contador={String(filtros.partidosFiltrados.length)}>
-            <LineaTemporalPartidos
-              partidos={filtros.partidosFiltrados}
-              onAbrir={(partido) => setVista({ tipo: 'visor', partido })}
-            />
-          </Plegable>
         </div>
-      </div>
+      )}
 
       {vista.tipo === 'visor' && (
         <ModalVisorPartido

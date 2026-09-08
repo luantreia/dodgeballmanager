@@ -54,7 +54,7 @@ const Harness = () => {
   const filtros = useFiltrosPartidos(PARTIDOS);
   return (
     <>
-      <PanelFiltrosPartidos filtros={filtros} totalPartidos={PARTIDOS.length} />
+      <PanelFiltrosPartidos filtros={filtros} />
       <LineaTemporalPartidos partidos={filtros.partidosFiltrados} onAbrir={() => {}} />
     </>
   );
@@ -97,6 +97,19 @@ describe('Línea temporal con filtros', () => {
 
     expect(within(linea()).queryByText(/Riestra/)).not.toBeInTheDocument();
     expect(within(linea()).getByText(/Marvin/)).toBeInTheDocument();
-    expect(screen.getByText('1 de 2 partidos')).toBeInTheDocument();
+    // El chip queda marcado como elegido. El conteo "1 de 2" ya no vive acá: se movió al chip
+    // del shell fijo de la pantalla, que este test no monta.
+    expect(screen.getByRole('button', { name: 'Foam 1' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('ofrece limpiar todo recién cuando hay algo filtrado', () => {
+    render(<Harness />);
+    expect(screen.queryByRole('button', { name: /Limpiar todos/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foam 1' }));
+    const limpiar = screen.getByRole('button', { name: /Limpiar todos/i });
+
+    fireEvent.click(limpiar);
+    expect(screen.getByRole('button', { name: 'Foam 1' })).toHaveAttribute('aria-pressed', 'false');
   });
 });
