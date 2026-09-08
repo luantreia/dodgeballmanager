@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import SeccionTests from './SeccionTests';
 import { ToastProvider } from '../../../shared/components/Toast/ToastProvider';
 import * as testService from '../services/testService';
@@ -74,9 +74,25 @@ beforeEach(() => {
   });
 });
 
+/**
+ * El catálogo de tests dejó de estar a la vista: es configuración —se define una vez y después
+ * casi nunca— y ocupaba el lugar de los resultados, que son lo que la pantalla viene a mostrar.
+ * Ahora se despliega desde la rueda del encabezado.
+ */
+const abrirCatalogo = async () => {
+  fireEvent.click(await screen.findByRole('button', { name: /Qué mide tu equipo/ }));
+};
+
 describe('SeccionTests', () => {
+  it('el catálogo arranca plegado detrás de la rueda', async () => {
+    montar();
+    await screen.findByRole('button', { name: /Qué mide tu equipo/ });
+    expect(screen.queryByRole('region', { name: 'Catálogo de tests' })).not.toBeInTheDocument();
+  });
+
   it('muestra el catálogo con la dirección de mejora de cada test', async () => {
     montar();
+    await abrirCatalogo();
     // Acotado al catálogo por su landmark: "Más bajo es mejor" también es una <option> del
     // formulario de alta, y el nombre del test aparece en tres lugares de la pantalla.
     const catalogo = await screen.findByRole('region', { name: 'Catálogo de tests' });
@@ -105,6 +121,7 @@ describe('SeccionTests', () => {
 
   it('ofrece los tests sugeridos que todavía no están en el catálogo', async () => {
     montar();
+    await abrirCatalogo();
     // Se espera por el botón sugerido y no por el nombre del test: "Sprint 10 m" aparece en el
     // catálogo, en el <option> del selector y en el título de evolución, así que como ancla
     // es ambiguo.

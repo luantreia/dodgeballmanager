@@ -62,7 +62,7 @@ describe('MobileTabBar', () => {
 
     fireEvent.click(mas);
     expect(mas).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('link', { name: /Competencias/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Perfil/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('link', { name: /Entrenamientos/ }));
     expect(mas).toHaveAttribute('aria-expanded', 'false');
@@ -72,13 +72,9 @@ describe('MobileTabBar', () => {
     mockPendientes = 3;
     montar();
 
-    // Un punto en la pestaña: notificaciones vive adentro del panel, así que sin esto un
-    // pendiente nuevo no se vería hasta abrirlo.
+    // Un punto en la pestaña. Los pendientes ya no son un destino del menú —viven arriba del
+    // dashboard—, así que esta marca es lo único que avisa desde la barra que hay algo esperando.
     expect(screen.getByLabelText('3 solicitudes pendientes')).toBeInTheDocument();
-
-    // El conteo exacto está adentro, al lado de la sección.
-    fireEvent.click(screen.getByRole('button', { name: /Más/ }));
-    expect(screen.getByRole('link', { name: /Notificaciones 3/ })).toBeInTheDocument();
   });
 
   it('cerrar sesión desde el panel desloguea y manda al login', () => {

@@ -45,6 +45,7 @@ const SeccionTests = ({ equipoId }: Props) => {
   const [evolucion, setEvolucion] = useState<EvolucionJugador[]>([]);
   const [plantel, setPlantel] = useState<ResumenJugador[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [catalogoAbierto, setCatalogoAbierto] = useState(false);
 
   const [tipoElegido, setTipoElegido] = useState('');
   const [fecha, setFecha] = useState(hoyISO);
@@ -203,7 +204,30 @@ const SeccionTests = ({ equipoId }: Props) => {
 
   return (
     <div className="space-y-8">
-      {/* ---------- catálogo ---------- */}
+      {/*
+        El catálogo es configuración, no contenido: definir qué se mide se hace una vez y después
+        casi nunca, mientras que los resultados se miran siempre. Estaba arriba de todo, ocupando
+        el lugar de lo que la pantalla viene a mostrar, así que se pliega detrás de una rueda.
+
+        Rueda y no «⋯»: la distinción que se usa en toda la app es ⚙ para lo que cambia cómo
+        funciona la sección y ⋯ para acciones sobre un ítem. Mezclarlas hace que no se encuentre
+        ninguna de las dos.
+      */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setCatalogoAbierto((v) => !v)}
+          aria-expanded={catalogoAbierto}
+          className="flex min-h-[2.75rem] items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition [touch-action:manipulation] hover:border-slate-300 hover:text-slate-900"
+        >
+          {/* Sin chevron: la etiqueta ya dice en qué estado está, y un triángulo más en una
+              pantalla donde ▲ y ▼ significan «mejoró» y «empeoró» sólo agrega ruido. */}
+          <span aria-hidden>⚙</span>
+          {catalogoAbierto ? 'Cerrar catálogo' : 'Qué mide tu equipo'}
+        </button>
+      </div>
+
+      {catalogoAbierto && (
       <section aria-label="Catálogo de tests" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
         <header className="mb-3">
           <h2 className="text-base font-semibold text-slate-900">Qué mide tu equipo</h2>
@@ -295,6 +319,7 @@ const SeccionTests = ({ equipoId }: Props) => {
           </button>
         </form>
       </section>
+      )}
 
       {/* ---------- carga de una jornada ---------- */}
       {tipos.length > 0 && (

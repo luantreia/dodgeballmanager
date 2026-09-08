@@ -7,10 +7,21 @@ import InvitarJugadorSection from '../components/InvitarJugadorSection';
 import CrearJugadorSection from '../components/CrearJugadorSection';
 import SolicitudesPendientesSection from '../components/SolicitudesPendientesSection';
 import ModalBase from '../../../shared/components/ModalBase/ModalBase';
-import JugadoresListSection from '../components/JugadoresListSection';
-import SeccionRatings from '../components/SeccionRatings';
+import JugadoresListSection from './JugadoresListSection';
+import SeccionRatings from './SeccionRatings';
 
-const JugadoresPage = () => {
+/**
+ * El plantel del equipo: solicitudes pendientes, contratos vigentes y ratings.
+ *
+ * Era la página `/jugadores`, con su propio título «Gestión de jugadores». Se fusionó como
+ * pestaña dentro de Equipo: ningún DT distingue «gestión del equipo» de «gestión de jugadores»,
+ * es todo su gente, y dos destinos de navegación para lo mismo obligaban a recordar en cuál
+ * estaba cada cosa.
+ *
+ * Invitar y crear jugador salieron del cuerpo de la página a un modal. Eran dos formularios
+ * completos ARRIBA del plantel: lo que hacés cada tanto tapando lo que mirás siempre.
+ */
+const SeccionPlantel = () => {
   const { addToast } = useToast();
   const { equipoSeleccionado } = useEquipo();
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
@@ -20,6 +31,7 @@ const JugadoresPage = () => {
   const [contratosNoActivos, setContratosNoActivos] = useState<ContratoJugadorResumen[]>([]);
   const [contratosLoading, setContratosLoading] = useState(false);
   const [contratosError, setContratosError] = useState<string | null>(null);
+  const [agregarAbierto, setAgregarAbierto] = useState(false);
 
   useEffect(() => {
     const equipoId = equipoSeleccionado?.id;
@@ -88,33 +100,25 @@ const JugadoresPage = () => {
     setContratosError(null);
   };
 
-  if (!equipoSeleccionado) {
-    return (
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center">
-        <h1 className="text-xl font-semibold text-slate-900">Seleccioná un equipo</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Necesitamos saber qué equipo gestionar para mostrar sus jugadores.
-        </p>
-      </div>
-    );
-  }
+  if (!equipoSeleccionado) return null;
 
   return (
-    <div className="space-y-8">
-      <header className="flex-1">
-        <h1 className="text-2xl font-semibold text-slate-900">Gestión de jugadores</h1>
+    <div className="space-y-6">
+      {/* Las solicitudes van primero: son lo único de esta pantalla que espera una decisión. */}
+      <SolicitudesPendientesSection equipoId={equipoSeleccionado.id} onRefresh={refreshData} />
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-slate-500">
-          Edita contratos activos, invita jugadores y gestiona solicitudes.
+          {jugadores.length} {jugadores.length === 1 ? 'jugador con contrato vigente' : 'jugadores con contrato vigente'}
         </p>
-      </header>
-
-      {equipoSeleccionado ? (
-        <SolicitudesPendientesSection equipoId={equipoSeleccionado.id} onRefresh={refreshData} />
-      ) : null}
-
-      <InvitarJugadorSection equipoId={equipoSeleccionado.id} onSuccess={refreshData} />
-
-      <CrearJugadorSection equipoId={equipoSeleccionado.id} onSuccess={refreshData} />
+        <button
+          type="button"
+          onClick={() => setAgregarAbierto(true)}
+          className="min-h-[2.75rem] rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm transition [touch-action:manipulation] hover:bg-brand-700"
+        >
+          + Agregar jugador
+        </button>
+      </div>
 
       {error ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
@@ -134,6 +138,33 @@ const JugadoresPage = () => {
       {/* Debajo del plantel y no arriba: el rating es contexto sobre los jugadores que ya
           conocés, no la razon por la que entras a esta pantalla. */}
       <SeccionRatings equipoId={equipoSeleccionado.id} />
+
+      {agregarAbierto ? (
+        <ModalBase
+          isOpen
+          onClose={() => setAgregarAbierto(false)}
+          title="Agregar jugador"
+          subtitle="Invitá a alguien que ya tiene cuenta, o creá la ficha de un jugador que todavía no la tiene."
+          size="lg"
+        >
+          <div className="space-y-6 py-2">
+            <InvitarJugadorSection
+              equipoId={equipoSeleccionado.id}
+              onSuccess={() => {
+                void refreshData();
+                setAgregarAbierto(false);
+              }}
+            />
+            <CrearJugadorSection
+              equipoId={equipoSeleccionado.id}
+              onSuccess={() => {
+                void refreshData();
+                setAgregarAbierto(false);
+              }}
+            />
+          </div>
+        </ModalBase>
+      ) : null}
 
       {showContratosModal ? (
         <ModalBase isOpen onClose={handleCloseContratosModal} title="Contratos vencidos y bajas" size="xl">
@@ -183,4 +214,4 @@ const JugadoresPage = () => {
   );
 };
 
-export default JugadoresPage;
+export default SeccionPlantel;

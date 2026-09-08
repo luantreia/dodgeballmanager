@@ -7,8 +7,9 @@ import { getPartidos } from '../../partidos/services/partidoService';
 import { SeccionTop5estadisticasDirectas } from '../../estadisticas/components/sections/SeccionTop5estadisticasDirectas';
 import type { Partido } from '../../../shared/utils/types/types';
 import { formatNumber } from '../../../shared/utils/formatNumber';
-import { Link } from 'react-router-dom';
+
 import { getSolicitudesEdicion } from '../../../shared/features/solicitudes';
+import PanelPendientes from '../../../shared/features/notificaciones/components/PanelPendientes';
 import { getResumenOficialEquipo, type ResumenOficialEquipo } from '../../estadisticas/services/estadisticasService';
 
 
@@ -143,7 +144,7 @@ const DashboardPage = () => {
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-slate-900">Hola, {equipoSeleccionado.nombre}</h1>
         <p className="text-sm text-slate-500">
-          Gestión rápida del equipo: próximos partidos, notificaciones y rendimiento actual.
+          Lo que necesita tu atención hoy, y cómo viene el equipo.
         </p>
       </header>
 
@@ -151,20 +152,29 @@ const DashboardPage = () => {
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
       ) : null}
 
+      {/*
+        Las solicitudes pendientes van arriba de todo y sólo cuando las hay. Antes eran una
+        tarjeta con un número y un enlace a otra página: una lista de aprobaciones que esperan una
+        decisión no es un destino de navegación, es literalmente la respuesta a «qué necesita de
+        mí». Y la misma información vivía en tres lugares —esta tarjeta, la campanita y la página
+        de Notificaciones— sin que ninguno la resolviera.
+      */}
+      {notificacionesPendientes > 0 ? (
+        <section className="rounded-2xl border border-brand-200 bg-brand-50/60 p-4">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-brand-800">
+            Te esperan {notificacionesPendientes}{' '}
+            {notificacionesPendientes === 1 ? 'solicitud' : 'solicitudes'}
+          </h2>
+          <div className="mt-3">
+            <PanelPendientes />
+          </div>
+        </section>
+      ) : null}
+
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {statsCards.map((card) => (
           <EstadisticaCard key={card.titulo} {...card} />
         ))}
-        <EstadisticaCard
-          titulo="Notificaciones"
-          valor={notificacionesPendientes}
-          descripcion="Solicitudes pendientes para el equipo."
-        />
-        <div className="flex items-center">
-          <Link to="/notificaciones" className="ml-auto text-sm font-medium text-brand-700 hover:underline">
-            Ver notificaciones →
-          </Link>
-        </div>
       </section>
 
         <div className="flex flex-col gap-4 ">

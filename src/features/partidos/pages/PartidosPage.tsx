@@ -3,6 +3,7 @@ import PartidoCard from '../../../shared/components/PartidoCard/PartidoCard';
 import BarraFiltros from '../../../shared/components/BarraFiltros/BarraFiltros';
 import MenuAcciones from '../../../shared/components/MenuAcciones/MenuAcciones';
 import EstadoVacio from '../../../shared/components/EstadoVacio/EstadoVacio';
+import SeccionCompetencias from '../../competencias/components/SeccionCompetencias';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getPartido, getPartidos, getTemporadasByCompetencia, getFasesByTemporada } from '../services/partidoService';
 import type { Partido } from '../../../shared/utils/types/types';
@@ -12,7 +13,7 @@ import { ModalCrearPartido } from '../components/modals/ModalCrearPartidoAmistos
 import ModalAlineacionPartido from '../components/modals/ModalAlineacionPartido';
 import ModalInformacionPartido from '../components/modals/ModalInformacionPartido';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
-import { AdjustmentsHorizontalIcon, PencilSquareIcon, EnvelopeIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { AdjustmentsHorizontalIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { getParticipaciones } from '../../competencias/services/equipoCompetenciaService';
 
 type FiltroTipoPartido = 'todos' | 'competencia' | 'amistoso';
@@ -24,6 +25,7 @@ const PartidosPage = () => {
   const [proximos, setProximos] = useState<Partido[]>([]);
   const [recientes, setRecientes] = useState<Partido[]>([]);
   const [pasadosSinCerrar, setPasadosSinCerrar] = useState<Partido[]>([]);
+  const [pestana, setPestana] = useState<'agenda' | 'competencias'>('agenda');
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipoPartido>('todos');
   const [filtroCompetencia, setFiltroCompetencia] = useState('');
   const [filtroTemporada, setFiltroTemporada] = useState('');
@@ -68,18 +70,6 @@ const PartidosPage = () => {
 
     return partes.length > 0 ? partes.join(' · ') : 'Sólo competencia';
   }, [hayFiltros, filtroTipo, filtroCompetencia, filtroTemporada, filtroFase, competencias, temporadas, fases]);
-
-  /**
-   * Las acciones de una tarjeta: una primaria visible y el resto en «⋯».
-   *
-   * Antes cada tarjeta mostraba los cuatro botones —Datos, Solicitar edición, Alineación,
-   * Gestionar— y con cinco partidos en pantalla eran veinte botones compitiendo entre sí. El
-   * problema no era sólo el ruido: ninguno decía qué corresponde hacer ahora.
-   *
-   * Cuál es la primaria depende del estado del partido, así que la tarjeta pasa de listar lo
-   * posible a sugerir lo que sigue. Antes de jugar un amistoso, la alineación; con el partido en
-   * curso o terminado, la carga de estadísticas.
-   */
 
   const refreshPartidos = useCallback(async () => {
     const equipoId = equipoSeleccionado?.id;
@@ -274,7 +264,18 @@ const PartidosPage = () => {
 
   const esPartidoCompetencia = (partido: Partido) => Boolean(partido.competencia?.id);
 
-  const accionesDe = useCallback(
+  /**
+   * Las acciones de una tarjeta: una primaria visible y el resto en «⋯».
+   *
+   * Antes cada tarjeta mostraba los cuatro botones —Datos, Solicitar edición, Alineación,
+   * Gestionar— y con cinco partidos en pantalla eran veinte botones compitiendo entre sí. El
+   * problema no era sólo el ruido: ninguno decía qué corresponde hacer ahora.
+   *
+   * Cuál es la primaria depende del estado del partido, así que la tarjeta pasa de listar lo
+   * posible a sugerir lo que sigue. Antes de jugar un amistoso, la alineación; con el partido en
+   * curso o terminado, la carga de estadísticas.
+   */
+  const accionesDe =
     (partido: Partido) => {
       const esCompetencia = esPartidoCompetencia(partido);
       const estado = partido.estado ?? 'programado';
@@ -331,9 +332,7 @@ const PartidosPage = () => {
           <MenuAcciones acciones={secundarias} etiqueta={`Más acciones del partido contra ${rival}`} />
         </>
       );
-    },
-    [handleAbrirInformacion, handleAbrirSolicitud, handleAbrirAlineacion, handleSeleccionar],
-  );
+  };
 
   // onSaved no-op: actualizará vista dentro del modal
 
@@ -354,6 +353,29 @@ const PartidosPage = () => {
         <h1 className="text-2xl font-semibold text-slate-900">Partidos</h1>
 
         {/*
+          Competencias dejó de ser un destino del menú y pasó a ser una pestaña de acá. A un DT
+          una competencia le importa como el contenedor de sus partidos —cuándo juega, contra
+          quién, en qué fase—, no como una entidad que se visita por sí sola; la página era casi
+          sólo lectura más «solicitar inscripción».
+        */}
+        <div className="flex gap-1 rounded-lg bg-slate-100/70 p-1" role="tablist">
+          {(['agenda', 'competencias'] as const).map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={pestana === id}
+              onClick={() => setPestana(id)}
+              className={`min-h-[2.5rem] flex-1 rounded-md px-2 text-[11px] font-bold uppercase tracking-tight transition-colors [touch-action:manipulation] ${
+                pestana === id ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'
+              }`}
+            >
+              {id === 'agenda' ? 'Agenda' : 'Competencias'}
+            </button>
+          ))}
+        </div>
+
+        {/*
           Los filtros van plegados detrás del chip. Antes eran cuatro `select` que en un teléfono
           se apilaban en ~280px antes del primer partido, y tres de los cuatro estaban
           deshabilitados salvo que el tipo fuera «competencia»: media pantalla de controles que en
@@ -363,6 +385,7 @@ const PartidosPage = () => {
           control deshabilitado obliga a descubrir por qué lo está; uno ausente no genera la
           pregunta.
         */}
+        {pestana === 'agenda' && (
         <BarraFiltros
           resumen={resumenFiltros}
           activo={hayFiltros}
@@ -464,6 +487,7 @@ const PartidosPage = () => {
             )}
           </div>
         </BarraFiltros>
+        )}
       </header>
 
       {modalAdminAbierto && partidoAdminId ? (
@@ -519,6 +543,10 @@ const PartidosPage = () => {
         onClose={handleCerrarSolicitud}
       />
 
+      {pestana === 'competencias' && <SeccionCompetencias />}
+
+      {pestana === 'agenda' && (
+      <>
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <header className="flex items-center justify-between">
@@ -630,6 +658,8 @@ const PartidosPage = () => {
           </p>
         )}
       </section>
+      </>
+      )}
       
       <ModalCrearPartido
         isOpen={showCrearModal}

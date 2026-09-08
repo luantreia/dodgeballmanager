@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import EquipoCard from '../../../shared/components/EquipoCard/EquipoCard';
+import SeccionPlantel from '../../jugadores/components/SeccionPlantel';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import {
   getRolePresetPermissions,
@@ -23,7 +24,21 @@ import ModalGestionAdministradoresEntidad from '../../../shared/components/modal
 import ConfirmModal from '../../../shared/components/ConfirmModal/ConfirmModal';
 import { agregarAdminEquipo, quitarAdminEquipo, getAdminsEquipo, getUsuarioById } from '../../auth/services/usersService';
 
+type PestanaEquipo = 'plantel' | 'staff' | 'datos';
+
+/**
+ * Plantel primero: es lo que el DT viene a ver. El staff se toca cuando entra alguien nuevo y
+ * los datos del club, casi nunca — pero ninguno de los dos merece ser un destino aparte del
+ * menú, que es lo que eran.
+ */
+const PESTANAS: Array<{ id: PestanaEquipo; label: string }> = [
+  { id: 'plantel', label: 'Plantel' },
+  { id: 'staff', label: 'Staff' },
+  { id: 'datos', label: 'Datos' },
+];
+
 const EquipoPage = () => {
+  const [pestana, setPestana] = useState<PestanaEquipo>('plantel');
   const { addToast } = useToast();
   const { equipoSeleccionado, recargarEquipos } = useEquipo();
   const [detalleEquipo, setDetalleEquipo] = useState<Equipo | null>(null);
@@ -429,18 +444,40 @@ const EquipoPage = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Gestión del equipo</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Actualizá la información general, el staff y los datos visibles para tus jugadores.
-        </p>
+        <h1 className="text-2xl font-semibold text-slate-900">Equipo</h1>
+        <p className="mt-1 text-sm text-slate-500">Tu plantel, tu staff y los datos del club.</p>
       </header>
 
       {detalleEquipo ? <EquipoCard equipo={detalleEquipo} /> : null}
 
-      {/* Invitaciones movidas a JugadoresPage */}
+      {/*
+        Tres pestañas en vez de dos destinos de navegación. Antes esto era «Gestión del equipo» y
+        «Gestión de jugadores» en el menú: dos páginas cuyo nombre no le dice a nadie qué hay en
+        cada una, porque para un DT es todo su gente. Se monta sólo la activa, así que entrar a
+        ver el plantel ya no pide también los miembros y los administradores.
+      */}
+      <div className="flex gap-1 rounded-lg bg-slate-100/70 p-1" role="tablist">
+        {PESTANAS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            role="tab"
+            aria-selected={pestana === p.id}
+            onClick={() => setPestana(p.id)}
+            className={`min-h-[2.5rem] flex-1 rounded-md px-2 text-[11px] font-bold uppercase tracking-tight transition-colors [touch-action:manipulation] ${
+              pestana === p.id ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
 
+      {pestana === 'plantel' && <SeccionPlantel />}
+
+      {pestana === 'datos' && (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
         <h2 className="text-lg font-semibold text-slate-900">Detalles del equipo</h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -588,7 +625,10 @@ const EquipoPage = () => {
           </div>
         </form>
       </section>
+      )}
 
+      {pestana === 'staff' && (
+      <>
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">Administradores</h3>
@@ -808,6 +848,8 @@ const EquipoPage = () => {
           ) : null}
         </div>
       </section>
+      </>
+      )}
 
       {loading ? <p className="text-sm text-slate-500">Actualizando información…</p> : null}
 

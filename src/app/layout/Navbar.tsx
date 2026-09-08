@@ -8,12 +8,9 @@ import { usePendientesDelEquipo } from '../../shared/features/solicitudes/hooks/
 const links = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/equipo', label: 'Equipo' },
-  { to: '/jugadores', label: 'Jugadores' },
-  { to: '/competencias', label: 'Competencias' },
   { to: '/partidos', label: 'Partidos' },
   { to: '/entrenamientos', label: 'Entrenamientos' },
   { to: '/estadisticas', label: 'Estadísticas' },
-  { to: '/notificaciones', label: 'Notificaciones' },
   { to: '/perfil', label: 'Perfil' },
 ];
 
@@ -40,11 +37,15 @@ export default function Navbar() {
   return (
     <header className="border-b border-slate-200 bg-white/70 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 font-bold text-white shadow shadow-brand-500/40">
+        {/* La marca se achica en mobile a favor del selector de equipo. Con dos equipos a cargo,
+            saber en cuál estás parado es el dato más importante de la pantalla —es el filtro
+            implícito de todo lo demás— y competía de igual a igual con un logo que no cambia
+            nunca. */}
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-sm font-bold text-white shadow shadow-brand-500/40 sm:h-10 sm:w-10 sm:text-base">
             DT
           </span>
-          <div className="hidden sm:block">
+          <div className="hidden lg:block">
             <p className="text-sm font-semibold text-slate-900">Overtime DT</p>
             <p className="text-xs text-slate-500">Panel de entrenadores</p>
           </div>

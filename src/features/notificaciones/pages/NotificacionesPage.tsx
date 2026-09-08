@@ -1,30 +1,17 @@
-import React from 'react';
-import { NotificacionesPanel } from '../../../shared/features/notificaciones/components/NotificacionesPanel';
+import PanelPendientes from '../../../shared/features/notificaciones/components/PanelPendientes';
 
+/**
+ * Los pendientes en pantalla completa.
+ *
+ * Ya no está en el menú: los pendientes aparecen arriba del dashboard, que es donde se miran. La
+ * ruta sigue viva porque es a donde lleva la campanita y porque puede estar guardada en un
+ * favorito.
+ */
 export default function NotificacionesPage() {
   return (
-    <NotificacionesPanel
+    <PanelPendientes
       title="Notificaciones"
       description="Gestiona las solicitudes de edición de partidos y estadísticas"
-      allowedTipos={[
-        'resultadoPartido',
-        'editarPartidoCompetencia',
-        'estadisticasJugadorSet',
-        'estadisticas-set-propuesta',
-        'estadisticas-partido-propuesta',
-        'estadisticasJugadorPartido',
-        'estadisticasEquipoPartido',
-        'estadisticasEquipoSet',
-        'jugador-equipo-crear',
-        'jugador-equipo-editar',
-        'jugador-equipo-eliminar',
-        'participacion-temporada-crear',
-      ]}
-      entityType="none"
-      scope="aprobables"
-      canApprove={true}
-      showCategoriaFilter={true}
-      showEntidadFilter={false}
     />
   );
 }

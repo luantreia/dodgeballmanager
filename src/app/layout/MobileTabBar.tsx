@@ -7,8 +7,11 @@ import { usePendientesDelEquipo } from '../../shared/features/solicitudes/hooks/
  * Las cuatro secciones del día a día del DT, más un panel con el resto.
  *
  * Son las que se abren estando en el club o al costado de la cancha: ver cómo viene la semana,
- * entrar a un partido a cargar estadísticas, mirar el plantel y analizar. Jugadores,
- * competencias, entrenamientos, avisos y perfil viven en «Más»: se usan sentado.
+ * entrar a un partido a cargar estadísticas, mirar el plantel y analizar.
+ *
+ * Quedaron cuatro y no nueve porque varias secciones dejaron de ser destinos: el plantel es una
+ * pestaña de Equipo, las competencias una pestaña de Partidos, y los pendientes viven arriba del
+ * dashboard. Entrenamientos y perfil van en «Más»: se usan sentado.
  */
 const TABS_PRINCIPALES = [
   { to: '/dashboard', label: 'Inicio', icon: '🏠' },
@@ -18,10 +21,7 @@ const TABS_PRINCIPALES = [
 ];
 
 const ENLACES_MAS = [
-  { to: '/jugadores', label: 'Jugadores', icon: '👥' },
-  { to: '/competencias', label: 'Competencias', icon: '🏆' },
   { to: '/entrenamientos', label: 'Entrenamientos', icon: '🏃' },
-  { to: '/notificaciones', label: 'Notificaciones', icon: '🔔' },
   { to: '/perfil', label: 'Perfil', icon: '👤' },
 ];
 

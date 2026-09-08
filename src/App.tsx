@@ -17,7 +17,6 @@ import { ErrorBoundary } from './shared/components/ui';
  */
 const DashboardPage = lazy(() => import('./features/dashboard/pages/DashboardPage'));
 const EquipoPage = lazy(() => import('./features/equipo/pages/EquipoPage'));
-const JugadoresPage = lazy(() => import('./features/jugadores/pages/JugadoresPage'));
 const CompetenciasPage = lazy(() => import('./features/competencias/pages/CompetenciasPage'));
 const PartidosPage = lazy(() => import('./features/partidos/pages/PartidosPage'));
 const EntrenamientosPage = lazy(() => import('./features/entrenamientos/pages/EntrenamientosPage'));
@@ -92,16 +91,9 @@ const App = () => {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/jugadores"
-        element={
-          <ProtectedRoute>
-            <RequireEquipo>
-              <JugadoresPage />
-            </RequireEquipo>
-          </ProtectedRoute>
-        }
-      />
+      {/* El plantel es ahora una pestaña de Equipo. La ruta sobrevive como redirección porque
+          puede estar guardada en un favorito o compartida en un chat. */}
+      <Route path="/jugadores" element={<Navigate to="/equipo" replace />} />
       <Route
         path="/competencias"
         element={
