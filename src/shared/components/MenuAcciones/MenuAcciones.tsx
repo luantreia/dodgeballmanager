@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export type AccionMenu = {
   label: string;
@@ -21,31 +22,62 @@ type Props = {
  * llamador es dejar UNA acción primaria visible —la que corresponde al estado del ítem— y mandar
  * el resto acá.
  *
+ * El menú se porta a `document.body` en vez de vivir `absolute` dentro del botón: la tarjeta que
+ * lo contiene tiene `overflow-hidden` (para las esquinas redondeadas) y eso recortaba el
+ * desplegable casi por completo. Portado afuera, se posiciona con las coordenadas del botón y ya
+ * no depende del recorte de ningún ancestro.
+ *
  * Ojo con no convertirlo en un cajón de sastre: «⋯» es para acciones sobre este ítem. La
  * configuración de una sección va en su propia rueda, en el encabezado de la sección, porque
  * mezclarlas hace que no se encuentre ninguna de las dos.
  */
 const MenuAcciones = ({ acciones, etiqueta }: Props) => {
   const [abierto, setAbierto] = useState(false);
-  const contenedor = useRef<HTMLDivElement | null>(null);
+  const [posicion, setPosicion] = useState({ top: 0, left: 0 });
+  const boton = useRef<HTMLButtonElement | null>(null);
+  const menu = useRef<HTMLDivElement | null>(null);
+
+  const recalcularPosicion = () => {
+    const rect = boton.current?.getBoundingClientRect();
+    if (!rect) return;
+    // Ancla a la derecha del botón, como el `absolute right-0` original: el menú crece hacia la
+    // izquierda desde el borde derecho del botón.
+    setPosicion({ top: rect.bottom + 4, left: rect.right });
+  };
+
+  useLayoutEffect(() => {
+    if (!abierto) return;
+    recalcularPosicion();
+  }, [abierto]);
 
   useEffect(() => {
     if (!abierto) return;
 
     // Un click en cualquier otro lado cierra. Se escucha en captura para que el menú se cierre
-    // aunque el click caiga sobre algo que detiene la propagación.
+    // aunque el click caiga sobre algo que detiene la propagación. Se chequean ambos refs porque
+    // el menú vive en un portal, fuera del DOM del botón.
     const alClick = (e: MouseEvent) => {
-      if (!contenedor.current?.contains(e.target as Node)) setAbierto(false);
+      const objetivo = e.target as Node;
+      if (boton.current?.contains(objetivo)) return;
+      if (menu.current?.contains(objetivo)) return;
+      setAbierto(false);
     };
     const alTeclado = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setAbierto(false);
     };
+    // Reposiciona si la página scrollea o cambia de tamaño mientras el menú está abierto, en vez
+    // de dejarlo flotando lejos del botón que lo abrió.
+    const alScrollOResize = () => recalcularPosicion();
 
     document.addEventListener('click', alClick, true);
     document.addEventListener('keydown', alTeclado);
+    window.addEventListener('scroll', alScrollOResize, true);
+    window.addEventListener('resize', alScrollOResize);
     return () => {
       document.removeEventListener('click', alClick, true);
       document.removeEventListener('keydown', alTeclado);
+      window.removeEventListener('scroll', alScrollOResize, true);
+      window.removeEventListener('resize', alScrollOResize);
     };
   }, [abierto]);
 
@@ -57,8 +89,9 @@ const MenuAcciones = ({ acciones, etiqueta }: Props) => {
   ];
 
   return (
-    <div className="relative" ref={contenedor}>
+    <div className="relative">
       <button
+        ref={boton}
         type="button"
         onClick={(e) => {
           // La tarjeta que lo contiene puede ser clickeable entera.
@@ -73,32 +106,36 @@ const MenuAcciones = ({ acciones, etiqueta }: Props) => {
         <span aria-hidden className="text-lg leading-none">⋯</span>
       </button>
 
-      {abierto && (
-        <div
-          role="menu"
-          className="absolute right-0 z-20 mt-1 min-w-[12rem] rounded-xl border border-slate-200 bg-white p-1 shadow-lg"
-        >
-          {ordenadas.map((accion) => (
-            <button
-              key={accion.label}
-              type="button"
-              role="menuitem"
-              onClick={(e) => {
-                e.stopPropagation();
-                setAbierto(false);
-                accion.onSelect();
-              }}
-              className={`flex min-h-[2.75rem] w-full items-center rounded-lg px-3 text-left text-sm font-medium transition [touch-action:manipulation] ${
-                accion.tono === 'cuidado'
-                  ? 'text-amber-700 hover:bg-amber-50'
-                  : 'text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              {accion.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {abierto &&
+        createPortal(
+          <div
+            ref={menu}
+            role="menu"
+            style={{ top: posicion.top, left: posicion.left, transform: 'translateX(-100%)' }}
+            className="fixed z-50 min-w-[12rem] rounded-xl border border-slate-200 bg-white p-1 shadow-lg"
+          >
+            {ordenadas.map((accion) => (
+              <button
+                key={accion.label}
+                type="button"
+                role="menuitem"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAbierto(false);
+                  accion.onSelect();
+                }}
+                className={`flex min-h-[2.75rem] w-full items-center rounded-lg px-3 text-left text-sm font-medium transition [touch-action:manipulation] ${
+                  accion.tono === 'cuidado'
+                    ? 'text-amber-700 hover:bg-amber-50'
+                    : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {accion.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };
