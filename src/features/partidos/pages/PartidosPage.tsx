@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import PartidoCard from '../../../shared/components/PartidoCard/PartidoCard';
+import BarraFiltros from '../../../shared/components/BarraFiltros/BarraFiltros';
+import MenuAcciones from '../../../shared/components/MenuAcciones/MenuAcciones';
+import EstadoVacio from '../../../shared/components/EstadoVacio/EstadoVacio';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getPartido, getPartidos, getTemporadasByCompetencia, getFasesByTemporada } from '../services/partidoService';
 import type { Partido } from '../../../shared/utils/types/types';
@@ -38,6 +41,45 @@ const PartidosPage = () => {
   const [partidoInfoId, setPartidoInfoId] = useState<string | null>(null);
   const [solicitudModalAbierto, setSolicitudModalAbierto] = useState(false);
   const [partidoSolicitudId, setPartidoSolicitudId] = useState<string | null>(null);
+
+  const hayFiltros =
+    filtroTipo !== 'todos' || Boolean(filtroCompetencia || filtroTemporada || filtroFase);
+
+  const limpiarFiltros = useCallback(() => {
+    setFiltroTipo('todos');
+    setFiltroCompetencia('');
+    setFiltroTemporada('');
+    setFiltroFase('');
+  }, []);
+
+  /**
+   * Lo que dice el chip cuando está cerrado. Sin esto, alguien deja un filtro puesto, lo olvida,
+   * ve tres partidos y cree que se perdieron los demás.
+   */
+  const resumenFiltros = useMemo(() => {
+    if (!hayFiltros) return 'Todos los partidos';
+    if (filtroTipo === 'amistoso') return 'Sólo amistosos';
+
+    const partes = [
+      competencias.find((c) => c.id === filtroCompetencia)?.nombre,
+      temporadas.find((t) => t.id === filtroTemporada)?.nombre,
+      fases.find((f) => f.id === filtroFase)?.nombre,
+    ].filter(Boolean);
+
+    return partes.length > 0 ? partes.join(' · ') : 'Sólo competencia';
+  }, [hayFiltros, filtroTipo, filtroCompetencia, filtroTemporada, filtroFase, competencias, temporadas, fases]);
+
+  /**
+   * Las acciones de una tarjeta: una primaria visible y el resto en «⋯».
+   *
+   * Antes cada tarjeta mostraba los cuatro botones —Datos, Solicitar edición, Alineación,
+   * Gestionar— y con cinco partidos en pantalla eran veinte botones compitiendo entre sí. El
+   * problema no era sólo el ruido: ninguno decía qué corresponde hacer ahora.
+   *
+   * Cuál es la primaria depende del estado del partido, así que la tarjeta pasa de listar lo
+   * posible a sugerir lo que sigue. Antes de jugar un amistoso, la alineación; con el partido en
+   * curso o terminado, la carga de estadísticas.
+   */
 
   const refreshPartidos = useCallback(async () => {
     const equipoId = equipoSeleccionado?.id;
@@ -232,6 +274,67 @@ const PartidosPage = () => {
 
   const esPartidoCompetencia = (partido: Partido) => Boolean(partido.competencia?.id);
 
+  const accionesDe = useCallback(
+    (partido: Partido) => {
+      const esCompetencia = esPartidoCompetencia(partido);
+      const estado = partido.estado ?? 'programado';
+      const rival = partido.equipoVisitante?.nombre ?? partido.rival ?? 'el rival';
+
+      const alineacionDisponible = !esCompetencia;
+      const primariaEsAlineacion = estado === 'programado' && alineacionDisponible;
+
+      const etiquetaGestionar =
+        estado === 'en_juego'
+          ? 'Cargar estadísticas'
+          : estado === 'finalizado'
+          ? 'Estadísticas'
+          : 'Gestionar';
+
+      const secundarias = [
+        { label: 'Datos del partido', onSelect: () => handleAbrirInformacion(partido.id) },
+        {
+          label: 'Solicitar edición',
+          onSelect: () => handleAbrirSolicitud(partido.id),
+          tono: 'cuidado' as const,
+        },
+      ];
+
+      // La alineación es de la capa partido: en competencia la carga el organizador, así que el
+      // acceso vive dentro del modal y depende de los permisos reales sobre ese partido.
+      if (alineacionDisponible) {
+        secundarias.unshift(
+          primariaEsAlineacion
+            ? { label: etiquetaGestionar, onSelect: () => handleSeleccionar(partido.id) }
+            : { label: 'Alineación', onSelect: () => handleAbrirAlineacion(partido.id) },
+        );
+      }
+
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() =>
+              primariaEsAlineacion
+                ? handleAbrirAlineacion(partido.id)
+                : handleSeleccionar(partido.id)
+            }
+            className="inline-flex min-h-[2.75rem] flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm transition [touch-action:manipulation] hover:bg-brand-700 sm:flex-none"
+          >
+            {primariaEsAlineacion ? (
+              <AdjustmentsHorizontalIcon className="h-4 w-4" />
+            ) : (
+              <Cog6ToothIcon className="h-4 w-4" />
+            )}
+            {primariaEsAlineacion ? 'Alineación' : etiquetaGestionar}
+          </button>
+
+          <MenuAcciones acciones={secundarias} etiqueta={`Más acciones del partido contra ${rival}`} />
+        </>
+      );
+    },
+    [handleAbrirInformacion, handleAbrirSolicitud, handleAbrirAlineacion, handleSeleccionar],
+  );
+
   // onSaved no-op: actualizará vista dentro del modal
 
   if (!equipoSeleccionado) {
@@ -247,91 +350,120 @@ const PartidosPage = () => {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col gap-2">
+      <header className="flex flex-col gap-3">
         <h1 className="text-2xl font-semibold text-slate-900">Partidos</h1>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-slate-500">Programación y resultados del equipo.</p>
-          <button
-            type="button"
-            onClick={handleAbrirCrear}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-          >
-            Agregar amistoso
-          </button>
-        </div>
-        <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-4">
-          <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Tipo
-            <select
-              value={filtroTipo}
-              onChange={(event) => {
-                const next = event.target.value as FiltroTipoPartido;
-                setFiltroTipo(next);
-                if (next !== 'competencia') {
-                  setFiltroCompetencia('');
-                  setFiltroTemporada('');
-                  setFiltroFase('');
-                }
-              }}
-              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700"
-            >
-              <option value="todos">Todos</option>
-              <option value="competencia">Competencia</option>
-              <option value="amistoso">Amistosos</option>
-            </select>
-          </label>
 
-          <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Competencia
-            <select
-              value={filtroCompetencia}
-              onChange={(event) => setFiltroCompetencia(event.target.value)}
-              disabled={filtroTipo !== 'competencia'}
-              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
-            >
-              <option value="">Todas</option>
-              {competencias.map((competencia) => (
-                <option key={competencia.id} value={competencia.id}>
-                  {competencia.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
+        {/*
+          Los filtros van plegados detrás del chip. Antes eran cuatro `select` que en un teléfono
+          se apilaban en ~280px antes del primer partido, y tres de los cuatro estaban
+          deshabilitados salvo que el tipo fuera «competencia»: media pantalla de controles que en
+          el caso más común no hacían nada.
 
-          <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Temporada
-            <select
-              value={filtroTemporada}
-              onChange={(event) => setFiltroTemporada(event.target.value)}
-              disabled={filtroTipo !== 'competencia' || !filtroCompetencia}
-              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
-            >
-              <option value="">Todas</option>
-              {temporadas.map((temporada) => (
-                <option key={temporada.id} value={temporada.id}>
-                  {temporada.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
+          Los encadenados ya no se muestran deshabilitados, aparecen cuando corresponde. Un
+          control deshabilitado obliga a descubrir por qué lo está; uno ausente no genera la
+          pregunta.
+        */}
+        <BarraFiltros
+          resumen={resumenFiltros}
+          activo={hayFiltros}
+          acciones={
+            <>
+              {hayFiltros && (
+                <button
+                  type="button"
+                  onClick={limpiarFiltros}
+                  className="min-h-[2.75rem] rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-600 transition [touch-action:manipulation] hover:border-slate-300 hover:text-slate-900"
+                >
+                  Limpiar
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleAbrirCrear}
+                className="inline-flex min-h-[2.75rem] items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm transition [touch-action:manipulation] hover:bg-brand-700"
+              >
+                + Amistoso
+              </button>
+            </>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Tipo
+              <select
+                value={filtroTipo}
+                onChange={(event) => {
+                  const next = event.target.value as FiltroTipoPartido;
+                  setFiltroTipo(next);
+                  if (next !== 'competencia') {
+                    setFiltroCompetencia('');
+                    setFiltroTemporada('');
+                    setFiltroFase('');
+                  }
+                }}
+                className="mt-1 block h-11 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700"
+              >
+                <option value="todos">Todos</option>
+                <option value="competencia">Competencia</option>
+                <option value="amistoso">Amistosos</option>
+              </select>
+            </label>
 
-          <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Fase
-            <select
-              value={filtroFase}
-              onChange={(event) => setFiltroFase(event.target.value)}
-              disabled={filtroTipo !== 'competencia' || !filtroTemporada}
-              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100"
-            >
-              <option value="">Todas</option>
-              {fases.map((fase) => (
-                <option key={fase.id} value={fase.id}>
-                  {fase.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+            {filtroTipo === 'competencia' && (
+              <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Competencia
+                <select
+                  value={filtroCompetencia}
+                  onChange={(event) => setFiltroCompetencia(event.target.value)}
+                  className="mt-1 block h-11 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700"
+                >
+                  <option value="">Todas</option>
+                  {competencias.map((competencia) => (
+                    <option key={competencia.id} value={competencia.id}>
+                      {competencia.nombre}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {filtroTipo === 'competencia' && filtroCompetencia && (
+              <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Temporada
+                <select
+                  value={filtroTemporada}
+                  onChange={(event) => setFiltroTemporada(event.target.value)}
+                  className="mt-1 block h-11 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700"
+                >
+                  <option value="">Todas</option>
+                  {temporadas.map((temporada) => (
+                    <option key={temporada.id} value={temporada.id}>
+                      {temporada.nombre}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {filtroTipo === 'competencia' && filtroTemporada && (
+              <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Fase
+                <select
+                  value={filtroFase}
+                  onChange={(event) => setFiltroFase(event.target.value)}
+                  className="mt-1 block h-11 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700"
+                >
+                  <option value="">Todas</option>
+                  {fases.map((fase) => (
+                    <option key={fase.id} value={fase.id}>
+                      {fase.nombre}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        </BarraFiltros>
       </header>
 
       {modalAdminAbierto && partidoAdminId ? (
@@ -405,56 +537,38 @@ const PartidosPage = () => {
                 <PartidoCard
                   key={partido.id}
                   partido={partido}
-                  actions={
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleAbrirInformacion(partido.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                      >
-                        <PencilSquareIcon className="h-4 w-4" />
-                        Datos
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAbrirSolicitud(partido.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
-                      >
-                        <EnvelopeIcon className="h-4 w-4" />
-                        Solicitar edición
-                      </button>
-                      {/* La alineación es de la capa partido: en competencia la carga
-                          el organizador, así que el acceso vive dentro del modal y
-                          depende de los permisos reales sobre ese partido. */}
-                      {!esPartidoCompetencia(partido) ? (
-                        <button
-                          type="button"
-                          onClick={() => handleAbrirAlineacion(partido.id)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                        >
-                          <AdjustmentsHorizontalIcon className="h-4 w-4" />
-                          Alineación
-                        </button>
-                      ) : null}
-                      {/* En competencia el modal manda todo como propuesta al
-                          organizador, así que también sirve para partidos de liga. */}
-                      <button
-                        type="button"
-                        onClick={() => handleSeleccionar(partido.id)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
-                      >
-                        <Cog6ToothIcon className="h-4 w-4" />
-                        Gestionar
-                      </button>
-                    </>
-                  }
+                  actions={accionesDe(partido)}
                 />
               ))}
             </div>
           ) : (
-            <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
-              No hay partidos pendientes.
-            </p>
+            <EstadoVacio
+              titulo={hayFiltros ? 'Ningún partido pendiente con estos filtros' : 'No tenés partidos en agenda'}
+              descripcion={
+                hayFiltros
+                  ? 'Probá ampliar el filtro para ver el resto de la agenda.'
+                  : 'Los partidos de competencia los carga la organización. Un amistoso lo agregás vos.'
+              }
+              accion={
+                hayFiltros ? (
+                  <button
+                    type="button"
+                    onClick={limpiarFiltros}
+                    className="min-h-[2.75rem] rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition [touch-action:manipulation] hover:bg-slate-50"
+                  >
+                    Limpiar filtros
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleAbrirCrear}
+                    className="min-h-[2.75rem] rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm transition [touch-action:manipulation] hover:bg-brand-700"
+                  >
+                    Agregar un amistoso
+                  </button>
+                )
+              }
+            />
           )}
         </div>
 
@@ -476,56 +590,15 @@ const PartidosPage = () => {
                   key={partido.id}
                   partido={partido}
                   variante="resultado"
-                  actions={
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleAbrirInformacion(partido.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                      >
-                        <PencilSquareIcon className="h-4 w-4" />
-                        Datos
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAbrirSolicitud(partido.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
-                      >
-                        <EnvelopeIcon className="h-4 w-4" />
-                        Solicitar edición
-                      </button>
-                      {/* La alineación es de la capa partido: en competencia la carga
-                          el organizador, así que el acceso vive dentro del modal y
-                          depende de los permisos reales sobre ese partido. */}
-                      {!esPartidoCompetencia(partido) ? (
-                        <button
-                          type="button"
-                          onClick={() => handleAbrirAlineacion(partido.id)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                        >
-                          <AdjustmentsHorizontalIcon className="h-4 w-4" />
-                          Alineación
-                        </button>
-                      ) : null}
-                      {/* En competencia el modal manda todo como propuesta al
-                          organizador, así que también sirve para partidos de liga. */}
-                      <button
-                        type="button"
-                        onClick={() => handleSeleccionar(partido.id)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700"
-                      >
-                        <Cog6ToothIcon className="h-4 w-4" />
-                        Gestionar
-                      </button>
-                    </>
-                  }
+                  actions={accionesDe(partido)}
                 />
               ))}
             </div>
           ) : (
-            <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
-              No hay resultados registrados.
-            </p>
+            <EstadoVacio
+              titulo="Todavía no hay partidos jugados"
+              descripcion="Cuando se cierre el primero vas a poder cargar sus estadísticas y empezar a analizar."
+            />
           )}
         </div>
       </section>
@@ -547,36 +620,7 @@ const PartidosPage = () => {
               <PartidoCard
                 key={partido.id}
                 partido={partido}
-                actions={
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => handleAbrirInformacion(partido.id)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                    >
-                      <PencilSquareIcon className="h-4 w-4" />
-                      Datos
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAbrirSolicitud(partido.id)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
-                    >
-                      <EnvelopeIcon className="h-4 w-4" />
-                      Solicitar edición
-                    </button>
-                    {!esPartidoCompetencia(partido) ? (
-                      <button
-                        type="button"
-                        onClick={() => handleAbrirAlineacion(partido.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                      >
-                        <AdjustmentsHorizontalIcon className="h-4 w-4" />
-                        Alineación
-                      </button>
-                    ) : null}
-                  </>
-                }
+                actions={accionesDe(partido)}
               />
             ))}
           </div>
