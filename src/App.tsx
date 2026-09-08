@@ -4,6 +4,7 @@ import EmailVerificacionBanner from './shared/components/EmailVerificacionBanner
 import ProtectedRoute from './app/routes/ProtectedRoute';
 import RequireEquipo from './app/routes/RequireEquipo';
 import Navbar from './app/layout/Navbar';
+import MobileTabBar from './app/layout/MobileTabBar';
 import IndicadorSinConexion from './shared/components/IndicadorSinConexion';
 import { ErrorBoundary } from './shared/components/ui';
 
@@ -175,7 +176,9 @@ const App = () => {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
+    // El padding inferior deja pasar la barra de pestañas fija de mobile: sin él tapa el final
+    // del contenido y el pie de página. Suma el safe-area porque la barra también lo hace.
+    <div className="flex min-h-screen flex-col bg-slate-50 pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0">
       <Navbar />
       <EmailVerificacionBanner />
       <IndicadorSinConexion />
@@ -192,6 +195,8 @@ const App = () => {
           <span>Gestión diaria para directores técnicos, entrenadores y staff</span>
         </div>
       </footer>
+
+      <MobileTabBar />
     </div>
   );
 };
