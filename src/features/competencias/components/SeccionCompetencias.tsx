@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import CompetenciaCard from '../../../shared/components/CompetenciaCard';
-import TablaPosiciones from './TablaPosiciones';
+import DetalleCompetencia from './DetalleCompetencia';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getParticipaciones } from '../services/equipoCompetenciaService';
 import type { EquipoCompetencia } from '../../../shared/utils/types/types';
@@ -12,6 +12,7 @@ const SeccionCompetencias = () => {
   const { addToast } = useToast();
   const { equipoSeleccionado } = useEquipo();
   const [participaciones, setParticipaciones] = useState<EquipoCompetencia[]>([]);
+  const [abierta, setAbierta] = useState<{ id: string; nombre: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [inscripcionLoading, setInscripcionLoading] = useState(false);
   const [mensaje, setMensaje] = useState('');
@@ -90,6 +91,20 @@ const SeccionCompetencias = () => {
   };
 
   if (!equipoSeleccionado) return null;
+
+  // Abrir una competencia reemplaza el índice en vez de apilarse debajo: adentro hay tres
+  // pestañas propias, y anidarlas dentro de una lista scrolleable haría perder el hilo de dónde
+  // está uno parado.
+  if (abierta) {
+    return (
+      <DetalleCompetencia
+        competenciaId={abierta.id}
+        competenciaNombre={abierta.nombre}
+        equipoId={equipoSeleccionado.id}
+        onVolver={() => setAbierta(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -173,18 +188,26 @@ const SeccionCompetencias = () => {
             </p>
           ) : null}
 
-          {/* Cada competencia con su tabla debajo. Antes eran dos columnas de tarjetas sueltas:
-              el DT veía en qué competencias está inscripto, pero no dónde está parado en cada
-              una — que es la pregunta que realmente se hace. */}
+          {/* La tabla dejó de venir desplegada debajo de cada tarjeta: con dos o tres
+              competencias eran tres tablas apiladas y ninguna pregunta contestada. Ahora cada
+              competencia se abre, y adentro está todo lo suyo —tabla, plantel habilitado y
+              balance— en vez de repartido por la app. */}
           {participaciones.map((participacion) => (
             <div key={participacion.id} className="space-y-2">
               <CompetenciaCard participacion={participacion} />
-              {participacion.competencia?.id && equipoSeleccionado ? (
-                <TablaPosiciones
-                  competenciaId={participacion.competencia.id}
-                  competenciaNombre={participacion.competencia.nombre}
-                  equipoId={equipoSeleccionado.id}
-                />
+              {participacion.competencia?.id ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAbierta({
+                      id: participacion.competencia!.id!,
+                      nombre: participacion.competencia?.nombre ?? 'Competencia',
+                    })
+                  }
+                  className="min-h-[2.75rem] w-full rounded-lg border border-brand-300 bg-brand-50 px-4 text-sm font-semibold text-brand-700 transition [touch-action:manipulation] hover:bg-brand-100"
+                >
+                  Abrir competencia →
+                </button>
               ) : null}
             </div>
           ))}

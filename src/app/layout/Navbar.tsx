@@ -8,6 +8,7 @@ import { usePendientesDelEquipo } from '../../shared/features/solicitudes/hooks/
 const links = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/equipo', label: 'Equipo' },
+  { to: '/competencias', label: 'Competencias' },
   { to: '/partidos', label: 'Partidos' },
   { to: '/entrenamientos', label: 'Entrenamientos' },
   { to: '/estadisticas', label: 'Estadísticas' },
