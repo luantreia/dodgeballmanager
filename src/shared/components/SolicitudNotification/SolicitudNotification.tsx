@@ -1,49 +1,60 @@
-import React, { useEffect } from 'react';
-import { useSolicitudes } from '../../../app/providers/SolicitudesContext';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { usePendientesDelEquipo } from '../../features/solicitudes/hooks/usePendientesDelEquipo';
 
 interface SolicitudNotificationProps {
+  /** Reemplaza la navegación por defecto. Sin esto, la campanita lleva a Notificaciones. */
   onClick?: () => void;
   className?: string;
   showLabel?: boolean;
 }
 
 /**
- * Componente que muestra un badge con el contador de solicitudes pendientes
- * Generalmente se usa en el Navbar
+ * La campanita de solicitudes pendientes.
+ *
+ * Tenía tres problemas que se tapaban entre sí:
+ *
+ * 1. **No hacía nada.** `onClick` era una prop opcional y el `Navbar` la montaba sin pasarla, así
+ *    que era un botón con `onClick={undefined}`: se apretaba y no pasaba nada. Ahora navega a
+ *    Notificaciones por defecto y la prop queda sólo como override.
+ *
+ * 2. **Desaparecía sin pendientes.** Devolvía `null` con el contador en cero. Mientras
+ *    Notificaciones estuvo en el menú eso era razonable; desde que dejó de estarlo —los
+ *    pendientes se muestran arriba del dashboard— la campanita es la única puerta a esa pantalla,
+ *    y esconderla la volvía inalcanzable justo cuando no había nada urgente. Ahora está siempre;
+ *    lo que aparece y desaparece es el badge.
+ *
+ * 3. **Contaba distinto que el resto de la app.** Usaba `pendientesCount` de
+ *    `SolicitudesContext`, que es el total del usuario sin acotar al equipo seleccionado,
+ *    mientras la barra de pestañas mostraba el conteo del equipo. Dos números para lo mismo, y en
+ *    un DT con dos equipos no coincidían. Ahora los dos salen del mismo hook, que además comparte
+ *    un solo temporizador — este componente tenía el suyo propio de 30 segundos.
  */
 export const SolicitudNotification: React.FC<SolicitudNotificationProps> = ({
   onClick,
   className,
   showLabel = false,
 }) => {
-  const { pendientesCount, cargarSolicitudes } = useSolicitudes();
+  const navigate = useNavigate();
+  const pendientes = usePendientesDelEquipo();
 
-  // Recargar cada 30 segundos
-  useEffect(() => {
-    const interval = setInterval(() => {
-      cargarSolicitudes({ estado: 'pendiente' });
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [cargarSolicitudes]);
-
-  if (pendientesCount === 0) {
-    return null;
-  }
+  const etiqueta =
+    pendientes === 0
+      ? 'Notificaciones: no hay solicitudes pendientes'
+      : `Notificaciones: ${pendientes} ${pendientes === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'}`;
 
   return (
     <button
-      onClick={onClick}
-      className={className || 'relative p-2 text-gray-600 hover:text-gray-900'}
-      title={`${pendientesCount} solicitud(es) pendiente(s)`}
+      type="button"
+      onClick={onClick ?? (() => navigate('/notificaciones'))}
+      aria-label={etiqueta}
+      title={etiqueta}
+      className={
+        className ||
+        'relative flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition [touch-action:manipulation] hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40'
+      }
     >
-      {/* Icono de campana */}
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
+      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -52,14 +63,18 @@ export const SolicitudNotification: React.FC<SolicitudNotificationProps> = ({
         />
       </svg>
 
-      {/* Badge con contador */}
-      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
-        {pendientesCount > 99 ? '99+' : pendientesCount}
-      </span>
+      {pendientes > 0 && (
+        <span
+          aria-hidden
+          className="absolute right-1 top-1 inline-flex min-w-[1.15rem] items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-4 text-white"
+        >
+          {pendientes > 99 ? '99+' : pendientes}
+        </span>
+      )}
 
       {showLabel && (
         <span className="ml-2 text-sm font-medium">
-          {pendientesCount} {pendientesCount === 1 ? 'solicitud' : 'solicitudes'}
+          {pendientes} {pendientes === 1 ? 'solicitud' : 'solicitudes'}
         </span>
       )}
     </button>
