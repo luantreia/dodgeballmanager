@@ -154,7 +154,10 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     }));
 
     setSlots(completarSlots(ocupados, slotVacio));
-  }, [planilla, setActivoId]);
+    // Sólo `estadisticas` y `modo` importan acá: si `planilla` cambia por otra razón (por
+    // ejemplo al guardar el ganador del set) pero las estadísticas guardadas son las mismas,
+    // no hay que reconstruir la grilla y pisar lo que el usuario todavía no guardó.
+  }, [planilla?.estadisticas, planilla?.modo, setActivoId]);
 
   const editable = planilla?.estado === 'borrador' || planilla?.estado === 'rechazada';
 
@@ -220,9 +223,13 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   const cambiarGanador = async (ganadorSet: PlanillaSetTipo['ganadorSet']): Promise<void> => {
     if (!planilla || !setActivo) return;
     try {
-      await guardarSet(planilla._id, { numeroSet: setActivo.numeroSet, ganadorSet });
-      const completa = await obtenerPlanilla(planilla._id);
-      setPlanilla(completa);
+      const actualizado = await guardarSet(planilla._id, { numeroSet: setActivo.numeroSet, ganadorSet });
+      // Se parchea sólo el set tocado, no se refetchea la planilla entera: un refetch completo
+      // reemplaza `estadisticas` por lo último guardado en el backend, y la grilla en pantalla
+      // puede tener números que el usuario cargó pero todavía no guardó con el botón "Guardar".
+      setPlanilla((prev) =>
+        prev ? { ...prev, sets: prev.sets.map((s) => (s._id === actualizado._id ? actualizado : s)) } : prev,
+      );
     } catch (error) {
       addToast({
         type: 'error',
