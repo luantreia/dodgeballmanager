@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FC } from 'react';
-import JugadorEstadisticasCard from '../common/JugadorEstadisticasCard';
+import JugadorEstadisticasCard, { type EstadoGuardadoFila } from '../common/JugadorEstadisticasCard';
 import { getJugadoresEquipo } from '../../../jugadores/services/jugadorEquipoService';
 import { JUGADORES_POR_SET } from '../../constants/capturaSet';
 
@@ -26,6 +26,8 @@ export type ListaJugadoresProps = {
   onCambiarSurvive?: (index: number, value: boolean) => void;
   token: string;
   opcionesJugadores?: Array<{ value: string; label: string }>;
+  /** Estado de autoguardado por slot, en el mismo orden que `estadisticasJugador`. */
+  estadosGuardado?: Array<EstadoGuardadoFila | undefined>;
 };
 
 export const ListaJugadores: FC<ListaJugadoresProps> = ({
@@ -37,6 +39,7 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
   onCambiarSurvive,
   token,
   opcionesJugadores,
+  estadosGuardado,
 }) => {
   type JugadorRelacion = {
     id: string;
@@ -142,6 +145,7 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
               }
               estadisticasJugador={stats}
               onCambiarSurvive={(value) => onCambiarSurvive?.(idx, value)}
+              estadoGuardado={estadosGuardado?.[idx]}
             />
           );
         })}

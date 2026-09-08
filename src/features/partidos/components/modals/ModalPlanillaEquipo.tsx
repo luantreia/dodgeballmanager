@@ -1,9 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
 import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
 import { ListaJugadores } from './ListaJugadores';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
+import { useDebouncedCallback } from '../../../../shared/hooks/useDebouncedCallback';
+import { socket } from '../../../../shared/services/socket';
+import { getAccessToken } from '../../../../shared/utils/authFetch';
+import type { EstadoGuardadoFila } from '../common/JugadorEstadisticasCard';
 import {
   JUGADORES_POR_SET,
   ESTADISTICAS_SLOT_VACIO,
@@ -23,11 +27,29 @@ import {
   quitarPresente,
   totalizarPorPresente,
   type PlanillaCompleta,
+  type PlanillaEstadistica,
   type PlanillaModo,
   type PlanillaPresente,
   type PlanillaSet as PlanillaSetTipo,
 } from '../../services/planillaEquipoService';
 import { extractEquipoNombre, type PartidoDetallado } from '../../services/partidoService';
+
+/**
+ * Upsert de una fila dentro de `planilla.estadisticas`, sin tocar el resto — ni el autoguardado
+ * por fila ni las actualizaciones que llegan por socket de otra persona cargando la misma
+ * planilla tienen que disparar un refetch completo (eso es lo que pisaba capturas sin guardar).
+ */
+const mergeEstadisticaEnPlanilla = (
+  planilla: PlanillaCompleta,
+  fila: PlanillaEstadistica,
+): PlanillaCompleta => {
+  const idx = planilla.estadisticas.findIndex((e) => e._id === fila._id);
+  const estadisticas =
+    idx >= 0
+      ? planilla.estadisticas.map((e, i) => (i === idx ? fila : e))
+      : [...planilla.estadisticas, fila];
+  return { ...planilla, estadisticas };
+};
 
 /**
  * Captura del equipo sobre un partido propio.
@@ -85,11 +107,31 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   const [setActivoId, setSetActivoId] = useState<string | null>(null);
   const [slots, setSlots] = useState<Slot[]>(slotsVacios);
   /**
-   * Hay números en la grilla que todavía no se guardaron. En mobile el backdrop del modal se
-   * toca sin querer todo el tiempo y cerrar sin avisar tiraba la planilla entera del set.
+   * Autoguardado por fila: cada slot de la grilla se guarda solo, ~600ms después de la última
+   * edición. `filasGuardando` es lo que muestra el estado de esa fila puntual; el viejo
+   * "hay cambios sin guardar" global (más abajo) ahora se deriva de esto en vez de vivir como
+   * estado propio, porque la fuente de la verdad es "¿qué filas no confirmó el backend todavía?".
    */
-  const [hayCambiosSinGuardar, setHayCambiosSinGuardar] = useState(false);
+  const [filasGuardando, setFilasGuardando] = useState<Record<number, EstadoGuardadoFila>>({});
   const [eliminando, setEliminando] = useState(false);
+
+  // Refs para leer el estado más fresco desde callbacks que no pueden depender de él sin
+  // volver a crearse en cada tecla (el debounce por fila y los listeners de socket).
+  const planillaRef = useRef(planilla);
+  planillaRef.current = planilla;
+  const slotsRef = useRef(slots);
+  slotsRef.current = slots;
+  const setActivoIdRef = useRef(setActivoId);
+  setActivoIdRef.current = setActivoId;
+  const filasGuardandoRef = useRef(filasGuardando);
+  filasGuardandoRef.current = filasGuardando;
+
+  // "Hay cambios sin guardar" ahora es "hay al menos una fila que el backend todavía no
+  // confirmó" — con autoguardado, ya no depende de que alguien se acuerde de tocar "Guardar".
+  const hayCambiosSinGuardar = useMemo(
+    () => Object.values(filasGuardando).some((estado) => estado !== 'guardado'),
+    [filasGuardando],
+  );
   /**
    * Un solo `ConfirmModal` para los tres borrados (planilla, set y presente). Todos destruyen
    * estadísticas ya cargadas y ninguno se puede deshacer, así que ninguno se dispara directo
@@ -130,16 +172,24 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     void cargar();
   }, [cargar]);
 
-  // Los slots en pantalla siempre reflejan el set activo (o los totales, en modo
-  // directa). Al cambiar de set se recargan desde lo guardado.
-  useEffect(() => {
-    if (!planilla) {
+  /**
+   * Reconstruye `slots` desde lo que hay guardado. Se llama por `_id`/`modo`/`setActivoId`
+   * (ver el efecto de abajo) y no por cada cambio de `planilla.estadisticas` — el autoguardado
+   * por fila y las actualizaciones que llegan por socket tocan `planilla.estadisticas` todo el
+   * tiempo, y si eso disparara esto se perdería cualquier edición reciente todavía no reflejada
+   * en la respuesta del backend. Lee `planillaRef`/`setActivoIdRef` (no los valores del closure)
+   * para no tener que declarar `planilla`/`setActivoId` como dependencias de nada.
+   */
+  const resincronizarSlots = useCallback(() => {
+    const actual = planillaRef.current;
+    if (!actual) {
       setSlots(slotsVacios());
+      setFilasGuardando({});
       return;
     }
 
-    const filas = planilla.estadisticas.filter((e) =>
-      planilla.modo === 'sets' ? e.planillaSet === setActivoId : e.planillaSet === null,
+    const filas = actual.estadisticas.filter((e) =>
+      actual.modo === 'sets' ? e.planillaSet === setActivoIdRef.current : e.planillaSet === null,
     );
 
     const ocupados: Slot[] = filas.map((fila) => ({
@@ -154,10 +204,69 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     }));
 
     setSlots(completarSlots(ocupados, slotVacio));
-    // Sólo `estadisticas` y `modo` importan acá: si `planilla` cambia por otra razón (por
-    // ejemplo al guardar el ganador del set) pero las estadísticas guardadas son las mismas,
-    // no hay que reconstruir la grilla y pisar lo que el usuario todavía no guardó.
-  }, [planilla?.estadisticas, planilla?.modo, setActivoId]);
+    setFilasGuardando({});
+  }, []);
+
+  // Los slots en pantalla siempre reflejan el set activo (o los totales, en modo directa). Se
+  // recargan al abrir la planilla y al cambiar de set — nunca por un cambio de `planilla` que no
+  // sea uno de esos dos (ver el comentario en `resincronizarSlots`).
+  useEffect(() => {
+    resincronizarSlots();
+  }, [planilla?._id, planilla?.modo, setActivoId, resincronizarSlots]);
+
+  /**
+   * Captura simultánea: cuando otra persona con permiso sobre el equipo tiene esta misma
+   * planilla abierta, sus guardados (por fila o del ganador del set) llegan acá por socket y se
+   * mergean sin refetch — mismo motivo que en `guardarFilaAhora`/`cambiarGanador`. Si la fila que
+   * llegó es una que YO tengo pendiente o en vuelo, se descarta: se prioriza no perder lo que
+   * estoy tecleando ahora mismo antes que la versión remota, y cuando mi guardado confirme va a
+   * traer el valor correcto de todos modos.
+   */
+  useEffect(() => {
+    const planillaId = planilla?._id;
+    if (!planillaId) return;
+
+    const unirse = () => socket.emit('planilla:join', { planillaId, token: getAccessToken() });
+
+    const alEstadisticasActualizadas = (payload: {
+      planillaId: string;
+      estadisticas: PlanillaEstadistica[];
+    }) => {
+      if (payload.planillaId !== planillaId) return;
+      setPlanilla((prev) => {
+        if (!prev) return prev;
+        let siguiente = prev;
+        payload.estadisticas.forEach((fila) => {
+          const indiceLocal = slotsRef.current.findIndex((s) => s.presenteId === fila.planillaPresente);
+          const estadoLocal = indiceLocal >= 0 ? filasGuardandoRef.current[indiceLocal] : undefined;
+          if (estadoLocal === 'pendiente' || estadoLocal === 'guardando') return;
+          siguiente = mergeEstadisticaEnPlanilla(siguiente, fila);
+        });
+        return siguiente;
+      });
+    };
+
+    const alSetActualizado = (payload: { planillaId: string; set: PlanillaSetTipo }) => {
+      if (payload.planillaId !== planillaId) return;
+      setPlanilla((prev) =>
+        prev ? { ...prev, sets: prev.sets.map((s) => (s._id === payload.set._id ? payload.set : s)) } : prev,
+      );
+    };
+
+    socket.on('connect', unirse);
+    socket.on('planilla:estadisticas_actualizadas', alEstadisticasActualizadas);
+    socket.on('planilla:set_actualizado', alSetActualizado);
+    if (socket.connected) unirse();
+    else socket.connect();
+
+    return () => {
+      socket.emit('planilla:leave', { planillaId });
+      socket.off('connect', unirse);
+      socket.off('planilla:estadisticas_actualizadas', alEstadisticasActualizadas);
+      socket.off('planilla:set_actualizado', alSetActualizado);
+      socket.disconnect();
+    };
+  }, [planilla?._id]);
 
   const editable = planilla?.estado === 'borrador' || planilla?.estado === 'rechazada';
 
@@ -215,6 +324,60 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   );
 
   /**
+   * Guarda UNA fila de la grilla — la clave del autoguardado. El backend ya hace upsert por
+   * fila (`{planillaSet, planillaPresente}`), así que mandar un array de una sola entrada no
+   * pisa las demás filas de otros jugadores, ni las que esté cargando otra persona a la vez.
+   */
+  const guardarFilaAhora = useCallback(
+    async (index: number) => {
+      const planillaActual = planillaRef.current;
+      const slot = slotsRef.current[index];
+      if (!planillaActual || !slot?.presenteId) return;
+
+      setFilasGuardando((prev) => ({ ...prev, [index]: 'guardando' }));
+      try {
+        const [guardada] = await guardarEstadisticas(planillaActual._id, {
+          planillaSet: planillaActual.modo === 'sets' ? setActivoIdRef.current : null,
+          estadisticas: [
+            {
+              planillaPresente: slot.presenteId,
+              throws: slot.estadisticas.throws,
+              hits: slot.estadisticas.hits,
+              outs: slot.estadisticas.outs,
+              catches: slot.estadisticas.catches,
+              survive: slot.estadisticas.survive,
+            },
+          ],
+        });
+        setFilasGuardando((prev) => ({ ...prev, [index]: 'guardado' }));
+        if (guardada) {
+          setPlanilla((prev) => (prev ? mergeEstadisticaEnPlanilla(prev, guardada) : prev));
+        }
+      } catch (error) {
+        setFilasGuardando((prev) => ({ ...prev, [index]: 'error' }));
+        addToast({
+          type: 'error',
+          title: 'No se guardó una fila',
+          message: error instanceof Error ? error.message : 'Reintentá tocando algo de esa fila',
+        });
+      }
+    },
+    [addToast],
+  );
+
+  const { debounced: programarGuardadoFila, flushAll: flushAllFilas } = useDebouncedCallback(
+    (clave: string) => {
+      void guardarFilaAhora(Number(clave));
+    },
+    600,
+  );
+
+  // Si cierran el modal con una edición reciente todavía en el debounce, se fuerza su guardado
+  // en vez de perderla — el guard de `hasUnsavedChanges` avisa, pero si igual confirman cerrar,
+  // mejor que la última tecleada llegue al backend a que se pierda en silencio.
+  useEffect(() => () => flushAllFilas(), [flushAllFilas]);
+
+  /**
    * Sin ganador el set se oficializa como 'pendiente', y al oficializar se crea un
    * SetPartido en estado 'en_juego' dentro de un partido finalizado. Peor: el marcador
    * del partido se deriva de los sets FINALIZADOS, así que un recálculo posterior los
@@ -241,6 +404,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
 
   const agregarSet = async (): Promise<void> => {
     if (!planilla) return;
+    flushAllFilas();
     const siguiente = (planilla.sets.reduce((max, s) => Math.max(max, s.numeroSet), 0) || 0) + 1;
     try {
       const creado = await guardarSet(planilla._id, { numeroSet: siguiente });
@@ -256,13 +420,19 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     }
   };
 
+  /** Marca la fila como pendiente y programa su autoguardado — común a las tres ediciones. */
+  const marcarPendienteYGuardar = (index: number) => {
+    setFilasGuardando((prev) => ({ ...prev, [index]: 'pendiente' }));
+    programarGuardadoFila(String(index));
+  };
+
   const asignarJugador = (index: number, presenteId: string): void => {
-    setHayCambiosSinGuardar(true);
     setSlots((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], presenteId: presenteId || undefined };
       return next;
     });
+    if (presenteId) marcarPendienteYGuardar(index);
   };
 
   const cambiarEstadistica = (
@@ -270,7 +440,6 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     campo: 'throws' | 'hits' | 'outs' | 'catches',
     delta: number,
   ): void => {
-    setHayCambiosSinGuardar(true);
     setSlots((prev) => {
       const next = [...prev];
       const actual = next[index];
@@ -283,10 +452,10 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       };
       return next;
     });
+    marcarPendienteYGuardar(index);
   };
 
   const cambiarSurvive = (index: number, value: boolean): void => {
-    setHayCambiosSinGuardar(true);
     setSlots((prev) => {
       const next = [...prev];
       next[index] = {
@@ -295,6 +464,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       };
       return next;
     });
+    marcarPendienteYGuardar(index);
   };
 
   const guardar = async (): Promise<void> => {
@@ -335,7 +505,15 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
 
       const completa = await obtenerPlanilla(planilla._id);
       setPlanilla(completa);
-      setHayCambiosSinGuardar(false);
+      // Todo lo que había en pantalla quedó confirmado — no hace falta esperar a que los
+      // autoguardados individuales, si alguno seguía en vuelo, lleguen a marcarlo por su cuenta.
+      setFilasGuardando((prev) => {
+        const next = { ...prev };
+        slots.forEach((s, i) => {
+          if (s.presenteId) next[i] = 'guardado';
+        });
+        return next;
+      });
       addToast({ type: 'success', title: 'Planilla guardada', message: 'Los datos oficiales no se modificaron' });
     } catch (error) {
       addToast({
@@ -411,7 +589,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       await eliminarPlanilla(planilla._id);
       // Antes de cerrar: si no, la guardia de cambios sin guardar pregunta por datos que
       // acaban de dejar de existir.
-      setHayCambiosSinGuardar(false);
+      setFilasGuardando({});
       await Promise.resolve(onRefresh?.());
       addToast({
         type: 'success',
@@ -458,6 +636,9 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     try {
       await quitarPresente(planilla._id, presenteId);
       await recargarPlanilla(planilla._id);
+      // Mismo id de planilla y mismo set activo: el efecto automático no reconstruye la
+      // grilla solo, y acá si hace falta (el jugador quitado pudo estar ocupando un slot).
+      resincronizarSlots();
       addToast({
         type: 'success',
         title: 'Jugador quitado',
@@ -486,7 +667,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       size="xl"
       isOpen
       hasUnsavedChanges={hayCambiosSinGuardar}
-      unsavedMessage="Cargaste datos en la planilla que todavía no guardaste. ¿Cerrar y perderlos?"
+      unsavedMessage="Hay filas que todavía no se terminaron de guardar. ¿Cerrar igual?"
     >
       {loading ? (
         <div className="py-10 text-center text-gray-600">Cargando planilla...</div>
@@ -586,7 +767,12 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                   >
                     <button
                       type="button"
-                      onClick={() => setSetActivoId(s._id)}
+                      onClick={() => {
+                        // Fuerza el guardado de lo que se estaba tecleando en el set que se
+                        // abandona, antes de que la grilla se reconstruya para el nuevo.
+                        flushAllFilas();
+                        setSetActivoId(s._id);
+                      }}
                       className={`px-3 py-1.5 text-sm font-medium transition ${
                         activo ? 'text-white' : 'text-gray-700 hover:bg-gray-200'
                       }`}
@@ -691,6 +877,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                   value: p._id,
                   label: nombrePresente(p),
                 }))}
+                estadosGuardado={slots.map((_, i) => filasGuardando[i])}
                 onAsignarJugador={(index, presenteId) => {
                   if (editable) asignarJugador(index, presenteId);
                 }}
@@ -842,11 +1029,12 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                   type="button"
                   onClick={guardar}
                   disabled={guardando}
+                  title="Cada fila ya se guarda sola; este botón fuerza el guardado de todo ahora, útil si alguna quedó marcada como no guardada"
                   className="min-h-[2.75rem] rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white
                              transition [touch-action:manipulation]
                              hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {guardando ? 'Guardando...' : 'Guardar'}
+                  {guardando ? 'Guardando...' : 'Guardar todo ahora'}
                 </button>
               </div>
             )}

@@ -58,6 +58,9 @@ const refrescarTokenCompartido = (): Promise<string | null> => {
   return refreshEnCurso;
 };
 
+/** El mismo token que usa cada request HTTP, para autenticar también el handshake de sockets. */
+export const getAccessToken = (): string | null => localStorage.getItem(ACCESS_TOKEN_KEY);
+
 const serializeBody = (body: BodyType): BodyInit | null | undefined => {
   if (body === undefined) return undefined;
   if (body === null) return null;

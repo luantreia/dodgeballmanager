@@ -17,6 +17,8 @@ type OpcionJugador = {
 
 type CampoNumerico = 'throws' | 'hits' | 'outs' | 'catches';
 
+export type EstadoGuardadoFila = 'pendiente' | 'guardando' | 'guardado' | 'error';
+
 export type JugadorEstadisticasCardProps = {
   index: number;
   jugadorId: string;
@@ -25,6 +27,16 @@ export type JugadorEstadisticasCardProps = {
   onCambiarEstadistica: (campo: CampoNumerico, delta: number) => void;
   onCambiarSurvive?: (value: boolean) => void;
   estadisticasJugador?: Partial<EstadisticasJugador>;
+  /** Autoguardado de esta fila: para que el que carga sepa si ya quedó grabado o si conviene
+   * esperar/reintentar antes de irse. `undefined` es "sin ediciones todavía en esta fila". */
+  estadoGuardado?: EstadoGuardadoFila;
+};
+
+const ETIQUETA_ESTADO: Record<EstadoGuardadoFila, { texto: string; clase: string }> = {
+  pendiente: { texto: 'Sin guardar', clase: 'text-slate-400' },
+  guardando: { texto: 'Guardando…', clase: 'text-amber-600' },
+  guardado: { texto: 'Guardado', clase: 'text-emerald-600' },
+  error: { texto: 'No se guardó — tocá algo de esta fila para reintentar', clase: 'text-rose-600' },
 };
 
 const CONTROLES: Array<{ campo: CampoNumerico; label: string }> = [
@@ -62,6 +74,7 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
   onCambiarEstadistica,
   onCambiarSurvive,
   estadisticasJugador = { throws: 0, hits: 0, outs: 0, catches: 0 },
+  estadoGuardado,
 }) => {
   const timerRef = useRef<number | null>(null);
   const intervaloRef = useRef<number | null>(null);
@@ -144,6 +157,11 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
 
   return (
     <div className="rounded-lg bg-white p-2 shadow-md">
+      {estadoGuardado && (
+        <p className={`mb-1 text-right text-[10px] font-medium ${ETIQUETA_ESTADO[estadoGuardado].clase}`}>
+          {ETIQUETA_ESTADO[estadoGuardado].texto}
+        </p>
+      )}
       <SelectDropdown
         label={null}
         name={`jugador-${index}`}
