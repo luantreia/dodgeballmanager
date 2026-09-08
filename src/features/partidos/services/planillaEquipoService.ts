@@ -127,6 +127,21 @@ export const eliminarSet = (planillaId: string, setId: string) =>
   authFetch<void>(`${BASE}/${planillaId}/sets/${setId}`, { method: 'DELETE' });
 
 /**
+ * Borra la fila de estadísticas de un presente en un set puntual (o en los totales, si se
+ * omite `planillaSetId`). Pensada para cuando se reasigna un slot de la grilla: el jugador que
+ * ocupaba ese lugar deja de tener una fila para este set en vez de quedar huérfana sumando en
+ * los totales sin aparecer en ningún slot visible.
+ */
+export const eliminarEstadisticaPresente = (
+  planillaId: string,
+  presenteId: string,
+  planillaSetId?: string | null,
+) => {
+  const query = planillaSetId ? `?planillaSet=${encodeURIComponent(planillaSetId)}` : '';
+  return authFetch<void>(`${BASE}/${planillaId}/estadisticas/${presenteId}${query}`, { method: 'DELETE' });
+};
+
+/**
  * Upsert en lote. Omitir `planillaSet` carga los totales del partido, y solo funciona
  * si la planilla está en modo 'directa'.
  */

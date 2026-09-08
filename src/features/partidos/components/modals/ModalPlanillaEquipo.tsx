@@ -25,6 +25,7 @@ import {
   eliminarPlanilla,
   eliminarSet,
   quitarPresente,
+  eliminarEstadisticaPresente,
   totalizarPorPresente,
   type PlanillaCompleta,
   type PlanillaEstadistica,
@@ -253,9 +254,31 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       );
     };
 
+    // Cuando otra persona reasigna un slot, su limpieza del jugador anterior (`limpiarFilaAnterior`)
+    // también tiene que reflejarse acá — si no, "Totales del partido" sigue mostrando una fila que
+    // ya no existe en el backend hasta que se cierre y reabra la planilla.
+    const alEstadisticaEliminada = (payload: {
+      planillaId: string;
+      planillaSet: string | null;
+      planillaPresente: string;
+    }) => {
+      if (payload.planillaId !== planillaId) return;
+      setPlanilla((prev) =>
+        prev
+          ? {
+              ...prev,
+              estadisticas: prev.estadisticas.filter(
+                (e) => !(e.planillaPresente === payload.planillaPresente && e.planillaSet === payload.planillaSet),
+              ),
+            }
+          : prev,
+      );
+    };
+
     socket.on('connect', unirse);
     socket.on('planilla:estadisticas_actualizadas', alEstadisticasActualizadas);
     socket.on('planilla:set_actualizado', alSetActualizado);
+    socket.on('planilla:estadistica_eliminada', alEstadisticaEliminada);
     if (socket.connected) unirse();
     else socket.connect();
 
@@ -264,6 +287,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       socket.off('connect', unirse);
       socket.off('planilla:estadisticas_actualizadas', alEstadisticasActualizadas);
       socket.off('planilla:set_actualizado', alSetActualizado);
+      socket.off('planilla:estadistica_eliminada', alEstadisticaEliminada);
       socket.disconnect();
     };
   }, [planilla?._id]);
@@ -426,13 +450,84 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     programarGuardadoFila(String(index));
   };
 
+  const filaTieneDatos = (estadisticas: EstadisticasSlot): boolean =>
+    estadisticas.throws > 0 || estadisticas.hits > 0 || estadisticas.outs > 0 || estadisticas.catches > 0 || estadisticas.survive;
+
+  /**
+   * Borra en el backend la fila del presente que se va de este slot — sin esto quedaba huérfana:
+   * ya no aparece en ningún slot de la grilla pero seguía sumando en "Totales del partido". No
+   * se borra si ese mismo presente sigue ocupando OTRO slot (posible con captura simultánea: dos
+   * personas pueden, en teoría, asignarlo a la vez en dos slots antes de sincronizarse).
+   */
+  const limpiarFilaAnterior = useCallback(
+    async (presenteAnterior: string) => {
+      if (slotsRef.current.some((s) => s.presenteId === presenteAnterior)) return;
+      const planillaActual = planillaRef.current;
+      if (!planillaActual) return;
+      const planillaSetId = planillaActual.modo === 'sets' ? setActivoIdRef.current : null;
+      try {
+        await eliminarEstadisticaPresente(planillaActual._id, presenteAnterior, planillaSetId);
+        setPlanilla((prev) =>
+          prev
+            ? {
+                ...prev,
+                estadisticas: prev.estadisticas.filter(
+                  (e) => !(e.planillaPresente === presenteAnterior && e.planillaSet === planillaSetId),
+                ),
+              }
+            : prev,
+        );
+      } catch (error) {
+        addToast({
+          type: 'error',
+          title: 'No se pudo limpiar al jugador anterior',
+          message: error instanceof Error ? error.message : 'Sus números viejos pueden seguir sumando en los totales',
+        });
+      }
+    },
+    [addToast],
+  );
+
   const asignarJugador = (index: number, presenteId: string): void => {
+    const anterior = slotsRef.current[index]?.presenteId;
     setSlots((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], presenteId: presenteId || undefined };
+      // Arranca en cero: si sólo se pisara `presenteId` el nuevo jugador heredaba los números
+      // del que estaba antes en este slot — eso es justo el bug que esto soluciona.
+      next[index] = { presenteId: presenteId || undefined, estadisticas: { ...ESTADISTICAS_SLOT_VACIO } };
       return next;
     });
+    setFilasGuardando((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+    if (anterior && anterior !== presenteId) void limpiarFilaAnterior(anterior);
     if (presenteId) marcarPendienteYGuardar(index);
+  };
+
+  /**
+   * Antes de reasignar, si el slot ya tenía un jugador CON números cargados, se avisa: el
+   * cambio borra esos números (el jugador anterior queda sin fila en este set) y el nuevo
+   * arranca de cero. Sin esto, un toque accidental en el desplegable tira datos sin que quede
+   * claro qué pasó — que es exactamente lo que reportó el usuario.
+   */
+  const solicitarAsignarJugador = (index: number, presenteId: string): void => {
+    const actual = slots[index];
+    const hayAlgoQuePerder = Boolean(actual?.presenteId) && actual.presenteId !== presenteId && filaTieneDatos(actual.estadisticas);
+    if (!hayAlgoQuePerder) {
+      asignarJugador(index, presenteId);
+      return;
+    }
+    setConfirmacion({
+      titulo: 'Cambiar el jugador de este slot',
+      mensaje:
+        'Este slot ya tiene números cargados. Si cambiás el jugador se pierden: el jugador anterior queda sin esa fila en este set y el nuevo arranca en cero.',
+      confirmLabel: 'Cambiar igual',
+      accion: async () => {
+        asignarJugador(index, presenteId);
+      },
+    });
   };
 
   const cambiarEstadistica = (
@@ -879,7 +974,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                 }))}
                 estadosGuardado={slots.map((_, i) => filasGuardando[i])}
                 onAsignarJugador={(index, presenteId) => {
-                  if (editable) asignarJugador(index, presenteId);
+                  if (editable) solicitarAsignarJugador(index, presenteId);
                 }}
                 onCambiarEstadistica={(index, campo, delta) => {
                   if (editable) cambiarEstadistica(index, campo, delta);
