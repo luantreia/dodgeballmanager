@@ -195,6 +195,23 @@ const SeccionCompetencias = () => {
           {participaciones.map((participacion) => (
             <div key={participacion.id} className="space-y-2">
               <CompetenciaCard participacion={participacion} />
+              {/* Sin esto el orden es inexplicable: se ven dos veces la misma competencia (dos
+                  temporadas) y nada dice cuál es cuál ni por qué una va arriba. */}
+              {participacion.temporada && (
+                <p className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <span>{participacion.temporada.nombre}</span>
+                  {participacion.temporada.estado === 'en_curso' && (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                      En curso
+                    </span>
+                  )}
+                  {participacion.temporada.estado === 'finalizada' && (
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                      Finalizada
+                    </span>
+                  )}
+                </p>
+              )}
               {participacion.competencia?.id ? (
                 <button
                   type="button"

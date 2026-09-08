@@ -4,6 +4,7 @@ import BarraFiltros from '../../../shared/components/BarraFiltros/BarraFiltros';
 import MenuAcciones from '../../../shared/components/MenuAcciones/MenuAcciones';
 import EstadoVacio from '../../../shared/components/EstadoVacio/EstadoVacio';
 import PartidoCalendar from '../../../shared/components/PartidoCalendar/PartidoCalendar';
+import SeccionCompetencias from '../../competencias/components/SeccionCompetencias';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getPartido, getPartidos, getTemporadasByCompetencia, getFasesByTemporada } from '../services/partidoService';
 import type { Partido } from '../../../shared/utils/types/types';
@@ -25,6 +26,7 @@ const PartidosPage = () => {
   const [proximos, setProximos] = useState<Partido[]>([]);
   const [recientes, setRecientes] = useState<Partido[]>([]);
   const [pasadosSinCerrar, setPasadosSinCerrar] = useState<Partido[]>([]);
+  const [pestana, setPestana] = useState<'agenda' | 'competencias'>('agenda');
   const [vista, setVista] = useState<'lista' | 'calendario'>('lista');
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipoPartido>('todos');
   const [filtroCompetencia, setFiltroCompetencia] = useState('');
@@ -358,10 +360,50 @@ const PartidosPage = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col gap-3">
-        <h1 className="text-2xl font-semibold text-slate-900">Partidos</h1>
+    <div className="space-y-4">
+      {/*
+        Tres cosas distintas que antes vivían amontonadas en la misma fila. Cada una en su lugar:
 
+        - «+ Amistoso» CREA algo, y las acciones de creación van con el título de la página.
+        - Las pestañas NAVEGAN entre dos partes de esta pantalla.
+        - El chip de filtros y el conmutador lista/calendario MOLDEAN la lista que está abajo, así
+          que viven pegados a ella y sólo existen en la pestaña que tiene lista.
+
+        Mezcladas, ninguna se leía: había que buscar la que uno quería entre cuatro controles de
+        naturaleza distinta.
+      */}
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-slate-900">Partidos</h1>
+        <button
+          type="button"
+          onClick={handleAbrirCrear}
+          className="inline-flex min-h-[2.75rem] items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm transition [touch-action:manipulation] hover:bg-brand-700"
+        >
+          + Amistoso
+        </button>
+      </header>
+
+      <div className="flex gap-1 rounded-lg bg-slate-100/70 p-1" role="tablist">
+        {(['agenda', 'competencias'] as const).map((id) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={pestana === id}
+            onClick={() => setPestana(id)}
+            className={`min-h-[2.5rem] flex-1 rounded-md px-2 text-[11px] font-bold uppercase tracking-tight transition-colors [touch-action:manipulation] ${
+              pestana === id ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'
+            }`}
+          >
+            {id === 'agenda' ? 'Agenda' : 'Competencias'}
+          </button>
+        ))}
+      </div>
+
+      {pestana === 'competencias' && <SeccionCompetencias />}
+
+      {pestana === 'agenda' && (
+      <div className="space-y-4">
         {/*
           Los filtros van plegados detrás del chip. Antes eran cuatro `select` que en un teléfono
           se apilaban en ~280px antes del primer partido, y tres de los cuatro estaban
@@ -405,13 +447,6 @@ const PartidosPage = () => {
                   Limpiar
                 </button>
               )}
-              <button
-                type="button"
-                onClick={handleAbrirCrear}
-                className="inline-flex min-h-[2.75rem] items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm transition [touch-action:manipulation] hover:bg-brand-700"
-              >
-                + Amistoso
-              </button>
             </>
           }
         >
@@ -492,7 +527,25 @@ const PartidosPage = () => {
             )}
           </div>
         </BarraFiltros>
-      </header>
+
+        {/*
+          Los partidos jugados que nadie cerró van PRIMERO y sólo si existen. Estaban al final de
+          la página, detrás de próximos y de resultados: es la única lista que pide una acción y
+          era la última que se veía. Cuando no hay ninguno no ocupa nada — un cartel diciendo que
+          no hay nada pendiente es ruido en el lugar más caro de la pantalla.
+        */}
+        {pasadosSinCerrar.length > 0 && !loading && (
+          <section className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+            <h2 className="text-sm font-bold text-amber-900">
+              Sin cerrar <span className="font-normal">{pasadosSinCerrar.length}</span>
+            </h2>
+            {pasadosSinCerrar.map((partido) => (
+              <PartidoCard key={partido.id} partido={partido} actions={accionesDe(partido)} />
+            ))}
+          </section>
+        )}
+      </div>
+      )}
 
       {modalAdminAbierto && partidoAdminId ? (
         <ModalPartidoAdmin
@@ -548,7 +601,7 @@ const PartidosPage = () => {
       />
 
 
-      {vista === 'calendario' && (
+      {pestana === 'agenda' && vista === 'calendario' && (
         <PartidoCalendar
           partidos={todosLosPartidos}
           accionesFn={accionesDe}
@@ -556,14 +609,15 @@ const PartidosPage = () => {
         />
       )}
 
-      {vista === 'lista' && (
+      {pestana === 'agenda' && vista === 'lista' && (
       <>
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
-          <header className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Próximos partidos</h2>
-            <span className="text-xs uppercase tracking-wide text-slate-400">En agenda</span>
-          </header>
+          {/* El conteo reemplaza a la etiqueta «En agenda», que repetía el título con otras
+              palabras y no decía nada que no se viera. */}
+          <h2 className="text-base font-semibold text-slate-900">
+            Próximos <span className="font-normal text-slate-400">{proximos.length}</span>
+          </h2>
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 2 }).map((_, index) => (
@@ -612,10 +666,9 @@ const PartidosPage = () => {
         </div>
 
         <div className="space-y-4">
-          <header className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Resultados recientes</h2>
-            <span className="text-xs uppercase tracking-wide text-slate-400">Todos los finalizados</span>
-          </header>
+          <h2 className="text-base font-semibold text-slate-900">
+            Resultados <span className="font-normal text-slate-400">{recientes.length}</span>
+          </h2>
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 2 }).map((_, index) => (
@@ -639,34 +692,6 @@ const PartidosPage = () => {
             />
           )}
         </div>
-      </section>
-
-      <section className="space-y-4">
-        <header className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Partidos pasados sin cierre</h2>
-          <span className="text-xs uppercase tracking-wide text-slate-400">Revisión pendiente</span>
-        </header>
-        {loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 1 }).map((_, index) => (
-              <div key={index} className="h-32 animate-pulse rounded-2xl bg-slate-200" />
-            ))}
-          </div>
-        ) : pasadosSinCerrar.length ? (
-          <div className="space-y-4">
-            {pasadosSinCerrar.map((partido) => (
-              <PartidoCard
-                key={partido.id}
-                partido={partido}
-                actions={accionesDe(partido)}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
-            No hay partidos anteriores pendientes de cierre.
-          </p>
-        )}
       </section>
       </>
       )}

@@ -148,6 +148,18 @@ export interface EquipoCompetencia {
   competencia: Competencia;
   estado: 'pendiente' | 'aceptado' | 'rechazado';
   fixtureUrl?: string;
+  /**
+   * La temporada por la que el equipo entró a esta competencia, cuando se conoce.
+   *
+   * Es opcional porque hay dos orígenes: `/participacion-temporada` la trae, y
+   * `/equipos-competencia` —la relación vieja, sin temporada— no. Sirve para ordenar: lo que se
+   * está jugando va primero.
+   */
+  temporada?: {
+    id: string;
+    nombre: string;
+    estado?: 'en_creacion' | 'en_curso' | 'finalizada';
+  };
 }
 
 // ========================================

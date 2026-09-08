@@ -34,6 +34,14 @@ type BackendParticipacionTemporada = {
   temporada?: {
     _id?: string;
     nombre?: string;
+    /**
+     * `en_creacion` | `en_curso` | `finalizada`, del schema de Temporada. Es lo que permite
+     * mostrar primero los torneos que se están jugando. El backend no lo mandaba: el `populate`
+     * de `/participacion-temporada` seleccionaba nombre y fechas pero no el estado.
+     */
+    estado?: string;
+    fechaInicio?: string;
+    fechaFin?: string;
     competencia?: BackendRef | string;
   };
 };
@@ -62,6 +70,16 @@ const toNombre = (ref?: BackendRef | string, fallback = 'Competencia'): string =
   if (typeof ref === 'string') return fallback;
   return ref.nombre || fallback;
 };
+
+type EstadoTemporada = NonNullable<EquipoCompetencia['temporada']>['estado'];
+
+/**
+ * Angosta el estado que viene del backend a la unión del schema. Un valor desconocido queda en
+ * `undefined` en vez de colarse: si mañana Mongoose suma un estado, esta competencia ordena como
+ * «sin declarar» en lugar de mentir que está en curso.
+ */
+const estadoTemporada = (estado?: string): EstadoTemporada =>
+  estado === 'en_curso' || estado === 'en_creacion' || estado === 'finalizada' ? estado : undefined;
 
 const mapEstado = (estado?: string): EquipoCompetencia['estado'] => {
   if (estado === 'aceptado' || estado === 'pendiente' || estado === 'rechazado') return estado;
@@ -134,13 +152,44 @@ export const getParticipaciones = async ({ equipoId }: EquipoCompetenciaQuery): 
           nombre: competenciaNombre,
           estado: 'activa',
         },
+        temporada: item.temporada?._id
+          ? {
+              id: item.temporada._id,
+              nombre: item.temporada.nombre || 'Temporada',
+              estado: estadoTemporada(item.temporada.estado),
+            }
+          : undefined,
       });
 
       return acc;
     }, []);
 
-  return [...normalizadasRelaciones, ...normalizadasTemporadas];
+  return ordenarPorVigencia([...normalizadasRelaciones, ...normalizadasTemporadas]);
 };
+
+/**
+ * Primero lo que se está jugando.
+ *
+ * Un DT entra a Competencias para mirar el torneo en curso, no el del año pasado, y la lista
+ * venía en orden de creación — así que con tres temporadas encima la vigente podía quedar
+ * última. El orden es: en curso, después las que todavía no arrancaron, después las que no
+ * declaran estado (la relación vieja `/equipos-competencia` no lo trae), y al final las
+ * finalizadas.
+ */
+const PESO_TEMPORADA: Record<string, number> = {
+  en_curso: 0,
+  en_creacion: 1,
+  finalizada: 3,
+};
+
+const ordenarPorVigencia = (items: EquipoCompetencia[]): EquipoCompetencia[] =>
+  [...items].sort((a, b) => {
+    const pa = a.temporada?.estado ? PESO_TEMPORADA[a.temporada.estado] ?? 2 : 2;
+    const pb = b.temporada?.estado ? PESO_TEMPORADA[b.temporada.estado] ?? 2 : 2;
+    if (pa !== pb) return pa - pb;
+    // A igual vigencia, alfabético: es un orden estable y previsible entre recargas.
+    return a.competencia.nombre.localeCompare(b.competencia.nombre, 'es');
+  });
 
 export const solicitarInscripcion = (payload: InscripcionPayload) =>
   authFetch<SolicitudCompetencia>('/equipos-competencia', {

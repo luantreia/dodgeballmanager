@@ -9,9 +9,10 @@ import { usePendientesDelEquipo } from '../../shared/features/solicitudes/hooks/
  * Son las que se abren estando en el club o al costado de la cancha: ver cómo viene la semana,
  * entrar a un partido a cargar estadísticas, mirar el plantel y analizar.
  *
- * Quedaron cuatro y no nueve porque dos secciones dejaron de ser destinos: el plantel es una
- * pestaña de Equipo y los pendientes viven arriba del dashboard. Competencias, entrenamientos y
- * perfil siguen siendo destinos propios pero van en «Más»: se abren sentado, no en la cancha.
+ * Quedaron cuatro y no nueve porque tres secciones dejaron de ser destinos: el plantel es una
+ * pestaña de Equipo, las competencias una pestaña de Partidos —una competencia le importa al DT
+ * como el contenedor de sus partidos— y los pendientes viven arriba del dashboard.
+ * Entrenamientos y perfil siguen siendo destinos, pero van en «Más»: se abren sentado.
  */
 const TABS_PRINCIPALES = [
   { to: '/dashboard', label: 'Inicio', icon: '🏠' },
@@ -21,7 +22,6 @@ const TABS_PRINCIPALES = [
 ];
 
 const ENLACES_MAS = [
-  { to: '/competencias', label: 'Competencias', icon: '🏆' },
   { to: '/entrenamientos', label: 'Entrenamientos', icon: '🏃' },
   { to: '/perfil', label: 'Perfil', icon: '👤' },
 ];
