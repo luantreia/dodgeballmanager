@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import ToastProvider from '../../../../shared/components/Toast/ToastProvider';
 import SeccionAnalisis from './SeccionAnalisis';
 import { alineacion } from '../../utils/__fixtures__/filas';
@@ -65,7 +65,7 @@ const tab = (nombre: RegExp) => screen.getByRole('button', { name: nombre });
 describe('SeccionAnalisis · shell fijo con pestañas', () => {
   it('abre en Resumen y sólo monta la pestaña activa', async () => {
     montar();
-    await waitFor(() => expect(screen.getByText('Estadísticas')).toBeInTheDocument());
+    await screen.findByText('Estadísticas');
 
     // El resumen está; las otras secciones ni siquiera se montaron.
     expect(screen.queryByText('Sinergias', { selector: 'h2' })).not.toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('SeccionAnalisis · shell fijo con pestañas', () => {
 
   it('cambiar de pestaña reemplaza el contenido', async () => {
     montar();
-    await waitFor(() => expect(screen.getByText('Estadísticas')).toBeInTheDocument());
+    await screen.findByText('Estadísticas');
 
     fireEvent.click(tab(/^Sinergias$/i));
     expect(screen.getByRole('heading', { name: 'Sinergias' })).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe('SeccionAnalisis · shell fijo con pestañas', () => {
 
   it('el chip de filtros resume cuántos partidos quedan y despliega las facetas', async () => {
     montar();
-    await waitFor(() => expect(screen.getByText('Estadísticas')).toBeInTheDocument());
+    await screen.findByText('Estadísticas');
 
     const chip = tab(/2 partidos/);
     expect(chip).toHaveAttribute('aria-expanded', 'false');
@@ -102,7 +102,7 @@ describe('SeccionAnalisis · shell fijo con pestañas', () => {
 
   it('los filtros valen para todas las pestañas, no sólo para la que estaba abierta', async () => {
     montar();
-    await waitFor(() => expect(screen.getByText('Estadísticas')).toBeInTheDocument());
+    await screen.findByText('Estadísticas');
 
     fireEvent.click(tab(/2 partidos/));
     fireEvent.click(screen.getByRole('button', { name: 'Cloth 1' }));
