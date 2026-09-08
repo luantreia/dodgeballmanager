@@ -69,8 +69,10 @@ const FEEDBACK_DURATION = 300;
  * - Los cuatro contadores van en una sola fila (`grid-cols-4`), no apilados: con seis
  *   jugadores en pantalla, cuatro filas por tarjeta eran ~270px de alto cada una y ni con
  *   scroll entraban los seis sin perder de vista al primero mientras se carga el sexto. En una
- *   fila el botón principal baja a ~40px de ancho — por debajo del ideal de 44px, pero sigue
- *   siendo un número de un dígito, no hace falta más para acertarle con el pulgar.
+ *   fila el botón principal baja a ~36-40px de ancho — por debajo del ideal de 44px, pero sigue
+ *   siendo un número de un dígito, no hace falta más para acertarle con el pulgar. El "−" y el
+ *   toggle de "Sobrevive" bajan más todavía (~20-36px): son correcciones ocasionales, no la
+ *   acción principal, así que ceden espacio antes que el número y el selector de jugador.
  */
 const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
   index,
@@ -163,21 +165,21 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
   };
 
   return (
-    <div className="rounded-lg bg-white p-1.5 shadow-md">
+    <div className="rounded-lg bg-white p-1 shadow-md">
       {estadoGuardado && (
         <p className={`text-right text-[9px] font-medium leading-tight ${ETIQUETA_ESTADO[estadoGuardado].clase}`}>
           {ETIQUETA_ESTADO[estadoGuardado].texto}
         </p>
       )}
-      <div className="mb-1.5 flex items-center gap-1">
+      <div className="mb-1 flex items-center gap-1">
         <SelectDropdown
           label={null}
           name={`jugador-${index}`}
           value={jugadorId}
           options={opcionesJugadores}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => onCambiarJugador(e.target.value)}
-          placeholder="Elegí un jugador"
-          className="block h-10 w-full rounded-md border-slate-300 text-sm shadow-sm focus:border-brand-500 focus:ring focus:ring-brand-200 focus:ring-opacity-50"
+          placeholder="Jugador"
+          className="block h-9 w-full rounded-md border-slate-300 text-sm shadow-sm focus:border-brand-500 focus:ring focus:ring-brand-200 focus:ring-opacity-50"
         />
         {/* Swap de números con otro slot — para cuando dos jugadores quedaron anotados al
             revés y no hace falta perder ninguna de las dos capturas para corregirlo. */}
@@ -187,7 +189,7 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
             onClick={onIntercambiar}
             title="Intercambiar los números con otro jugador"
             aria-label="Intercambiar los números con otro jugador"
-            className="flex h-10 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 text-base text-slate-500 transition [touch-action:manipulation] hover:border-slate-300 hover:bg-slate-50"
+            className="flex h-9 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 text-sm text-slate-500 transition [touch-action:manipulation] hover:border-slate-300 hover:bg-slate-50"
           >
             ⇄
           </button>
@@ -201,7 +203,7 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
           title="Sobrevive al set"
           aria-label={`Sobrevive al set: ${estadisticasJugador.survive ? 'sí' : 'no'}`}
           aria-pressed={Boolean(estadisticasJugador.survive)}
-          className={`flex h-10 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition [touch-action:manipulation] ${
+          className={`flex h-9 w-7 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition [touch-action:manipulation] ${
             estadisticasJugador.survive
               ? 'border-emerald-400 bg-emerald-100 text-emerald-700'
               : 'border-slate-200 text-slate-400 hover:bg-slate-50'
@@ -218,7 +220,7 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
           const valor = estadisticasJugador[campo] ?? 0;
           return (
             <div key={campo} className="flex flex-col items-center gap-0.5">
-              <span className="text-[9px] font-medium uppercase text-slate-500">{abrev}</span>
+              <span className="text-[9px] font-medium uppercase leading-none text-slate-500">{abrev}</span>
               <button
                 type="button"
                 onPointerDown={() => iniciarLongPress(campo)}
@@ -227,8 +229,8 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
                 onPointerCancel={detenerLongPress}
                 onClick={() => handleClick(campo)}
                 aria-label={`${label}: ${valor}. Tocá para sumar, mantené apretado para restar`}
-                className={`flex h-10 w-full select-none items-center justify-center rounded-md border-2
-                            text-base font-bold text-slate-800 transition-colors duration-100 ease-out
+                className={`flex h-9 w-full select-none items-center justify-center rounded-md border-2
+                            text-sm font-bold text-slate-800 transition-colors duration-100 ease-out
                             [touch-action:manipulation] focus-visible:outline-none focus-visible:ring-2
                             focus-visible:ring-brand-500/50 ${claseFeedback(campo)}`}
               >
@@ -239,8 +241,8 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
                 onClick={() => restar(campo)}
                 disabled={valor <= 0}
                 aria-label={`Restar 1 a ${label}`}
-                className="flex h-6 w-full items-center justify-center rounded-md border border-slate-200
-                           bg-white text-xs font-bold text-slate-500 transition-colors
+                className="flex h-5 w-full items-center justify-center rounded-md border border-slate-200
+                           bg-white text-xs font-bold leading-none text-slate-500 transition-colors
                            [touch-action:manipulation] disabled:opacity-30
                            hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2
                            focus-visible:ring-brand-500/50"

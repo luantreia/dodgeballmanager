@@ -127,7 +127,7 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
   return (
     <div className="p-1">
       <h3 className="mb-1 text-lg font-semibold text-slate-800">{equipoNombre}</h3>
-      <div className="grid grid-cols-2 gap-2 xs:grid-cols-3 md:grid-cols-6">
+      <div className="grid grid-cols-2 gap-1.5 xs:grid-cols-3 md:grid-cols-6">
         {estadisticasCompletas.map((jugadorObj, idx) => {
           const jugadorId = jugadorObj?.jugadorId ?? '';
           const stats = jugadorObj?.estadisticas ?? {};

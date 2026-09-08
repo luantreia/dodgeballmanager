@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
+import MenuAcciones from '../../../../shared/components/MenuAcciones/MenuAcciones';
 import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
 import { ListaJugadores } from './ListaJugadores';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
@@ -967,14 +968,21 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     }
   };
 
-  const subtitulo = equipoNombre
-    ? `${equipoNombre} · captura propia, no afecta los datos oficiales`
-    : 'Captura propia del equipo, no afecta los datos oficiales';
-
   return (
     <ModalBase
-      title="Mi planilla"
-      subtitle={subtitulo}
+      // Antes "Mi planilla" y "MORAN · captura propia, no afecta los datos oficiales" eran dos
+      // líneas — la segunda se pliega acá al lado de la primera para no gastar esa fila entera
+      // arriba de las tarjetas, que son lo que de verdad hay que ver en una pantalla chica.
+      title={
+        <>
+          Mi planilla
+          {equipoNombre && (
+            <span className="ml-1.5 align-middle text-xs font-normal text-slate-400 sm:text-sm">
+              · {equipoNombre}
+            </span>
+          )}
+        </>
+      }
       onClose={onClose}
       size="xl"
       isOpen
@@ -1303,80 +1311,80 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
             </details>
           )}
 
-          {/* El pie ya no depende de `editable`: la planilla se puede eliminar también mientras
-              espera oficialización (el backend lo permite), y con la oficializada hay que
-              explicar por qué no se puede en vez de esconder el botón y dejar al usuario
-              buscándolo. */}
-          {/* Pegada al fondo del área scrolleable, no al final del contenido. Una planilla de
-              seis jugadores por varios sets es larga: en un teléfono había que recorrerla entera
-              para llegar a "Guardar", y el que la carga suele estar al costado de la cancha. El
-              margen negativo la lleva hasta los bordes del modal para que la franja tape todo el
-              ancho y el contenido no se vea pasar por los costados. */}
-          <div className="sticky bottom-0 z-10 -mx-4 -mb-3 flex flex-wrap items-center gap-3
-                          border-t border-gray-200 bg-white px-4 py-3
-                          pb-[calc(0.75rem+env(safe-area-inset-bottom))]
-                          sm:-mx-6 sm:-mb-4 sm:px-6 sm:pb-3">
+          {/*
+            El pie reordenado por peso real, no por orden alfabético de cuándo se agregó cada
+            botón:
+            - "Eliminar planilla" es rara y destructiva → detrás del "⋯", mismo patrón que ya usa
+              PartidosPage para no competir con lo que se usa todos los días.
+            - "Guardar ahora" ya casi no hace falta con el autoguardado por fila: pasa a ser un
+              botón chico, no el CTA grande de antes.
+            - "Pedir oficial" es la única acción que de verdad importa acá — es la que manda el
+              trabajo a la organización — así que se queda como la destacada.
+            Sigue sin depender de `editable`: la planilla se puede eliminar también mientras
+            espera oficialización, y con la oficializada hay que explicar por qué no en vez de
+            esconder el botón. Pegado al fondo del área scrolleable (no al final del contenido)
+            para no obligar a bajar toda la grilla para llegar acá.
+          */}
+          <div className="sticky bottom-0 z-10 -mx-4 -mb-3 flex items-center justify-between gap-2
+                          border-t border-gray-200 bg-white px-4 py-2
+                          pb-[calc(0.5rem+env(safe-area-inset-bottom))]
+                          sm:-mx-6 sm:-mb-4 sm:px-6 sm:pb-2">
             {planilla.estado === 'oficializada' ? (
-              <p className="text-xs text-gray-500">
-                Una planilla oficializada no se puede eliminar: las estadísticas oficiales salieron
-                de acá y perderían su origen documentado.
-              </p>
+              <p className="text-xs text-gray-500">Oficializada: no se puede eliminar.</p>
             ) : (
-              <button
-                type="button"
-                disabled={eliminando || guardando}
-                onClick={() =>
-                  setConfirmacion({
-                    titulo: 'Eliminar la planilla',
-                    mensaje: (
-                      <>
-                        <p>
-                          Se borra la planilla completa: sus sets, los jugadores presentes y todas
-                          las estadísticas que cargaste. No se puede deshacer.
-                        </p>
-                        <p className="mt-2">
-                          Los datos oficiales del partido no se tocan
-                          {planilla.estado === 'pendiente_oficializacion'
-                            ? ', y la solicitud de oficialización pendiente queda sin efecto.'
-                            : '.'}
-                        </p>
-                      </>
-                    ),
-                    confirmLabel: 'Eliminar planilla',
-                    accion: borrarPlanilla,
-                  })
-                }
-                className="rounded-lg border border-rose-200 px-4 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
-              >
-                {eliminando ? 'Eliminando...' : 'Eliminar planilla'}
-              </button>
+              <MenuAcciones
+                etiqueta="Más opciones de esta planilla"
+                acciones={[
+                  {
+                    label: eliminando ? 'Eliminando...' : 'Eliminar planilla',
+                    tono: 'cuidado',
+                    onSelect: () =>
+                      setConfirmacion({
+                        titulo: 'Eliminar la planilla',
+                        mensaje: (
+                          <>
+                            <p>
+                              Se borra la planilla completa: sus sets, los jugadores presentes y
+                              todas las estadísticas que cargaste. No se puede deshacer.
+                            </p>
+                            <p className="mt-2">
+                              Los datos oficiales del partido no se tocan
+                              {planilla.estado === 'pendiente_oficializacion'
+                                ? ', y la solicitud de oficialización pendiente queda sin efecto.'
+                                : '.'}
+                            </p>
+                          </>
+                        ),
+                        confirmLabel: 'Eliminar planilla',
+                        accion: borrarPlanilla,
+                      }),
+                  },
+                ]}
+              />
             )}
 
             {editable && (
-              // En mobile los dos botones ocupan el ancho completo y van apilados: lado a lado
-              // quedaban en ~150px cada uno, y "Pedir que sea oficial" —que es irreversible—
-              // terminaba pegado a "Guardar", que es la acción de todos los días.
-              <div className="ml-auto flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-3">
-                <button
-                  type="button"
-                  onClick={oficializar}
-                  disabled={guardando}
-                  className="min-h-[2.75rem] rounded-lg border border-gray-300 px-4 py-2 font-medium
-                             text-gray-700 transition [touch-action:manipulation]
-                             hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Pedir que sea oficial
-                </button>
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={guardar}
                   disabled={guardando}
-                  title="Cada fila ya se guarda sola; este botón fuerza el guardado de todo ahora, útil si alguna quedó marcada como no guardada"
-                  className="min-h-[2.75rem] rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white
-                             transition [touch-action:manipulation]
+                  title="Cada fila ya se guarda sola; esto fuerza el guardado de todo ahora"
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium
+                             text-gray-600 transition [touch-action:manipulation]
+                             hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {guardando ? 'Guardando...' : 'Guardar ahora'}
+                </button>
+                <button
+                  type="button"
+                  onClick={oficializar}
+                  disabled={guardando}
+                  className="min-h-[2.75rem] rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold
+                             text-white transition [touch-action:manipulation]
                              hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {guardando ? 'Guardando...' : 'Guardar todo ahora'}
+                  Pedir oficial
                 </button>
               </div>
             )}
