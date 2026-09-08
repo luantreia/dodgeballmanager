@@ -4,6 +4,7 @@ import BarraFiltros from '../../../shared/components/BarraFiltros/BarraFiltros';
 import MenuAcciones from '../../../shared/components/MenuAcciones/MenuAcciones';
 import EstadoVacio from '../../../shared/components/EstadoVacio/EstadoVacio';
 import SeccionCompetencias from '../../competencias/components/SeccionCompetencias';
+import PartidoCalendar from '../../../shared/components/PartidoCalendar/PartidoCalendar';
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { getPartido, getPartidos, getTemporadasByCompetencia, getFasesByTemporada } from '../services/partidoService';
 import type { Partido } from '../../../shared/utils/types/types';
@@ -26,6 +27,7 @@ const PartidosPage = () => {
   const [recientes, setRecientes] = useState<Partido[]>([]);
   const [pasadosSinCerrar, setPasadosSinCerrar] = useState<Partido[]>([]);
   const [pestana, setPestana] = useState<'agenda' | 'competencias'>('agenda');
+  const [vista, setVista] = useState<'lista' | 'calendario'>('lista');
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipoPartido>('todos');
   const [filtroCompetencia, setFiltroCompetencia] = useState('');
   const [filtroTemporada, setFiltroTemporada] = useState('');
@@ -46,6 +48,16 @@ const PartidosPage = () => {
 
   const hayFiltros =
     filtroTipo !== 'todos' || Boolean(filtroCompetencia || filtroTemporada || filtroFase);
+
+  /**
+   * El calendario no distingue próximos, recientes ni pendientes de cierre: esa separación es de
+   * la lista, que ordena por «qué me toca ahora». En una grilla de días cada partido va en su
+   * casilla y punto.
+   */
+  const todosLosPartidos = useMemo(
+    () => [...proximos, ...recientes, ...pasadosSinCerrar],
+    [proximos, recientes, pasadosSinCerrar],
+  );
 
   const limpiarFiltros = useCallback(() => {
     setFiltroTipo('todos');
@@ -391,6 +403,25 @@ const PartidosPage = () => {
           activo={hayFiltros}
           acciones={
             <>
+              {/* Lista o calendario. La lista contesta «qué sigue» —está ordenada por cercanía y
+                  separa lo que espera acción—; el calendario contesta «cómo viene el mes», que es
+                  otra pregunta y hasta ahora no tenía dónde hacerse. Los dos filtran igual. */}
+              <div className="flex rounded-lg bg-slate-100 p-1">
+                {(['lista', 'calendario'] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setVista(v)}
+                    aria-pressed={vista === v}
+                    className={`min-h-[2.25rem] rounded-md px-3 text-xs font-semibold capitalize transition-all [touch-action:manipulation] ${
+                      vista === v ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'
+                    }`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+
               {hayFiltros && (
                 <button
                   type="button"
@@ -545,7 +576,15 @@ const PartidosPage = () => {
 
       {pestana === 'competencias' && <SeccionCompetencias />}
 
-      {pestana === 'agenda' && (
+      {pestana === 'agenda' && vista === 'calendario' && (
+        <PartidoCalendar
+          partidos={todosLosPartidos}
+          accionesFn={accionesDe}
+          etiquetaFn={(p) => p.equipoVisitante?.nombre ?? p.rival ?? 'Rival'}
+        />
+      )}
+
+      {pestana === 'agenda' && vista === 'lista' && (
       <>
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
@@ -617,7 +656,6 @@ const PartidosPage = () => {
                 <PartidoCard
                   key={partido.id}
                   partido={partido}
-                  variante="resultado"
                   actions={accionesDe(partido)}
                 />
               ))}
