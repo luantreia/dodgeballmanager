@@ -251,6 +251,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       estadisticas: PlanillaEstadistica[];
     }) => {
       if (payload.planillaId !== planillaId) return;
+
       setPlanilla((prev) => {
         if (!prev) return prev;
         let siguiente = prev;
@@ -261,6 +262,51 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           siguiente = mergeEstadisticaEnPlanilla(siguiente, fila);
         });
         return siguiente;
+      });
+
+      // Lo de arriba alimenta "Totales del partido", pero la grilla interactiva (`slots`) es
+      // estado aparte — sin esto, lo que carga otra persona se ve en los totales pero nunca en
+      // las tarjetas, ni actualiza los números de alguien ya asignado ni ubica a alguien nuevo.
+      setSlots((prev) => {
+        const modo = planillaRef.current?.modo;
+        const setActivo = setActivoIdRef.current;
+        let next = prev;
+        let cambio = false;
+        payload.estadisticas.forEach((fila) => {
+          const esDelSetActivo = modo === 'sets' ? fila.planillaSet === setActivo : fila.planillaSet === null;
+          if (!esDelSetActivo) return;
+
+          const idxExistente = next.findIndex((s) => s.presenteId === fila.planillaPresente);
+          const estadoLocal = idxExistente >= 0 ? filasGuardandoRef.current[idxExistente] : undefined;
+          // No pisar una fila que YO tengo pendiente o en vuelo — mismo criterio que para `planilla`.
+          if (estadoLocal === 'pendiente' || estadoLocal === 'guardando') return;
+
+          const estadisticasNuevas: EstadisticasSlot = {
+            throws: fila.throws ?? 0,
+            hits: fila.hits ?? 0,
+            outs: fila.outs ?? 0,
+            catches: fila.catches ?? 0,
+            survive: Boolean(fila.survive),
+          };
+
+          if (idxExistente >= 0) {
+            if (!cambio) next = [...next];
+            cambio = true;
+            next[idxExistente] = { ...next[idxExistente], estadisticas: estadisticasNuevas };
+            return;
+          }
+
+          // Es un presente que no ocupa ningún slot local todavía (alguien lo asignó recién en
+          // otra sesión): se ubica en el primer slot vacío. Si no hay ninguno libre, esta grilla
+          // ya está llena con otra gente y no hay dónde mostrarlo — sigue existiendo en
+          // "Totales", sólo que no visible acá hasta que se libere un lugar.
+          const idxVacio = next.findIndex((s) => !s.presenteId);
+          if (idxVacio === -1) return;
+          if (!cambio) next = [...next];
+          cambio = true;
+          next[idxVacio] = { presenteId: fila.planillaPresente, estadisticas: estadisticasNuevas };
+        });
+        return cambio ? next : prev;
       });
     };
 
@@ -290,6 +336,23 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
             }
           : prev,
       );
+
+      // Si ese presente ocupaba un slot acá, se vacía — salvo que sea la propia reasignación de
+      // este mismo browser haciendo eco (el `findIndex` ya no lo encuentra en ese caso).
+      const modo = planillaRef.current?.modo;
+      const setActivo = setActivoIdRef.current;
+      const esDelSetActivo = modo === 'sets' ? payload.planillaSet === setActivo : payload.planillaSet === null;
+      if (!esDelSetActivo) return;
+
+      setSlots((prev) => {
+        const idx = prev.findIndex((s) => s.presenteId === payload.planillaPresente);
+        if (idx === -1) return prev;
+        const estadoLocal = filasGuardandoRef.current[idx];
+        if (estadoLocal === 'pendiente' || estadoLocal === 'guardando') return prev;
+        const next = [...prev];
+        next[idx] = slotVacio();
+        return next;
+      });
     };
 
     socket.on('connect', unirse);
