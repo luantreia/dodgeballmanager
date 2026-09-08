@@ -41,11 +41,11 @@ const ETIQUETA_ESTADO: Record<EstadoGuardadoFila, { texto: string; clase: string
   error: { texto: 'No se guardó — tocá algo de esta fila para reintentar', clase: 'text-rose-600' },
 };
 
-const CONTROLES: Array<{ campo: CampoNumerico; label: string }> = [
-  { campo: 'throws', label: 'Throws' },
-  { campo: 'hits', label: 'Hits' },
-  { campo: 'outs', label: 'Outs' },
-  { campo: 'catches', label: 'Catches' },
+const CONTROLES: Array<{ campo: CampoNumerico; label: string; abrev: string }> = [
+  { campo: 'throws', label: 'Throws', abrev: 'Tir' },
+  { campo: 'hits', label: 'Hits', abrev: 'Hit' },
+  { campo: 'outs', label: 'Outs', abrev: 'Out' },
+  { campo: 'catches', label: 'Catches', abrev: 'Cat' },
 ];
 
 const LONG_PRESS_DELAY = 500;
@@ -66,7 +66,11 @@ const FEEDBACK_DURATION = 300;
  * - `onPointerCancel` corta el long-press: cuando el navegador se queda con el gesto para
  *   scrollear dispara ese evento, y sin escucharlo bastaba apoyar el dedo sobre un contador
  *   para scrollear la grilla para que empezara a restar solo.
- * - Los targets son de 44px, el mínimo táctil. Antes medían 32px de alto.
+ * - Los cuatro contadores van en una sola fila (`grid-cols-4`), no apilados: con seis
+ *   jugadores en pantalla, cuatro filas por tarjeta eran ~270px de alto cada una y ni con
+ *   scroll entraban los seis sin perder de vista al primero mientras se carga el sexto. En una
+ *   fila el botón principal baja a ~40px de ancho — por debajo del ideal de 44px, pero sigue
+ *   siendo un número de un dígito, no hace falta más para acertarle con el pulgar.
  */
 const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
   index,
@@ -159,13 +163,13 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
   };
 
   return (
-    <div className="rounded-lg bg-white p-2 shadow-md">
+    <div className="rounded-lg bg-white p-1.5 shadow-md">
       {estadoGuardado && (
-        <p className={`mb-1 text-right text-[10px] font-medium ${ETIQUETA_ESTADO[estadoGuardado].clase}`}>
+        <p className={`text-right text-[9px] font-medium leading-tight ${ETIQUETA_ESTADO[estadoGuardado].clase}`}>
           {ETIQUETA_ESTADO[estadoGuardado].texto}
         </p>
       )}
-      <div className="mb-3 flex items-start gap-1">
+      <div className="mb-1.5 flex items-center gap-1">
         <SelectDropdown
           label={null}
           name={`jugador-${index}`}
@@ -173,7 +177,7 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
           options={opcionesJugadores}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => onCambiarJugador(e.target.value)}
           placeholder="Elegí un jugador"
-          className="block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring focus:ring-brand-200 focus:ring-opacity-50"
+          className="block h-10 w-full rounded-md border-slate-300 text-sm shadow-sm focus:border-brand-500 focus:ring focus:ring-brand-200 focus:ring-opacity-50"
         />
         {/* Swap de números con otro slot — para cuando dos jugadores quedaron anotados al
             revés y no hace falta perder ninguna de las dos capturas para corregirlo. */}
@@ -183,64 +187,70 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
             onClick={onIntercambiar}
             title="Intercambiar los números con otro jugador"
             aria-label="Intercambiar los números con otro jugador"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-slate-200 text-lg text-slate-500 transition [touch-action:manipulation] hover:border-slate-300 hover:bg-slate-50"
+            className="flex h-10 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 text-base text-slate-500 transition [touch-action:manipulation] hover:border-slate-300 hover:bg-slate-50"
           >
             ⇄
           </button>
         )}
+        {/* Antes era una fila propia ("Sobrevive al set" + checkbox, ~44px) debajo de los
+            contadores. Como ícono al lado del select, cabe en la misma fila sin gastar el alto
+            de una fila entera — necesario para que las seis tarjetas entren juntas en pantalla. */}
+        <button
+          type="button"
+          onClick={() => onCambiarSurvive?.(!estadisticasJugador.survive)}
+          title="Sobrevive al set"
+          aria-label={`Sobrevive al set: ${estadisticasJugador.survive ? 'sí' : 'no'}`}
+          aria-pressed={Boolean(estadisticasJugador.survive)}
+          className={`flex h-10 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition [touch-action:manipulation] ${
+            estadisticasJugador.survive
+              ? 'border-emerald-400 bg-emerald-100 text-emerald-700'
+              : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+          }`}
+        >
+          S
+        </button>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {CONTROLES.map(({ campo, label }) => {
+      {/* Los cuatro contadores en una sola fila, no apilados — ver el comentario del
+          componente sobre por qué. */}
+      <div className="grid grid-cols-4 gap-1">
+        {CONTROLES.map(({ campo, label, abrev }) => {
           const valor = estadisticasJugador[campo] ?? 0;
           return (
-            <div key={campo} className="flex flex-col items-center">
-              <span className="text-xs font-medium text-slate-600">{label}</span>
-              <div className="flex items-stretch gap-1">
-                <button
-                  type="button"
-                  onClick={() => restar(campo)}
-                  disabled={valor <= 0}
-                  aria-label={`Restar 1 a ${label}`}
-                  className="flex h-11 w-8 items-center justify-center rounded-lg border-2 border-slate-200
-                             bg-white text-lg font-bold text-slate-500 transition-colors
-                             [touch-action:manipulation] disabled:opacity-30
-                             hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2
-                             focus-visible:ring-brand-500/50"
-                >
-                  −
-                </button>
-                <button
-                  type="button"
-                  onPointerDown={() => iniciarLongPress(campo)}
-                  onPointerUp={detenerLongPress}
-                  onPointerLeave={detenerLongPress}
-                  onPointerCancel={detenerLongPress}
-                  onClick={() => handleClick(campo)}
-                  aria-label={`${label}: ${valor}. Tocá para sumar, mantené apretado para restar`}
-                  className={`flex h-11 min-w-[3rem] flex-1 select-none items-center justify-center
-                              rounded-lg border-2 text-xl font-bold text-slate-800
-                              transition-colors duration-100 ease-out [touch-action:manipulation]
-                              focus-visible:outline-none focus-visible:ring-2
-                              focus-visible:ring-brand-500/50 ${claseFeedback(campo)}`}
-                >
-                  {valor}
-                </button>
-              </div>
+            <div key={campo} className="flex flex-col items-center gap-0.5">
+              <span className="text-[9px] font-medium uppercase text-slate-500">{abrev}</span>
+              <button
+                type="button"
+                onPointerDown={() => iniciarLongPress(campo)}
+                onPointerUp={detenerLongPress}
+                onPointerLeave={detenerLongPress}
+                onPointerCancel={detenerLongPress}
+                onClick={() => handleClick(campo)}
+                aria-label={`${label}: ${valor}. Tocá para sumar, mantené apretado para restar`}
+                className={`flex h-10 w-full select-none items-center justify-center rounded-md border-2
+                            text-base font-bold text-slate-800 transition-colors duration-100 ease-out
+                            [touch-action:manipulation] focus-visible:outline-none focus-visible:ring-2
+                            focus-visible:ring-brand-500/50 ${claseFeedback(campo)}`}
+              >
+                {valor}
+              </button>
+              <button
+                type="button"
+                onClick={() => restar(campo)}
+                disabled={valor <= 0}
+                aria-label={`Restar 1 a ${label}`}
+                className="flex h-6 w-full items-center justify-center rounded-md border border-slate-200
+                           bg-white text-xs font-bold text-slate-500 transition-colors
+                           [touch-action:manipulation] disabled:opacity-30
+                           hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2
+                           focus-visible:ring-brand-500/50"
+              >
+                −
+              </button>
             </div>
           );
         })}
       </div>
-
-      <label className="mt-3 flex min-h-[2.75rem] items-center justify-center gap-2 text-xs font-medium text-slate-700">
-        <input
-          type="checkbox"
-          checked={Boolean(estadisticasJugador.survive)}
-          onChange={(event) => onCambiarSurvive?.(event.target.checked)}
-          className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-        />
-        Sobrevive al set
-      </label>
     </div>
   );
 };
