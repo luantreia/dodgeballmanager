@@ -53,10 +53,14 @@ const TablaJugadoresEstadisticas: FC<Props> = ({
   onSolicitarIntercambio,
 }) => {
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200">
+    // Sin borde exterior propio: la tabla ya vive dentro del modal, y sumarle una caja más
+    // encima de las filas (que ya se separan con `divide-y`) y de cada contador (que ya tiene su
+    // propio borde) es lo que apilaba "cajas dentro de cajas". El encabezado se distingue por
+    // tipografía (mayúsculas chicas) y una línea fina, no por un bloque de color.
+    <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase text-slate-500">
+          <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase text-slate-500">
             <th className="w-full px-2 py-1.5 text-left">Jugador</th>
             <th className="px-1 py-1.5" />
             <th className="px-1 py-1.5">Sob.</th>

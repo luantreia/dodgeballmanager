@@ -95,12 +95,16 @@ const ContadorEstadistica: FC<Props> = ({ valor, etiquetaAria, etiquetaRestar, o
     marcarFeedback('suma');
   };
 
+  // En reposo el botón sólo se distingue con un borde fino y sin relleno — con 4 estadísticas ×
+  // 6 filas × 2 botones cada una, un `border-2` + relleno gris en TODOS a la vez es lo que arma
+  // el efecto "grid de cajas" que se reportó como ruido visual. El flash de +1/−1 sigue siendo
+  // vívido (fondo y borde de color), porque esa sí es información puntual que conviene notar.
   const claseFeedback =
     feedback === 'suma'
       ? 'bg-emerald-200 border-emerald-300'
       : feedback === 'resta'
       ? 'bg-rose-200 border-rose-300'
-      : 'bg-slate-100 border-slate-200';
+      : 'bg-white border-slate-300';
 
   const botonNumero = (
     <button
@@ -111,7 +115,7 @@ const ContadorEstadistica: FC<Props> = ({ valor, etiquetaAria, etiquetaRestar, o
       onPointerCancel={detenerLongPress}
       onClick={handleClick}
       aria-label={etiquetaAria}
-      className={`flex select-none items-center justify-center rounded-md border-2 font-bold text-slate-800
+      className={`flex select-none items-center justify-center rounded-md border font-bold text-slate-800
                   transition-colors duration-100 ease-out [touch-action:manipulation]
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 ${
                     disposicion === 'horizontal' ? 'h-8 w-9 text-sm' : 'h-9 w-full text-sm'

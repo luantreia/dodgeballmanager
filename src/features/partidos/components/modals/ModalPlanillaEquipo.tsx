@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
-import MenuAcciones from '../../../../shared/components/MenuAcciones/MenuAcciones';
 import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
 import { ListaJugadores } from './ListaJugadores';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
@@ -992,6 +991,16 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       isOpen
       hasUnsavedChanges={hayCambiosSinGuardar}
       unsavedMessage="Hay filas que todavía no se terminaron de guardar. ¿Cerrar igual?"
+      // `bodyClassName` reemplaza el default de `ModalBase` en vez de mezclarse con él (así lo
+      // usa `Modal.tsx`), así que achicarlo acá es un ajuste sin riesgo de pelea de cascada.
+      // `headerClassName`, en cambio, SE CONCATENA con las clases propias del header de
+      // `ModalBase` (mb-0.5/pb-1/border-b): dos utilities de Tailwind en conflicto tienen la
+      // misma especificidad, así que gana la que aparezca última en la hoja de estilos
+      // COMPILADA — un orden que depende de dónde se usó cada clase por primera vez en todo el
+      // proyecto, no del orden en este `className`. Por eso las de acá van con `!` (important):
+      // así se anulan de forma determinística en vez de apostar a ese orden.
+      bodyClassName="px-4 pt-2 pb-3 sm:px-6 sm:pt-3 sm:pb-4"
+      headerClassName="!mb-0 !border-b !border-slate-100 !pb-1 sm:!pb-1"
     >
       {loading ? (
         <div className="py-10 text-center text-gray-600">Cargando planilla...</div>
@@ -1318,12 +1327,16 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           {/*
             El pie reordenado por peso real, no por orden alfabético de cuándo se agregó cada
             botón:
-            - "Eliminar planilla" es rara y destructiva → detrás del "⋯", mismo patrón que ya usa
-              PartidosPage para no competir con lo que se usa todos los días.
+            - "Eliminar planilla" es rara y destructiva → texto chico sin caja, no un "⋯" con
+              menú propio. `MenuAcciones` (portal + trigger h-11/w-11) tiene sentido cuando hay
+              VARIAS acciones secundarias detrás — acá sólo hay una, así que el "⋯" era un tap de
+              indirección y una caja de más sin ganar nada a cambio; se queda para `PartidosPage`,
+              que sí agrupa varias.
             - "Guardar ahora" ya casi no hace falta con el autoguardado por fila: pasa a ser un
-              botón chico, no el CTA grande de antes.
+              link de texto plano, sin borde ni fondo — sigue siendo un botón real (mismo
+              handler), sólo que no compite visualmente con nada.
             - "Pedir oficial" es la única acción que de verdad importa acá — es la que manda el
-              trabajo a la organización — así que se queda como la destacada.
+              trabajo a la organización — así que se queda como la única con caja/color sólido.
             Sigue sin depender de `editable`: la planilla se puede eliminar también mientras
             espera oficialización, y con la oficializada hay que explicar por qué no en vez de
             esconder el botón. Pegado al fondo del área scrolleable (no al final del contenido)
@@ -1336,47 +1349,47 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
             {planilla.estado === 'oficializada' ? (
               <p className="text-xs text-gray-500">Oficializada: no se puede eliminar.</p>
             ) : (
-              <MenuAcciones
-                etiqueta="Más opciones de esta planilla"
-                acciones={[
-                  {
-                    label: eliminando ? 'Eliminando...' : 'Eliminar planilla',
-                    tono: 'cuidado',
-                    onSelect: () =>
-                      setConfirmacion({
-                        titulo: 'Eliminar la planilla',
-                        mensaje: (
-                          <>
-                            <p>
-                              Se borra la planilla completa: sus sets, los jugadores presentes y
-                              todas las estadísticas que cargaste. No se puede deshacer.
-                            </p>
-                            <p className="mt-2">
-                              Los datos oficiales del partido no se tocan
-                              {planilla.estado === 'pendiente_oficializacion'
-                                ? ', y la solicitud de oficialización pendiente queda sin efecto.'
-                                : '.'}
-                            </p>
-                          </>
-                        ),
-                        confirmLabel: 'Eliminar planilla',
-                        accion: borrarPlanilla,
-                      }),
-                  },
-                ]}
-              />
+              <button
+                type="button"
+                disabled={eliminando}
+                onClick={() =>
+                  setConfirmacion({
+                    titulo: 'Eliminar la planilla',
+                    mensaje: (
+                      <>
+                        <p>
+                          Se borra la planilla completa: sus sets, los jugadores presentes y
+                          todas las estadísticas que cargaste. No se puede deshacer.
+                        </p>
+                        <p className="mt-2">
+                          Los datos oficiales del partido no se tocan
+                          {planilla.estado === 'pendiente_oficializacion'
+                            ? ', y la solicitud de oficialización pendiente queda sin efecto.'
+                            : '.'}
+                        </p>
+                      </>
+                    ),
+                    confirmLabel: 'Eliminar planilla',
+                    accion: borrarPlanilla,
+                  })
+                }
+                className="rounded-md px-2 py-2 text-xs font-medium text-rose-600 transition
+                           [touch-action:manipulation] hover:bg-rose-50 disabled:opacity-40"
+              >
+                {eliminando ? 'Eliminando...' : 'Eliminar planilla'}
+              </button>
             )}
 
             {editable && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={guardar}
                   disabled={guardando}
                   title="Cada fila ya se guarda sola; esto fuerza el guardado de todo ahora"
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium
-                             text-gray-600 transition [touch-action:manipulation]
-                             hover:bg-gray-50 disabled:opacity-50"
+                  className="px-1 py-2 text-xs font-medium text-gray-500 transition
+                             [touch-action:manipulation] hover:text-gray-700 hover:underline
+                             disabled:opacity-50"
                 >
                   {guardando ? 'Guardando...' : 'Guardar ahora'}
                 </button>
