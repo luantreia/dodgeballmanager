@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import { Overlay } from 'overtime-kit';
 import { crearPartidoAmistoso } from '../../services/partidoService';
 import { obtenerOpcionesEquipos, type EquipoOpcion } from '../../../equipo/services/equipoService';
 
@@ -99,10 +100,6 @@ export const ModalCrearPartido = ({ isOpen, equipoId, onClose, onSuccess }: Moda
     };
   }, [form.rival, isOpen, equipoId]);
 
-  if (!isOpen) {
-    return null;
-  }
-
   const handleCerrar = () => {
     onClose();
   };
@@ -165,183 +162,173 @@ export const ModalCrearPartido = ({ isOpen, equipoId, onClose, onSuccess }: Moda
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <header className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Nuevo partido amistoso</h2>
-            <p className="text-sm text-slate-500">Completá los datos básicos para agendarlo.</p>
+    <Overlay
+      isOpen={isOpen}
+      onClose={handleCerrar}
+      size="sm"
+      title="Nuevo partido amistoso"
+      subtitle="Completá los datos básicos para agendarlo."
+    >
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div>
+          <label className="block text-sm font-medium text-slate-700" htmlFor="crear-rival">
+            Rival
+          </label>
+          <input
+            id="crear-rival"
+            name="rival"
+            type="text"
+            value={form.rival}
+            onChange={handleChange}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            placeholder="Buscar equipo por nombre"
+            required
+          />
+          {equiposLoading ? (
+            <p className="mt-2 text-xs text-slate-400">Buscando equipos…</p>
+          ) : null}
+          {!equiposLoading && !equiposError && form.rival.trim().length >= 2 && equiposOpciones.length === 0 ? (
+            <p className="mt-2 text-xs text-slate-500">No encontramos equipos. Probá con otro nombre.</p>
+          ) : null}
+          {!equiposLoading && equiposError ? (
+            <p className="mt-2 text-xs text-rose-600">{equiposError}</p>
+          ) : null}
+          {equiposOpciones.length ? (
+            <ul className="mt-2 max-h-48 overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+              {equiposOpciones.map((equipo) => {
+                const seleccionado = rivalSeleccionado?.id === equipo.id;
+                return (
+                  <li
+                    key={equipo.id}
+                    className={`cursor-pointer px-3 py-2 text-sm hover:bg-slate-50 ${
+                      seleccionado ? 'bg-brand-50 text-brand-700' : 'text-slate-600'
+                    }`}
+                    onClick={() => handleSeleccionarRival(equipo)}
+                    role="button"
+                  >
+                    <p className="font-medium text-slate-900">{equipo.nombre}</p>
+                    {equipo.pais ? <p className="text-xs text-slate-500">{equipo.pais}</p> : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
+
+        {rivalSeleccionado ? (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            <p className="font-semibold text-slate-900">Rival seleccionado:</p>
+            <p>{rivalSeleccionado.nombre}</p>
           </div>
+        ) : null}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-slate-700" htmlFor="crear-fecha">
+              Fecha
+            </label>
+            <input
+              id="crear-fecha"
+              name="fecha"
+              type="date"
+              value={form.fecha}
+              onChange={handleChange}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700" htmlFor="crear-hora">
+              Hora
+            </label>
+            <input
+              id="crear-hora"
+              name="hora"
+              type="time"
+              value={form.hora}
+              onChange={handleChange}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700" htmlFor="crear-escenario">
+            Escenario
+          </label>
+          <input
+            id="crear-escenario"
+            name="escenario"
+            type="text"
+            value={form.escenario}
+            onChange={handleChange}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            placeholder="Cancha o lugar (opcional)"
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-slate-700" htmlFor="crear-modalidad">
+              Modalidad
+            </label>
+            <select
+              id="crear-modalidad"
+              name="modalidad"
+              value={form.modalidad}
+              onChange={handleChange}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              required
+            >
+              {MODALIDAD_OPCIONES.map((opcion) => (
+                <option key={opcion} value={opcion}>
+                  {opcion}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700" htmlFor="crear-categoria">
+              Categoría
+            </label>
+            <select
+              id="crear-categoria"
+              name="categoria"
+              value={form.categoria}
+              onChange={handleChange}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              required
+            >
+              {CATEGORIA_OPCIONES.map((opcion) => (
+                <option key={opcion} value={opcion}>
+                  {opcion}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {crearError ? <p className="text-sm text-rose-600">{crearError}</p> : null}
+
+        <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={handleCerrar}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
           >
-            Cerrar
+            Cancelar
           </button>
-        </header>
-
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="crear-rival">
-              Rival
-            </label>
-            <input
-              id="crear-rival"
-              name="rival"
-              type="text"
-              value={form.rival}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              placeholder="Buscar equipo por nombre"
-              required
-            />
-            {equiposLoading ? (
-              <p className="mt-2 text-xs text-slate-400">Buscando equipos…</p>
-            ) : null}
-            {!equiposLoading && !equiposError && form.rival.trim().length >= 2 && equiposOpciones.length === 0 ? (
-              <p className="mt-2 text-xs text-slate-500">No encontramos equipos. Probá con otro nombre.</p>
-            ) : null}
-            {!equiposLoading && equiposError ? (
-              <p className="mt-2 text-xs text-rose-600">{equiposError}</p>
-            ) : null}
-            {equiposOpciones.length ? (
-              <ul className="mt-2 max-h-48 overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-                {equiposOpciones.map((equipo) => {
-                  const seleccionado = rivalSeleccionado?.id === equipo.id;
-                  return (
-                    <li
-                      key={equipo.id}
-                      className={`cursor-pointer px-3 py-2 text-sm hover:bg-slate-50 ${
-                        seleccionado ? 'bg-brand-50 text-brand-700' : 'text-slate-600'
-                      }`}
-                      onClick={() => handleSeleccionarRival(equipo)}
-                      role="button"
-                    >
-                      <p className="font-medium text-slate-900">{equipo.nombre}</p>
-                      {equipo.pais ? <p className="text-xs text-slate-500">{equipo.pais}</p> : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-          </div>
-
-          {rivalSeleccionado ? (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-              <p className="font-semibold text-slate-900">Rival seleccionado:</p>
-              <p>{rivalSeleccionado.nombre}</p>
-            </div>
-          ) : null}
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="crear-fecha">
-                Fecha
-              </label>
-              <input
-                id="crear-fecha"
-                name="fecha"
-                type="date"
-                value={form.fecha}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="crear-hora">
-                Hora
-              </label>
-              <input
-                id="crear-hora"
-                name="hora"
-                type="time"
-                value={form.hora}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700" htmlFor="crear-escenario">
-              Escenario
-            </label>
-            <input
-              id="crear-escenario"
-              name="escenario"
-              type="text"
-              value={form.escenario}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              placeholder="Cancha o lugar (opcional)"
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="crear-modalidad">
-                Modalidad
-              </label>
-              <select
-                id="crear-modalidad"
-                name="modalidad"
-                value={form.modalidad}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                required
-              >
-                {MODALIDAD_OPCIONES.map((opcion) => (
-                  <option key={opcion} value={opcion}>
-                    {opcion}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="crear-categoria">
-                Categoría
-              </label>
-              <select
-                id="crear-categoria"
-                name="categoria"
-                value={form.categoria}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                required
-              >
-                {CATEGORIA_OPCIONES.map((opcion) => (
-                  <option key={opcion} value={opcion}>
-                    {opcion}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {crearError ? <p className="text-sm text-rose-600">{crearError}</p> : null}
-
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={handleCerrar}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={crearLoading}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
-            >
-              {crearLoading ? 'Guardando…' : 'Guardar partido'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <button
+            type="submit"
+            disabled={crearLoading}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
+          >
+            {crearLoading ? 'Guardando…' : 'Guardar partido'}
+          </button>
+        </div>
+      </form>
+    </Overlay>
   );
 };
 

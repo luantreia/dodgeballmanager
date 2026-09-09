@@ -1,28 +1,21 @@
 const formsPlugin = require('@tailwindcss/forms');
 const typographyPlugin = require('@tailwindcss/typography');
+const overtimeKit = require('overtime-kit/tailwind-preset');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // `boxed` nació acá (ver el historial de este archivo) y ahora lo aporta el preset del kit,
+  // que es exactamente el mismo breakpoint. Se saca la definición local para no tener dos
+  // fuentes del mismo valor; `overtime-kit/tailwind-preset` es la que queda canónica.
+  presets: [overtimeKit],
   content: [
     './src/**/*.{js,jsx,ts,tsx}',
     './public/index.html',
+    // El `content` del preset no se hereda: Tailwind reemplaza esta clave, no la fusiona.
+    ...overtimeKit.content,
   ],
   theme: {
     extend: {
-      colors: {
-        brand: {
-          50: '#f5f7ff',
-          100: '#ebefff',
-          200: '#d6deff',
-          300: '#b0bfff',
-          400: '#7a90ff',
-          500: '#3b5dff',
-          600: '#2b45db',
-          700: '#2135ab',
-          800: '#1f3188',
-          900: '#1f2c6d',
-        },
-      },
       fontFamily: {
         sans: ['"Inter var"', 'Inter', 'system-ui', 'sans-serif'],
       },
@@ -37,13 +30,6 @@ module.exports = {
       lg: '1024px',
       xl: '1280px',
       '2xl': '1536px',
-      /**
-       * Para decidir "modal pantalla completa vs. diálogo centrado" en vez de `sm:`. Un
-       * celular en horizontal casi siempre supera los 640px de ANCHO pero tiene poca ALTURA
-       * (~350-450px) — con `sm:` solo, se trataba como desktop y aparecía con márgenes
-       * alrededor, justo cuando menos alto sobra. Exige ancho Y alto de sobra a la vez.
-       */
-      boxed: { raw: '(min-width: 640px) and (min-height: 500px)' },
     },
   },
   plugins: [formsPlugin, typographyPlugin],
