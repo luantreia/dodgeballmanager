@@ -253,6 +253,40 @@ export const cancelarOficializacion = (planillaId: string) =>
 export const eliminarPlanilla = (planillaId: string) =>
   authFetch<void>(`${BASE}/${planillaId}`, { method: 'DELETE' });
 
+/**
+ * Reasigna la planilla a otro partido: para cuando el partido de origen se borró (la
+ * organización lo recreó en otra fase) o el equipo se dio cuenta de que anotó un
+ * partido distinto al que creía. Mueve presentes, sets y estadísticas sin re-tipear
+ * nada. Sólo funciona con la planilla en 'borrador' — el backend valida el equipo
+ * contra el partido destino y rechaza el cambio (409) si algún rival ya capturado en
+ * los presentes no coincide con los dos equipos del destino.
+ */
+export const reasignarPartidoPlanilla = (planillaId: string, partidoId: string) =>
+  authFetch<PlanillaCompleta>(`${BASE}/${planillaId}/partido`, {
+    method: 'PUT',
+    body: { partido: partidoId },
+  });
+
+export interface PlanillaHuerfana {
+  _id: string;
+  partido: string;
+  /** El id del partido, tal cual queda en la planilla — ya no resuelve a nada. */
+  partidoEliminado: string;
+  estado: PlanillaEstado;
+  modo: PlanillaModo;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * Planillas del equipo cuyo partido ya no existe. El borrado de un Partido nunca
+ * cascadea la planilla (para no destruir el análisis propio del equipo), así que
+ * quedan vivas apuntando a un id que no resuelve a nada — esta es la única forma de
+ * encontrarlas para reasignarlas.
+ */
+export const listarPlanillasHuerfanas = (equipoId: string) =>
+  authFetch<PlanillaHuerfana[]>(`${BASE}/huerfanas?equipo=${encodeURIComponent(equipoId)}`);
+
 export interface ResumenJugadorPlanilla {
   jugadorId: string;
   nombre: string;

@@ -13,6 +13,7 @@ import SeccionCondicionesSet from './SeccionCondicionesSet';
 import { construirSets } from '../../utils/setsAnaliticos';
 import ModalVisorPartido from '../ModalVisorPartido';
 import ModalScoutearPartido from '../ModalScoutearPartido';
+import ModalPlanillasHuerfanas from '../ModalPlanillasHuerfanas';
 import ModalPlanillaEquipo from '../../../partidos/components/modals/ModalPlanillaEquipo';
 import ModalCapturaSetEstadisticas from '../../../partidos/components/modals/ModalCapturaSetEstadisticas';
 import { getPartidoDetallado, type PartidoDetallado } from '../../../partidos/services/partidoService';
@@ -71,6 +72,7 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
   const [pestana, setPestana] = useState<Pestana>('resumen');
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
   const [scouteando, setScouteando] = useState(false);
+  const [verHuerfanas, setVerHuerfanas] = useState(false);
   /**
    * Planilla de scouting recién creada, todavía no aparece en `partidos`/`filas` (esas
    * listas sólo traen partidos donde el equipo jugó — un partido scouteado no entra
@@ -188,8 +190,25 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
 
   if (partidos.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center text-sm text-slate-500">
-        Tu equipo todavía no tiene partidos cargados.
+      <div className="space-y-3">
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center text-sm text-slate-500">
+          Tu equipo todavía no tiene partidos cargados.
+        </div>
+        {/* El timeline solo trae partidos donde el equipo jugó — si el único que tenías se
+            borró, esta pantalla se queda vacía y el botón de la barra de abajo nunca se monta.
+            Sin esto no habría forma de llegar a la planilla que quedó huérfana. */}
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => setVerHuerfanas(true)}
+            className="text-xs font-medium text-slate-500 underline hover:text-slate-700"
+          >
+            ¿Tenías una planilla de un partido que se borró? Buscala acá
+          </button>
+        </div>
+        {verHuerfanas && (
+          <ModalPlanillasHuerfanas equipoId={equipoId} onClose={() => setVerHuerfanas(false)} onCambio={cargar} />
+        )}
       </div>
     );
   }
@@ -234,6 +253,14 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
             className="min-h-[2.75rem] rounded-full border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 transition [touch-action:manipulation] hover:bg-slate-100"
           >
             Scoutear partido
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVerHuerfanas(true)}
+            className="min-h-[2.75rem] rounded-full border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 transition [touch-action:manipulation] hover:bg-slate-100"
+          >
+            Planillas sin partido
           </button>
 
           <button
@@ -346,6 +373,10 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
           onClose={cerrarYRecargar}
           onRefresh={cargar}
         />
+      )}
+
+      {verHuerfanas && (
+        <ModalPlanillasHuerfanas equipoId={equipoId} onClose={() => setVerHuerfanas(false)} onCambio={cargar} />
       )}
 
       {scouteando && (
