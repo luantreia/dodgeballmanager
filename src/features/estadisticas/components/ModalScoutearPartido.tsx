@@ -29,7 +29,6 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
   const [paso, setPaso] = useState<'competencia' | 'partido'>('competencia');
   const [competencias, setCompetencias] = useState<Array<{ id: string; nombre: string }>>([]);
   const [cargandoCompetencias, setCargandoCompetencias] = useState(true);
-  const [competenciaId, setCompetenciaId] = useState<string | null>(null);
   const [partidos, setPartidos] = useState<Partido[]>([]);
   const [cargandoPartidos, setCargandoPartidos] = useState(false);
   const [creando, setCreando] = useState<string | null>(null);
@@ -63,7 +62,6 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
 
   const elegirCompetencia = useCallback(
     async (id: string) => {
-      setCompetenciaId(id);
       setPaso('partido');
       setCargandoPartidos(true);
       try {
@@ -81,7 +79,7 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
         setCargandoPartidos(false);
       }
     },
-    [addToast],
+    [addToast, equipoId],
   );
 
   const partidosOrdenados = useMemo(
