@@ -206,12 +206,15 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
    */
   const gruposDePlanilla = useMemo(() => {
     if (!planilla) return [] as Array<{ id: string; nombre: string }>;
+    // Un presente sin `equipo` explícito (documentos de antes de ese campo, o de un
+    // autocompletado que todavía no lo seteaba) cuenta como del DUEÑO de la planilla — no se
+    // descarta: si se descartara, una planilla con presentes propios sin tag y presentes del
+    // rival con tag terminaba viendo sólo al rival como "el único equipo con gente cargada".
     const idsConPresente = new Set(
-      planilla.presentes.map((p) => idEquipoDePresente(p)).filter((id): id is string => Boolean(id)),
+      planilla.presentes.map((p) => idEquipoDePresente(p) ?? equipoIdDePlanilla),
     );
-    // Sin ningún presente con `equipo` explícito (documentos de antes de ese campo, o la
-    // planilla recién creada y todavía sin nadie cargado): un solo grupo, el dueño — es la
-    // única opción posible en ese caso.
+    // Sin ningún presente (planilla recién creada, todavía sin nadie cargado): un solo grupo,
+    // el dueño — es la única opción posible en ese caso.
     if (idsConPresente.size === 0) {
       return [{ id: equipoIdDePlanilla, nombre: equipoNombre ?? 'Mi equipo' }];
     }
