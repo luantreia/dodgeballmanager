@@ -66,9 +66,22 @@ export interface PlanillaEstadistica {
   survive: boolean;
 }
 
+/** Cómo viene `partido` en el listado (`GET /planillas-equipo`): populado con los dos equipos. */
+export interface PlanillaPartidoResumen {
+  _id: string;
+  fecha?: string;
+  estado?: string;
+  equipoLocal?: { _id: string; nombre?: string; escudo?: string };
+  equipoVisitante?: { _id: string; nombre?: string; escudo?: string };
+  competencia?: string;
+  marcadorLocal?: number;
+  marcadorVisitante?: number;
+}
+
 export interface PlanillaEquipo {
   _id: string;
-  partido: string;
+  /** String en la mayoría de las respuestas; populado (con los dos equipos) en el listado. */
+  partido: string | PlanillaPartidoResumen;
   equipo: string | { _id: string; nombre?: string; escudo?: string };
   modo: PlanillaModo;
   estado: PlanillaEstado;
@@ -100,6 +113,22 @@ export const obtenerPlanillaDePartido = async (
 ): Promise<PlanillaEquipo | null> => {
   const planillas = await listarPlanillas(equipoId, partidoId);
   return planillas[0] ?? null;
+};
+
+/**
+ * De todas tus planillas, las de scouting: partidos donde tu equipo NO jugó (ni local ni
+ * visitante). Es la única forma de volver a encontrarlas — no aparecen en el historial de
+ * partidos propios ni en el análisis del equipo, así que sin esto se pierden apenas cerrás el
+ * modal donde las creaste.
+ */
+export const listarPlanillasScouteadas = async (equipoId: string): Promise<PlanillaEquipo[]> => {
+  const planillas = await listarPlanillas(equipoId);
+  return planillas.filter((pl) => {
+    if (typeof pl.partido === 'string') return false;
+    const localId = pl.partido.equipoLocal?._id;
+    const visitId = pl.partido.equipoVisitante?._id;
+    return localId !== equipoId && visitId !== equipoId;
+  });
 };
 
 export const obtenerPlanilla = (planillaId: string) =>

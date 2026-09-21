@@ -4,7 +4,12 @@ import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { formatDateTime } from '../../../shared/utils/formatDate';
 import { getParticipaciones } from '../../competencias/services/equipoCompetenciaService';
 import { getPartidos } from '../../partidos/services/partidoService';
-import { crearPlanilla } from '../../partidos/services/planillaEquipoService';
+import {
+  crearPlanilla,
+  listarPlanillasScouteadas,
+  type PlanillaEquipo,
+  type PlanillaPartidoResumen,
+} from '../../partidos/services/planillaEquipoService';
 import type { Partido } from '../../../shared/utils/types/types';
 
 type Props = {
@@ -32,6 +37,8 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
   const [partidos, setPartidos] = useState<Partido[]>([]);
   const [cargandoPartidos, setCargandoPartidos] = useState(false);
   const [creando, setCreando] = useState<string | null>(null);
+  const [misScouteados, setMisScouteados] = useState<PlanillaEquipo[]>([]);
+  const [cargandoScouteados, setCargandoScouteados] = useState(true);
 
   useEffect(() => {
     let cancelado = false;
@@ -59,6 +66,27 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
       cancelado = true;
     };
   }, [equipoId, addToast]);
+
+  // Las planillas de scouting no aparecen en ningún otro lado de la app (no son partidos
+  // propios), así que sin esta lista, apenas cerrás el modal donde las creaste no hay forma de
+  // volver a encontrarlas salvo recorrer la competencia de nuevo.
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      setCargandoScouteados(true);
+      try {
+        const propias = await listarPlanillasScouteadas(equipoId);
+        if (!cancelado) setMisScouteados(propias);
+      } catch {
+        // Silencioso: esta lista es un atajo, no bloquea el flujo de crear una nueva.
+      } finally {
+        if (!cancelado) setCargandoScouteados(false);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [equipoId]);
 
   const elegirCompetencia = useCallback(
     async (id: string) => {
@@ -88,28 +116,40 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
   );
 
   const elegirPartido = useCallback(
-    async (partido: Partido) => {
-      setCreando(partido.id);
+    async (partidoId: string) => {
+      setCreando(partidoId);
       try {
         await crearPlanilla({
-          partido: partido.id,
+          partido: partidoId,
           equipo: equipoId,
           modo: 'sets',
           autocompletarPresentes: false,
         });
-        onCreada(partido.id);
       } catch (error) {
-        addToast({
-          type: 'error',
-          title: 'No se pudo crear la planilla de scouting',
-          message: error instanceof Error ? error.message : 'Error inesperado',
-        });
-      } finally {
-        setCreando(null);
+        // 409 = ya tenías una planilla de este partido (por ejemplo, volviste a elegirlo desde
+        // "Tus partidos scouteados" o desde la lista de la competencia). No es un error: se
+        // reabre la que ya existe en vez de fallar.
+        const status = (error as { status?: number } | undefined)?.status;
+        if (status !== 409) {
+          addToast({
+            type: 'error',
+            title: 'No se pudo crear la planilla de scouting',
+            message: error instanceof Error ? error.message : 'Error inesperado',
+          });
+          setCreando(null);
+          return;
+        }
       }
+      setCreando(null);
+      onCreada(partidoId);
     },
     [equipoId, onCreada, addToast],
   );
+
+  const nombrePartidoScouteado = (partido: string | PlanillaPartidoResumen): string => {
+    if (typeof partido === 'string') return 'Partido';
+    return `${partido.equipoLocal?.nombre ?? 'Local'} vs ${partido.equipoVisitante?.nombre ?? 'Visitante'}`;
+  };
 
   return (
     <ModalBase isOpen onClose={onClose} size="lg" title="Scoutear un partido">
@@ -119,6 +159,37 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
           poder cargar los números de los dos equipos como referencia propia — no toca el
           registro oficial hasta que pidas oficializarla.
         </p>
+
+        {/* Sin esto, las planillas de scouting se perdían apenas cerrabas este modal — no
+            aparecen en ningún otro lado de la app (no son partidos propios), así que había que
+            recorrer la competencia entera de nuevo para volver a abrir una ya creada. */}
+        {paso === 'competencia' && !cargandoScouteados && misScouteados.length > 0 && (
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Tus partidos scouteados ({misScouteados.length})
+            </p>
+            <ul className="space-y-1.5">
+              {misScouteados.map((pl) => {
+                const partidoId = typeof pl.partido === 'string' ? pl.partido : pl.partido._id;
+                return (
+                  <li key={pl._id}>
+                    <button
+                      type="button"
+                      disabled={creando !== null}
+                      onClick={() => void elegirPartido(partidoId)}
+                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-left text-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50"
+                    >
+                      <span className="font-medium text-slate-800">{nombrePartidoScouteado(pl.partido)}</span>
+                      <span className="shrink-0 text-xs text-slate-500">
+                        {creando === partidoId ? 'Abriendo…' : pl.estado}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
         {paso === 'competencia' && (
           <div className="space-y-2">
@@ -166,7 +237,7 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
                     <button
                       type="button"
                       disabled={creando !== null}
-                      onClick={() => void elegirPartido(p)}
+                      onClick={() => void elegirPartido(p.id)}
                       className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-4 py-2.5 text-left text-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50"
                     >
                       <span className="font-medium text-slate-800">
