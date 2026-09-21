@@ -156,9 +156,20 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
       return j.alias || [j.nombre, j.apellido].filter(Boolean).join(' ').trim() || 'Jugador';
     };
 
+    // Mismo criterio que la rama oficial de arriba: sólo el propio equipo. Desde que la
+    // planilla puede tener también presentes del rival, sin este filtro sus números se
+    // mezclaban acá con los del equipo — un presente sin `equipo` (de antes de ese campo) se
+    // trata como propio.
+    const esPresentePropio = (presenteId: string): boolean => {
+      const presente = planillaCompleta.presentes.find((p) => p._id === presenteId);
+      const idEquipoPresente = typeof presente?.equipo === 'string' ? presente.equipo : presente?.equipo?._id;
+      return !idEquipoPresente || String(idEquipoPresente) === String(equipoId);
+    };
+
     if (setElegido === null) {
       const totales = totalizarPorPresente(planillaCompleta);
       return Object.entries(totales)
+        .filter(([presenteId]) => esPresentePropio(presenteId))
         .map(([presenteId, t]) => ({
           nombre: nombrePresente(presenteId),
           throws: t.throws,
@@ -174,6 +185,7 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
     const acc = new Map<string, Fila>();
     for (const stat of planillaCompleta.estadisticas) {
       if (stat.planillaSet !== idDelSet) continue;
+      if (!esPresentePropio(stat.planillaPresente)) continue;
       acumular(acc, nombrePresente(stat.planillaPresente), stat);
     }
     return ordenar(acc);

@@ -135,6 +135,126 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   const filasGuardandoRef = useRef(filasGuardando);
   filasGuardandoRef.current = filasGuardando;
 
+  // ListaJugadores lo usa para cargar el plantel cuando no recibe opciones. Acá siempre
+  // se las pasamos, así que no llega a consultarlo, pero el prop es obligatorio.
+  const equipoIdDePlanilla = useMemo(() => {
+    if (!planilla) return equipoId;
+    return typeof planilla.equipo === 'string' ? planilla.equipo : planilla.equipo._id;
+  }, [planilla, equipoId]);
+
+  const crear = async (): Promise<void> => {
+    setCreando(true);
+    try {
+      const nueva = await crearPlanilla({
+        partido: partidoId,
+        equipo: equipoId,
+        modo: modoNuevo,
+        autocompletarPresentes: true,
+      });
+      setPlanilla(nueva);
+      setSetActivoId(nueva.sets[0]?._id ?? null);
+      addToast({
+        type: 'success',
+        title: 'Planilla creada',
+        message: 'Cargá los sets y las estadísticas. Nada de esto afecta los datos oficiales.',
+      });
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'No se pudo crear la planilla',
+        message: error instanceof Error ? error.message : 'Error inesperado',
+      });
+    } finally {
+      setCreando(false);
+    }
+  };
+
+  const nombreLocal = useMemo(
+    () => extractEquipoNombre(partido?.equipoLocal, 'Local'),
+    [partido],
+  );
+  const nombreVisitante = useMemo(
+    () => extractEquipoNombre(partido?.equipoVisitante, 'Visitante'),
+    [partido],
+  );
+
+  /**
+   * Los dos equipos del partido, para elegir de qué plantel traer presentes. No se
+   * asume "mi equipo / el rival": en modo scouting ninguno de los dos es el dueño de
+   * la planilla, así que se listan los dos por nombre y se marca el propio si
+   * corresponde.
+   */
+  const equiposDelPartido = useMemo(() => {
+    const localId = extractEquipoId(partido?.equipoLocal);
+    const visitId = extractEquipoId(partido?.equipoVisitante);
+    return [
+      { id: localId, nombre: nombreLocal },
+      { id: visitId, nombre: nombreVisitante },
+    ].filter((e): e is { id: string; nombre: string } => Boolean(e.id));
+  }, [partido, nombreLocal, nombreVisitante]);
+
+  /**
+   * Los grupos que arma la grilla: uno por cada equipo que tiene presentes cargados en esta
+   * planilla. Con un solo equipo (el caso común, sin rival agregado) es un único grupo, igual
+   * que siempre. Apenas hay presentes de los dos lados, son dos — cada uno con sus propios
+   * JUGADORES_POR_SET lugares, para no compartir 6 slots entre 12 jugadores reales.
+   *
+   * El propio equipo va primero cuando es uno de los dos: los presentes viejos sin `equipo`
+   * (de antes de que este campo existiera) se tratan como del grupo 0 en `resincronizarSlots`,
+   * así que ese grupo tiene que ser siempre el dueño de la planilla, no un orden arbitrario de
+   * local/visitante.
+   */
+  const gruposDePlanilla = useMemo(() => {
+    if (!planilla) return [] as Array<{ id: string; nombre: string }>;
+    const idsConPresente = new Set(
+      planilla.presentes.map((p) => idEquipoDePresente(p)).filter((id): id is string => Boolean(id)),
+    );
+    // Sin ningún presente con `equipo` explícito (documentos de antes de ese campo, o la
+    // planilla recién creada y todavía sin nadie cargado): un solo grupo, el dueño — es la
+    // única opción posible en ese caso.
+    if (idsConPresente.size === 0) {
+      return [{ id: equipoIdDePlanilla, nombre: equipoNombre ?? 'Mi equipo' }];
+    }
+    if (idsConPresente.size === 1) {
+      // OJO: el único equipo con presentes no tiene por qué ser el dueño de la planilla — por
+      // ejemplo, si sólo se tocó "Agregar plantel de: [rival]" sin agregar el propio. Usar acá
+      // el id del dueño a ciegas dejaba la grilla vacía (los presentes eran del rival, el grupo
+      // buscaba al dueño, ninguno calzaba).
+      const [unicoId] = idsConPresente;
+      const nombreConocido = equiposDelPartido.find((eq) => eq.id === unicoId)?.nombre;
+      return [{
+        id: unicoId,
+        nombre: unicoId === equipoIdDePlanilla ? (equipoNombre ?? nombreConocido ?? 'Mi equipo') : (nombreConocido ?? 'Equipo'),
+      }];
+    }
+    const base = equiposDelPartido.length > 0
+      ? equiposDelPartido
+      : [...idsConPresente].map((id) => ({ id, nombre: 'Equipo' }));
+    return [...base].sort((a, b) => {
+      if (a.id === equipoIdDePlanilla) return -1;
+      if (b.id === equipoIdDePlanilla) return 1;
+      return 0;
+    });
+  }, [planilla, equipoIdDePlanilla, equipoNombre, equiposDelPartido]);
+
+  const gruposRef = useRef(gruposDePlanilla);
+  gruposRef.current = gruposDePlanilla;
+  const gruposKey = gruposDePlanilla.map((g) => g.id).join(',');
+
+  /** En qué grupo cae un presente — por su `equipo`, o el grupo 0 si es de antes de ese campo. */
+  const indiceGrupoDePresente = useCallback((presenteId: string): number => {
+    const presente = planillaRef.current?.presentes.find((p) => p._id === presenteId);
+    const idEquipo = presente ? idEquipoDePresente(presente) : undefined;
+    if (!idEquipo) return 0;
+    const idx = gruposRef.current.findIndex((g) => g.id === idEquipo);
+    return idx === -1 ? 0 : idx;
+  }, []);
+
+  const rangoDeGrupo = useCallback((grupoIndex: number): [number, number] => {
+    const desde = grupoIndex * JUGADORES_POR_SET;
+    return [desde, desde + JUGADORES_POR_SET];
+  }, []);
+
   // "Hay cambios sin guardar" ahora es "hay al menos una fila que el backend todavía no
   // confirmó" — con autoguardado, ya no depende de que alguien se acuerde de tocar "Guardar".
   const hayCambiosSinGuardar = useMemo(
@@ -207,37 +327,55 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
    */
   const resincronizarSlots = useCallback(() => {
     const actual = planillaRef.current;
-    if (!actual) {
+    const grupos = gruposRef.current;
+    if (!actual || grupos.length === 0) {
       setSlots(slotsVacios());
       setFilasGuardando({});
       return;
     }
 
+    const presentePorId = new Map(actual.presentes.map((p) => [p._id, p]));
     const filas = actual.estadisticas.filter((e) =>
       actual.modo === 'sets' ? e.planillaSet === setActivoIdRef.current : e.planillaSet === null,
     );
 
-    const ocupados: Slot[] = filas.map((fila) => ({
-      presenteId: fila.planillaPresente,
-      estadisticas: {
-        throws: fila.throws ?? 0,
-        hits: fila.hits ?? 0,
-        outs: fila.outs ?? 0,
-        catches: fila.catches ?? 0,
-        survive: Boolean(fila.survive),
-      },
-    }));
+    // Un bloque de JUGADORES_POR_SET slots por grupo, en el mismo orden que `grupos` — el
+    // índice absoluto de un slot es `grupoIndex * JUGADORES_POR_SET + posiciónEnElGrupo`.
+    const bloques: Slot[][] = grupos.map((grupo, grupoIndex) => {
+      const ocupados: Slot[] = filas
+        .filter((fila) => {
+          const presente = presentePorId.get(fila.planillaPresente);
+          const idEquipo = presente ? idEquipoDePresente(presente) : undefined;
+          // Sin `equipo` (presente de antes de ese campo): cae en el primer grupo, que
+          // `gruposDePlanilla` ya garantiza que es el dueño de la planilla.
+          return idEquipo ? idEquipo === grupo.id : grupoIndex === 0;
+        })
+        .map((fila) => ({
+          presenteId: fila.planillaPresente,
+          estadisticas: {
+            throws: fila.throws ?? 0,
+            hits: fila.hits ?? 0,
+            outs: fila.outs ?? 0,
+            catches: fila.catches ?? 0,
+            survive: Boolean(fila.survive),
+          },
+        }));
+      return completarSlots(ocupados, slotVacio);
+    });
 
-    setSlots(completarSlots(ocupados, slotVacio));
+    setSlots(bloques.flat());
     setFilasGuardando({});
   }, []);
 
   // Los slots en pantalla siempre reflejan el set activo (o los totales, en modo directa). Se
-  // recargan al abrir la planilla y al cambiar de set — nunca por un cambio de `planilla` que no
-  // sea uno de esos dos (ver el comentario en `resincronizarSlots`).
+  // recargan al abrir la planilla, al cambiar de set, y cuando cambia el conjunto de grupos
+  // (ej. al agregar el plantel del rival, que pasa de 1 a 2 grupos y el array de slots tiene
+  // que duplicar su tamaño) — nunca por cualquier otro cambio de `planilla` (ver el comentario
+  // en `resincronizarSlots`).
   useEffect(() => {
     resincronizarSlots();
-  }, [planilla?._id, planilla?.modo, setActivoId, resincronizarSlots]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planilla?._id, planilla?.modo, setActivoId, gruposKey, resincronizarSlots]);
 
   /**
    * Captura simultánea: cuando otra persona con permiso sobre el equipo tiene esta misma
@@ -304,10 +442,19 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           }
 
           // Es un presente que no ocupa ningún slot local todavía (alguien lo asignó recién en
-          // otra sesión): se ubica en el primer slot vacío. Si no hay ninguno libre, esta grilla
-          // ya está llena con otra gente y no hay dónde mostrarlo — sigue existiendo en
+          // otra sesión): se ubica en el primer slot vacío DENTRO DEL RANGO DE SU GRUPO — no en
+          // el primer vacío de toda la grilla, o un jugador del rival podría terminar mostrado
+          // en el bloque del equipo dueño. Si no hay ninguno libre en su grupo, esta grilla ya
+          // está llena para ese equipo y no hay dónde mostrarlo — sigue existiendo en
           // "Totales", sólo que no visible acá hasta que se libere un lugar.
-          const idxVacio = next.findIndex((s) => !s.presenteId);
+          const [desde, hasta] = rangoDeGrupo(indiceGrupoDePresente(fila.planillaPresente));
+          let idxVacio = -1;
+          for (let i = desde; i < hasta && i < next.length; i += 1) {
+            if (!next[i].presenteId) {
+              idxVacio = i;
+              break;
+            }
+          }
           if (idxVacio === -1) return;
           if (!cambio) next = [...next];
           cambio = true;
@@ -377,7 +524,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       socket.off('planilla:estadistica_eliminada', alEstadisticaEliminada);
       socket.disconnect();
     };
-  }, [planilla?._id]);
+  }, [planilla?._id, indiceGrupoDePresente, rangoDeGrupo]);
 
   const editable = planilla?.estado === 'borrador' || planilla?.estado === 'rechazada';
 
@@ -385,64 +532,6 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     () => (planilla ? totalizarPorPresente(planilla) : {}),
     [planilla],
   );
-
-  // ListaJugadores lo usa para cargar el plantel cuando no recibe opciones. Acá siempre
-  // se las pasamos, así que no llega a consultarlo, pero el prop es obligatorio.
-  const equipoIdDePlanilla = useMemo(() => {
-    if (!planilla) return equipoId;
-    return typeof planilla.equipo === 'string' ? planilla.equipo : planilla.equipo._id;
-  }, [planilla, equipoId]);
-
-  const crear = async (): Promise<void> => {
-    setCreando(true);
-    try {
-      const nueva = await crearPlanilla({
-        partido: partidoId,
-        equipo: equipoId,
-        modo: modoNuevo,
-        autocompletarPresentes: true,
-      });
-      setPlanilla(nueva);
-      setSetActivoId(nueva.sets[0]?._id ?? null);
-      addToast({
-        type: 'success',
-        title: 'Planilla creada',
-        message: 'Cargá los sets y las estadísticas. Nada de esto afecta los datos oficiales.',
-      });
-    } catch (error) {
-      addToast({
-        type: 'error',
-        title: 'No se pudo crear la planilla',
-        message: error instanceof Error ? error.message : 'Error inesperado',
-      });
-    } finally {
-      setCreando(false);
-    }
-  };
-
-  const nombreLocal = useMemo(
-    () => extractEquipoNombre(partido?.equipoLocal, 'Local'),
-    [partido],
-  );
-  const nombreVisitante = useMemo(
-    () => extractEquipoNombre(partido?.equipoVisitante, 'Visitante'),
-    [partido],
-  );
-
-  /**
-   * Los dos equipos del partido, para elegir de qué plantel traer presentes. No se
-   * asume "mi equipo / el rival": en modo scouting ninguno de los dos es el dueño de
-   * la planilla, así que se listan los dos por nombre y se marca el propio si
-   * corresponde.
-   */
-  const equiposDelPartido = useMemo(() => {
-    const localId = extractEquipoId(partido?.equipoLocal);
-    const visitId = extractEquipoId(partido?.equipoVisitante);
-    return [
-      { id: localId, nombre: nombreLocal },
-      { id: visitId, nombre: nombreVisitante },
-    ].filter((e): e is { id: string; nombre: string } => Boolean(e.id));
-  }, [partido, nombreLocal, nombreVisitante]);
 
   const [autocompletandoEquipo, setAutocompletandoEquipo] = useState<string | null>(null);
 
@@ -1285,43 +1374,52 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
 
               <p className="mb-1 text-xs text-slate-500">
                 {JUGADORES_POR_SET} en cancha
-                {planilla.modo === 'sets' ? ' en este set' : ''}. Elegí quiénes jugaron y cargá sus
-                números.
+                {planilla.modo === 'sets' ? ' en este set' : ''}
+                {gruposDePlanilla.length > 1 ? ' por equipo' : ''}. Elegí quiénes jugaron y cargá
+                sus números.
               </p>
-              {/* Misma grilla que usa la captura set a set del partido, para que las dos
-                  vistas se lean igual. Acá las opciones son los presentes de la planilla
-                  (id de PlanillaPresente), no jugadores sueltos. */}
-              <ListaJugadores
-                equipoNombre={equipoNombre ?? 'Mi equipo'}
-                equipoId={equipoIdDePlanilla}
-                token=""
-                estadisticasJugador={slots.map((s) => ({
-                  jugadorId: s.presenteId,
-                  estadisticas: s.estadisticas,
-                }))}
-                opcionesJugadores={planilla.presentes.map((p) => {
-                  const idEquipoP = idEquipoDePresente(p);
-                  const nombreEquipoP = equiposDelPartido.find((eq) => eq.id === idEquipoP)?.nombre;
-                  // Sólo se aclara el equipo cuando la planilla mezcla presentes de los dos
-                  // lados — con un solo equipo cargado, aclararlo en cada fila es ruido.
-                  const hayMezcla = new Set(planilla.presentes.map((pp) => idEquipoDePresente(pp))).size > 1;
-                  return {
-                    value: p._id,
-                    label: hayMezcla && nombreEquipoP ? `${nombrePresente(p)} · ${nombreEquipoP}` : nombrePresente(p),
-                  };
+              {/* Un bloque de JUGADORES_POR_SET slots por grupo (normalmente 1, o 2 si la
+                  planilla tiene presentes de los dos equipos) — mismo componente que usa la
+                  captura set a set del partido oficial, para que las dos vistas se lean igual.
+                  Acá las opciones son los presentes de la planilla (id de PlanillaPresente), no
+                  jugadores sueltos, y cada bloque sólo ofrece los presentes DE ESE equipo. */}
+              <div className="space-y-4">
+                {gruposDePlanilla.map((grupo, grupoIndex) => {
+                  const [desde, hasta] = rangoDeGrupo(grupoIndex);
+                  const slotsDelGrupo = slots.slice(desde, hasta);
+                  const presentesDelGrupo = planilla.presentes.filter((p) => {
+                    const idEq = idEquipoDePresente(p);
+                    return idEq ? idEq === grupo.id : grupoIndex === 0;
+                  });
+                  return (
+                    <ListaJugadores
+                      key={grupo.id}
+                      equipoNombre={grupo.nombre}
+                      equipoId={grupo.id}
+                      token=""
+                      estadisticasJugador={slotsDelGrupo.map((s) => ({
+                        jugadorId: s.presenteId,
+                        estadisticas: s.estadisticas,
+                      }))}
+                      opcionesJugadores={presentesDelGrupo.map((p) => ({
+                        value: p._id,
+                        label: nombrePresente(p),
+                      }))}
+                      estadosGuardado={slotsDelGrupo.map((_, i) => filasGuardando[desde + i])}
+                      onSolicitarIntercambio={(indexLocal) => solicitarIntercambio(desde + indexLocal)}
+                      onAsignarJugador={(indexLocal, presenteId) => {
+                        if (editable) solicitarAsignarJugador(desde + indexLocal, presenteId);
+                      }}
+                      onCambiarEstadistica={(indexLocal, campo, delta) => {
+                        if (editable) cambiarEstadistica(desde + indexLocal, campo, delta);
+                      }}
+                      onCambiarSurvive={(indexLocal, value) => {
+                        if (editable) cambiarSurvive(desde + indexLocal, value);
+                      }}
+                    />
+                  );
                 })}
-                estadosGuardado={slots.map((_, i) => filasGuardando[i])}
-                onSolicitarIntercambio={solicitarIntercambio}
-                onAsignarJugador={(index, presenteId) => {
-                  if (editable) solicitarAsignarJugador(index, presenteId);
-                }}
-                onCambiarEstadistica={(index, campo, delta) => {
-                  if (editable) cambiarEstadistica(index, campo, delta);
-                }}
-                onCambiarSurvive={(index, value) => {
-                  if (editable) cambiarSurvive(index, value);
-                }}
-              />
+              </div>
             </div>
           )}
 
@@ -1336,7 +1434,14 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
               <ul className="mt-3 divide-y divide-gray-200">
                 {planilla.presentes.map((presente) => (
                   <li key={presente._id} className="flex items-center justify-between gap-3 py-1.5">
-                    <span className="text-sm text-gray-800">{nombrePresente(presente)}</span>
+                    <span className="text-sm text-gray-800">
+                      {nombrePresente(presente)}
+                      {gruposDePlanilla.length > 1 && (
+                        <span className="ml-1.5 text-xs text-slate-400">
+                          · {gruposDePlanilla.find((g) => g.id === (idEquipoDePresente(presente) ?? gruposDePlanilla[0]?.id))?.nombre}
+                        </span>
+                      )}
+                    </span>
                     <button
                       type="button"
                       disabled={eliminando}
@@ -1381,7 +1486,14 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                       if (!t) return null;
                       return (
                         <tr key={presente._id} className="border-b border-gray-200 last:border-0">
-                          <td className="py-1.5 pr-3 text-gray-800">{nombrePresente(presente)}</td>
+                          <td className="py-1.5 pr-3 text-gray-800">
+                            {nombrePresente(presente)}
+                            {gruposDePlanilla.length > 1 && (
+                              <span className="ml-1.5 text-xs text-slate-400">
+                                · {gruposDePlanilla.find((g) => g.id === (idEquipoDePresente(presente) ?? gruposDePlanilla[0]?.id))?.nombre}
+                              </span>
+                            )}
+                          </td>
                           <td className="py-1.5 pr-3 text-right text-gray-600">{t.throws}</td>
                           <td className="py-1.5 pr-3 text-right text-gray-600">{t.hits}</td>
                           <td className="py-1.5 pr-3 text-right text-gray-600">{t.outs}</td>
@@ -1556,31 +1668,39 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
         title="Intercambiar con otro jugador"
         size="sm"
       >
-        {intercambioAbierto !== null && (
-          <div className="space-y-2 p-1">
-            <p className="text-sm text-slate-700">
-              Elegí con quién intercambiar los números de este slot. Ninguno de los dos cambia de
-              jugador — sólo se cruzan los números.
-            </p>
-            {slots.map((s, i) => {
-              if (i === intercambioAbierto || !s.presenteId) return null;
-              const presente = planilla?.presentes.find((p) => p._id === s.presenteId);
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => confirmarIntercambio(intercambioAbierto, i)}
-                  className="w-full rounded-lg border border-slate-200 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
-                >
-                  {presente ? nombrePresente(presente) : 'Jugador'}
-                </button>
-              );
-            })}
-            {slots.every((s, i) => i === intercambioAbierto || !s.presenteId) && (
-              <p className="text-xs text-slate-500">Todavía no hay otro slot con jugador asignado.</p>
-            )}
-          </div>
-        )}
+        {intercambioAbierto !== null && (() => {
+          // Sólo candidatos DEL MISMO GRUPO: cruzar números entre dos equipos distintos no
+          // tiene sentido (serían estadísticas de otro plantel).
+          const [desde, hasta] = rangoDeGrupo(Math.floor(intercambioAbierto / JUGADORES_POR_SET));
+          const candidatosEnRango = slots
+            .map((s, i) => ({ s, i }))
+            .filter(({ i }) => i >= desde && i < hasta);
+          return (
+            <div className="space-y-2 p-1">
+              <p className="text-sm text-slate-700">
+                Elegí con quién intercambiar los números de este slot. Ninguno de los dos cambia de
+                jugador — sólo se cruzan los números.
+              </p>
+              {candidatosEnRango.map(({ s, i }) => {
+                if (i === intercambioAbierto || !s.presenteId) return null;
+                const presente = planilla?.presentes.find((p) => p._id === s.presenteId);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => confirmarIntercambio(intercambioAbierto, i)}
+                    className="w-full rounded-lg border border-slate-200 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                  >
+                    {presente ? nombrePresente(presente) : 'Jugador'}
+                  </button>
+                );
+              })}
+              {candidatosEnRango.every(({ s, i }) => i === intercambioAbierto || !s.presenteId) && (
+                <p className="text-xs text-slate-500">Todavía no hay otro slot con jugador asignado.</p>
+              )}
+            </div>
+          );
+        })()}
       </ModalBase>
     </ModalBase>
   );
