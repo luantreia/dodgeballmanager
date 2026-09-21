@@ -5,6 +5,7 @@ import {
 import type { FilaAnalitica } from '../../services/filasService';
 import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
 import { useEsMobile } from '../../../../shared/hooks/useEsMobile';
+import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
 
 /**
  * Análisis cruzado de los partidos filtrados.
@@ -167,6 +168,9 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
 
   const tabla = useMemo(() => {
     const celdas = new Map<string, Map<string, Acumulador>>();
+    // Las filas crudas detrás de cada celda — sólo para el drill-down al hacer click. Separado
+    // de `celdas` (que sólo acumula números) para no complicar la lectura de la agregación.
+    const filasPorCelda = new Map<string, Map<string, FilaAnalitica[]>>();
     const totalesFila = new Map<string, Acumulador>();
     const totalesColumna = new Map<string, Acumulador>();
     const total = VACIO();
@@ -188,6 +192,11 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
       const fila = celdas.get(kf)!;
       if (!fila.has(kc)) fila.set(kc, VACIO());
       sumar(fila.get(kc)!, f);
+
+      if (!filasPorCelda.has(kf)) filasPorCelda.set(kf, new Map());
+      const filaCruda = filasPorCelda.get(kf)!;
+      if (!filaCruda.has(kc)) filaCruda.set(kc, []);
+      filaCruda.get(kc)!.push(f);
 
       if (!totalesFila.has(kf)) totalesFila.set(kf, VACIO());
       sumar(totalesFila.get(kf)!, f);
@@ -214,8 +223,31 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
       for (const f of filas) partidoPorEtiqueta.set(etiquetaPartido(f), f.partidoId);
     }
 
-    return { celdas, clavesFila, clavesColumna, totalesFila, totalesColumna, total, partidoPorEtiqueta };
+    return { celdas, filasPorCelda, clavesFila, clavesColumna, totalesFila, totalesColumna, total, partidoPorEtiqueta };
   }, [filas, dimFila, dimColumna, metrica]);
+
+  /** Celda para la que se abrió el detalle de partidos/sets, o null si no hay ninguna abierta. */
+  const [celdaAbierta, setCeldaAbierta] = useState<{ kf: string; kc: string } | null>(null);
+
+  /**
+   * Qué partido y set concretos hay detrás de la celda abierta — es lo que responde "¿cuál es
+   * el set que no está definido, y de qué partido?" en vez de dejar sólo el número agregado.
+   * Se agrupa por partido+set (no una fila por fila cruda: el pivot por jugador tiene una fila
+   * por jugador Y set, así que un mismo set aparecería repetido una vez por cada jugador en
+   * cancha) y se ordena por fecha, más reciente primero.
+   */
+  const entradasCeldaAbierta = useMemo(() => {
+    if (!celdaAbierta) return [];
+    const crudas = tabla.filasPorCelda.get(celdaAbierta.kf)?.get(celdaAbierta.kc) ?? [];
+    const porPartidoYSet = new Map<string, { fila: FilaAnalitica; jugadores: Set<string> }>();
+    for (const f of crudas) {
+      const clave = `${f.partidoId}#${f.numeroSet ?? 'total'}`;
+      const existente = porPartidoYSet.get(clave);
+      if (existente) existente.jugadores.add(f.jugador ?? 'Jugador');
+      else porPartidoYSet.set(clave, { fila: f, jugadores: new Set([f.jugador ?? 'Jugador']) });
+    }
+    return [...porPartidoYSet.values()].sort((a, b) => (b.fila.fecha ?? '').localeCompare(a.fila.fecha ?? ''));
+  }, [celdaAbierta, tabla.filasPorCelda]);
 
   const seriesGrafico = useMemo(
     () => (dimColumna === SIN_COLUMNAS ? ['Total'] : tabla.clavesColumna),
@@ -337,10 +369,13 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
                       // Un sombreado suave da la lectura de un vistazo sin necesidad
                       // de un gráfico aparte.
                       const intensidad = v !== null && maximo > 0 ? v / maximo : 0;
+                      const hayDatos = (tabla.filasPorCelda.get(kf)?.get(kc)?.length ?? 0) > 0;
                       return (
                         <td
                           key={kc}
-                          className="px-2 py-2 text-right text-slate-700"
+                          onClick={hayDatos ? () => setCeldaAbierta({ kf, kc }) : undefined}
+                          title={hayDatos ? 'Ver los partidos y sets detrás de este número' : undefined}
+                          className={`px-2 py-2 text-right text-slate-700 ${hayDatos ? 'cursor-pointer hover:underline' : ''}`}
                           style={intensidad > 0 ? { backgroundColor: `rgba(37, 99, 235, ${(intensidad * 0.18).toFixed(3)})` } : undefined}
                         >
                           {formatear(v, metrica)}
@@ -425,6 +460,50 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
           </p>
         </div>
       )}
+
+      <ModalBase
+        isOpen={celdaAbierta !== null}
+        onClose={() => setCeldaAbierta(null)}
+        title={celdaAbierta ? `${celdaAbierta.kf} · ${celdaAbierta.kc}` : ''}
+        size="sm"
+      >
+        {celdaAbierta && (
+          <div className="space-y-2 p-1">
+            <p className="text-sm text-slate-600">
+              Los partidos y sets puntuales detrás de este número. Tocá uno para abrirlo y, desde
+              ahí, editar la fuente que corresponda (tu planilla o lo oficial).
+            </p>
+            <ul className="max-h-96 space-y-1.5 overflow-y-auto">
+              {entradasCeldaAbierta.map(({ fila, jugadores }) => (
+                <li key={`${fila.partidoId}#${fila.numeroSet ?? 'total'}`}>
+                  <button
+                    type="button"
+                    disabled={!onAbrirPartido}
+                    onClick={() => {
+                      onAbrirPartido?.(fila.partidoId);
+                      setCeldaAbierta(null);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:cursor-default disabled:opacity-60"
+                  >
+                    <span>
+                      <span className="block font-medium text-slate-800">{etiquetaPartido(fila)}</span>
+                      <span className="text-xs text-slate-500">
+                        {fila.numeroSet !== null ? `Set ${fila.numeroSet}` : 'Totales del partido'}
+                        {' · '}
+                        {fila.fuente === 'planilla' ? 'Mi planilla' : fila.fuente === 'oficial' ? 'Oficial' : 'Sin fuente'}
+                        {jugadores.size > 1 ? ` · ${jugadores.size} jugadores` : ''}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {entradasCeldaAbierta.length === 0 && (
+                <p className="text-sm text-slate-500">No hay partidos puntuales para mostrar.</p>
+              )}
+            </ul>
+          </div>
+        )}
+      </ModalBase>
     </section>
   );
 };
