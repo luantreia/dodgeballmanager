@@ -15,6 +15,8 @@ import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
 } from '../../../../shared/utils/formatDate';
+import { extraerYoutubeId } from '../../../../shared/utils/youtube';
+import ModalSolicitudVideoPartido from './ModalSolicitudVideoPartido';
 
 interface ModalInformacionPartidoProps {
   partidoId: string | null;
@@ -39,8 +41,10 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
     modalidad: string;
     categoria: string;
     competencia: string;
+    videoUrl: string;
   } | null>(null);
   const [competencias, setCompetencias] = useState<Competencia[]>([]);
+  const [solicitudVideoAbierta, setSolicitudVideoAbierta] = useState(false);
 
   const temporadaPartido = (partido as PartidoDetallado & { temporada?: string | { nombre?: string } })?.temporada;
   const fasePartido = (partido as PartidoDetallado & { fase?: string | { nombre?: string } })?.fase;
@@ -74,6 +78,7 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
           typeof detalle.competencia === 'string'
             ? detalle.competencia
             : (detalle.competencia as { _id?: string } | undefined)?._id || '',
+        videoUrl: (detalle as any).videoUrl || '',
       });
     } catch (err) {
       console.error('Error al cargar información del partido:', err);
@@ -109,6 +114,10 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
 
   const handleGuardar = async () => {
     if (!partidoId || !datosEdicion) return;
+    if (datosEdicion.videoUrl && !extraerYoutubeId(datosEdicion.videoUrl)) {
+      addToast({ type: 'error', title: 'Link inválido', message: 'El link de video no parece ser un link de YouTube válido.' });
+      return;
+    }
     try {
       const { fecha, ...rest } = datosEdicion;
       const payload = {
@@ -178,9 +187,18 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                       Editar
                     </button>
                   ) : (
-                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                      Partido de competencia: solo lectura
-                    </span>
+                    <>
+                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                        Partido de competencia: solo lectura
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSolicitudVideoAbierta(true)}
+                        className="px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full hover:bg-indigo-100"
+                      >
+                        Solicitar video
+                      </button>
+                    </>
                   )}
                 </div>
               ) : (
@@ -343,6 +361,18 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Video de YouTube (en vivo o final)</label>
+                  <input
+                    type="text"
+                    value={datosEdicion.videoUrl}
+                    onChange={(e) =>
+                      setDatosEdicion((prev) => (prev ? { ...prev, videoUrl: e.target.value } : prev))
+                    }
+                    placeholder="https://youtube.com/watch?v=..."
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
                 <div className="pt-2">
                   <button
                     type="button"
@@ -382,6 +412,19 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                 <p>
                   <strong>Marcador:</strong> {partido.marcadorLocal} - {partido.marcadorVisitante}
                 </p>
+                {(partido as any).videoUrl && extraerYoutubeId((partido as any).videoUrl) && (
+                  <p>
+                    <strong>Video:</strong>{' '}
+                    <a
+                      href={(partido as any).videoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      Ver video
+                    </a>
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -389,6 +432,13 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
           <p className="text-sm text-slate-500">Seleccioná un partido para ver su información.</p>
         )}
       </div>
+      {partidoId && (
+        <ModalSolicitudVideoPartido
+          isOpen={solicitudVideoAbierta}
+          onClose={() => setSolicitudVideoAbierta(false)}
+          partidoId={partidoId}
+        />
+      )}
     </ModalBase>
   );
 };

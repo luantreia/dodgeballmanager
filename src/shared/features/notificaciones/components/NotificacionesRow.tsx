@@ -24,6 +24,7 @@ const FIELD_LABELS: Record<string, string> = {
   fechaNacimiento: 'Nacimiento', puntos: 'Puntos', asistencias: 'Asistencias',
   rebotes: 'Rebotes', robos: 'Robos', bloqueos: 'Bloqueos', faltas: 'Faltas',
   observaciones: 'Observaciones',
+  videoUrl: 'Video',
 };
 
 // ID fields that should be hidden when a matching *Nombre field exists

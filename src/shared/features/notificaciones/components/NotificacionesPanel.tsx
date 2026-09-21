@@ -82,6 +82,7 @@ export const NotificacionesPanel: React.FC<NotificacionesPanelProps> = ({
       'jugador-temporada-eliminar': 'Quitar de lista',
       'resultadoPartido': 'Resultado partido',
       'editarPartidoCompetencia': 'Editar partido',
+      'editarPartidoVideo': 'Video del partido',
       'resultadoSet': 'Resultado set',
       'estadisticasJugadorSet': 'Stats jugador set',
       'estadisticas-set-propuesta': 'Carga de stats de un set',

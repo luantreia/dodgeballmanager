@@ -12,6 +12,7 @@ import type { SolicitudEdicionTipo } from '../../solicitudes/types/solicitudesEd
 const TIPOS_APROBABLES: SolicitudEdicionTipo[] = [
   'resultadoPartido',
   'editarPartidoCompetencia',
+  'editarPartidoVideo',
   'estadisticasJugadorSet',
   'estadisticas-set-propuesta',
   'estadisticas-partido-propuesta',
