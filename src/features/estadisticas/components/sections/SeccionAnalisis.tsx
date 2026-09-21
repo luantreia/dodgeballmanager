@@ -12,6 +12,7 @@ import SeccionSinergias from './SeccionSinergias';
 import SeccionCondicionesSet from './SeccionCondicionesSet';
 import { construirSets } from '../../utils/setsAnaliticos';
 import ModalVisorPartido from '../ModalVisorPartido';
+import ModalScoutearPartido from '../ModalScoutearPartido';
 import ModalPlanillaEquipo from '../../../partidos/components/modals/ModalPlanillaEquipo';
 import ModalCapturaSetEstadisticas from '../../../partidos/components/modals/ModalCapturaSetEstadisticas';
 import { getPartidoDetallado, type PartidoDetallado } from '../../../partidos/services/partidoService';
@@ -69,6 +70,14 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
   const [segmentos, setSegmentos] = useState<Segmento[]>([]);
   const [pestana, setPestana] = useState<Pestana>('resumen');
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
+  const [scouteando, setScouteando] = useState(false);
+  /**
+   * Planilla de scouting recién creada, todavía no aparece en `partidos`/`filas` (esas
+   * listas sólo traen partidos donde el equipo jugó — un partido scouteado no entra
+   * ahí). Se abre en su propio estado, aparte de `vista`, para no simular un
+   * `PartidoTimeline` que no existe todavía.
+   */
+  const [planillaScoutAbierta, setPlanillaScoutAbierta] = useState<{ partidoId: string; detalle: PartidoDetallado | null } | null>(null);
 
   const filtros = useFiltrosPartidos(partidos);
 
@@ -221,6 +230,14 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
 
           <button
             type="button"
+            onClick={() => setScouteando(true)}
+            className="min-h-[2.75rem] rounded-full border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 transition [touch-action:manipulation] hover:bg-slate-100"
+          >
+            Scoutear partido
+          </button>
+
+          <button
+            type="button"
             onClick={agregarSegmento}
             className="ml-auto min-h-[2.75rem] rounded-full border border-brand-300 bg-brand-50 px-3 text-xs font-bold text-brand-700 transition [touch-action:manipulation] hover:bg-brand-100"
           >
@@ -327,6 +344,33 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
           token={token}
           esCompetencia={Boolean(vista.partido.competencia)}
           onClose={cerrarYRecargar}
+          onRefresh={cargar}
+        />
+      )}
+
+      {scouteando && (
+        <ModalScoutearPartido
+          equipoId={equipoId}
+          onClose={() => setScouteando(false)}
+          onCreada={async (partidoId) => {
+            setScouteando(false);
+            try {
+              const detalleCreado = await getPartidoDetallado(partidoId);
+              setPlanillaScoutAbierta({ partidoId, detalle: detalleCreado });
+            } catch {
+              setPlanillaScoutAbierta({ partidoId, detalle: null });
+            }
+          }}
+        />
+      )}
+
+      {planillaScoutAbierta && (
+        <ModalPlanillaEquipo
+          partidoId={planillaScoutAbierta.partidoId}
+          equipoId={equipoId}
+          equipoNombre={equipoNombre}
+          partido={planillaScoutAbierta.detalle}
+          onClose={() => setPlanillaScoutAbierta(null)}
           onRefresh={cargar}
         />
       )}

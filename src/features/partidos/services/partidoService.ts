@@ -3,7 +3,8 @@ import type { Partido, EstadoPartido, JugadorPartido, Competencia } from '../../
 import { toLocalDatePart, toLocalTimePart } from '../../../shared/utils/formatDate';
 
 type PartidoQuery = {
-  equipoId: string;
+  /** Opcional: sin este parámetro se listan los partidos de la competencia sin filtrar por equipo — usado para scoutear partidos ajenos. */
+  equipoId?: string;
   tipo?: 'todos' | 'competencia' | 'amistoso';
   estado?: EstadoPartido | EstadoPartido[];
   competenciaId?: string;
@@ -591,3 +592,31 @@ export const eliminarEstadisticaJugadorSet = (id: string) =>
   authFetch<{ mensaje: string }>(`/estadisticas/jugador-set/${id}`, {
     method: 'DELETE',
   });
+
+/**
+ * El autoguardado (crear/actualizar de arriba) ya escribe la fila real, pero no la manda a
+ * aprobación — nace 'privada'. Esto es el gatillo explícito: junta todas las filas privadas o
+ * rechazadas de {set, equipo} y arma/actualiza UNA sola solicitud de una vez, en vez de que la
+ * solicitud vaya creciendo en vivo mientras se sigue tipeando.
+ */
+export const pedirOficialSet = (
+  setId: string,
+  payload: { equipo: string; visibilidadObjetivo?: VisibilidadEstadistica },
+) =>
+  authFetch<{ pedidas: number; solicitudId: string | null; autoEstado: string | null; mensaje?: string }>(
+    `/estadisticas/jugador-set/set/${setId}/pedir-oficial`,
+    { method: 'POST', body: payload },
+  );
+
+/**
+ * Intercambia los números de dos jugadores en el mismo set. Si uno de los dos todavía no tenía
+ * fila, equivale a "mover los números al otro jugador".
+ */
+export const intercambiarEstadisticasSet = (
+  setId: string,
+  payload: { jugadorPartidoA: string; jugadorPartidoB: string },
+) =>
+  authFetch<{ jugadorPartidoA: EstadisticasJugadorSet | null; jugadorPartidoB: EstadisticasJugadorSet | null }>(
+    `/estadisticas/jugador-set/set/${setId}/intercambiar`,
+    { method: 'POST', body: payload },
+  );

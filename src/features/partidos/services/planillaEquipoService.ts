@@ -35,6 +35,12 @@ export interface PlanillaPresente {
   _id: string;
   planilla: string;
   jugador: PlanillaJugadorRef | string;
+  /**
+   * De qué plantel sale — local o visitante del partido, no necesariamente el equipo
+   * dueño de la planilla. Un presente viejo (de antes de este campo) puede venir sin
+   * esto; tratalo como el equipo dueño de la planilla en ese caso.
+   */
+  equipo?: string | { _id: string; nombre?: string; escudo?: string };
   jugadorPartido: string | null;
   numero?: number;
   rol: 'jugador' | 'entrenador';
@@ -108,7 +114,7 @@ export const crearPlanilla = (payload: {
 
 export const guardarPresentes = (
   planillaId: string,
-  presentes: Array<{ jugador: string; numero?: number; rol?: 'jugador' | 'entrenador' }>,
+  presentes: Array<{ jugador: string; equipo?: string; numero?: number; rol?: 'jugador' | 'entrenador' }>,
 ) =>
   authFetch<PlanillaCompleta>(`${BASE}/${planillaId}/presentes`, {
     method: 'POST',
@@ -117,6 +123,16 @@ export const guardarPresentes = (
 
 export const quitarPresente = (planillaId: string, presenteId: string) =>
   authFetch<void>(`${BASE}/${planillaId}/presentes/${presenteId}`, { method: 'DELETE' });
+
+/**
+ * Trae de un tiro todo el plantel elegible de un equipo (propio, rival, o un tercero
+ * inscripto en la competencia del partido) y lo agrega como presentes.
+ */
+export const autocompletarPresentesDeEquipo = (planillaId: string, equipoId: string) =>
+  authFetch<PlanillaCompleta>(`${BASE}/${planillaId}/presentes/autocompletar-equipo`, {
+    method: 'POST',
+    body: { equipo: equipoId },
+  });
 
 export const guardarSet = (
   planillaId: string,

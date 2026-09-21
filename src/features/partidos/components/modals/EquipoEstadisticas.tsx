@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import type { FC } from 'react';
 import { ListaJugadores } from './ListaJugadores';
+import type { EstadoGuardadoFila } from '../common/JugadorEstadisticasCard';
 
 type EquipoResumen = {
   _id: string;
@@ -58,6 +59,11 @@ type EquiposEstadisticasProps = {
    */
   puedeEditarLocal?: boolean;
   puedeEditarVisitante?: boolean;
+  /** Autoguardado por fila (ver ModalCapturaSetEstadisticas): estado de cada slot, por lado. */
+  estadosGuardadoLocal?: Array<EstadoGuardadoFila | undefined>;
+  estadosGuardadoVisitante?: Array<EstadoGuardadoFila | undefined>;
+  /** Pide intercambiar los números de un slot con otro DEL MISMO equipo. */
+  onSolicitarIntercambio?: (equipo: 'local' | 'visitante', index: number) => void;
 };
 
 const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
@@ -72,6 +78,9 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
   opcionesJugadoresVisitante,
   puedeEditarLocal = true,
   puedeEditarVisitante = true,
+  estadosGuardadoLocal,
+  estadosGuardadoVisitante,
+  onSolicitarIntercambio,
 }) => {
   const handleCambiarEstadisticaLocal = useCallback<CambiarEstadisticaHandler>(
     (equipoId, index, campo, delta) => {
@@ -104,6 +113,8 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
           onCambiarSurvive={(index, value) => onCambiarSurvive(equipoLocal._id, index, value)}
           token={token}
           opcionesJugadores={opcionesJugadoresLocal}
+          estadosGuardado={estadosGuardadoLocal}
+          onSolicitarIntercambio={onSolicitarIntercambio ? (index) => onSolicitarIntercambio('local', index) : undefined}
         />
       ) : null}
       {puedeEditarVisitante ? (
@@ -118,6 +129,8 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
           onCambiarSurvive={(index, value) => onCambiarSurvive(equipoVisitante._id, index, value)}
           token={token}
           opcionesJugadores={opcionesJugadoresVisitante}
+          estadosGuardado={estadosGuardadoVisitante}
+          onSolicitarIntercambio={onSolicitarIntercambio ? (index) => onSolicitarIntercambio('visitante', index) : undefined}
         />
       ) : null}
       {!puedeEditarLocal && !puedeEditarVisitante ? (

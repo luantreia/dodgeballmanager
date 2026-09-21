@@ -27,6 +27,7 @@ import {
   quitarPresente,
   eliminarEstadisticaPresente,
   intercambiarEstadisticas,
+  autocompletarPresentesDeEquipo,
   totalizarPorPresente,
   type PlanillaCompleta,
   type PlanillaEstadistica,
@@ -34,7 +35,7 @@ import {
   type PlanillaPresente,
   type PlanillaSet as PlanillaSetTipo,
 } from '../../services/planillaEquipoService';
-import { extractEquipoNombre, type PartidoDetallado } from '../../services/partidoService';
+import { extractEquipoId, extractEquipoNombre, type PartidoDetallado } from '../../services/partidoService';
 
 /**
  * Upsert de una fila dentro de `planilla.estadisticas`, sin tocar el resto — ni el autoguardado
@@ -90,6 +91,12 @@ const nombrePresente = (presente: PlanillaPresente): string => {
   if (!j) return 'Jugador';
   if (typeof j === 'string') return 'Jugador';
   return j.alias || [j.nombre, j.apellido].filter(Boolean).join(' ') || 'Jugador';
+};
+
+const idEquipoDePresente = (presente: PlanillaPresente): string | undefined => {
+  const eq = presente.equipo;
+  if (!eq) return undefined;
+  return typeof eq === 'string' ? eq : eq._id;
 };
 
 const ModalPlanillaEquipo: React.FC<Props> = ({
@@ -420,6 +427,44 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   const nombreVisitante = useMemo(
     () => extractEquipoNombre(partido?.equipoVisitante, 'Visitante'),
     [partido],
+  );
+
+  /**
+   * Los dos equipos del partido, para elegir de qué plantel traer presentes. No se
+   * asume "mi equipo / el rival": en modo scouting ninguno de los dos es el dueño de
+   * la planilla, así que se listan los dos por nombre y se marca el propio si
+   * corresponde.
+   */
+  const equiposDelPartido = useMemo(() => {
+    const localId = extractEquipoId(partido?.equipoLocal);
+    const visitId = extractEquipoId(partido?.equipoVisitante);
+    return [
+      { id: localId, nombre: nombreLocal },
+      { id: visitId, nombre: nombreVisitante },
+    ].filter((e): e is { id: string; nombre: string } => Boolean(e.id));
+  }, [partido, nombreLocal, nombreVisitante]);
+
+  const [autocompletandoEquipo, setAutocompletandoEquipo] = useState<string | null>(null);
+
+  const autocompletarPlantelDe = useCallback(
+    async (equipoAutocompletar: string): Promise<void> => {
+      if (!planilla) return;
+      setAutocompletandoEquipo(equipoAutocompletar);
+      try {
+        const completa = await autocompletarPresentesDeEquipo(planilla._id, equipoAutocompletar);
+        setPlanilla(completa);
+        addToast({ type: 'success', title: 'Plantel agregado', message: 'Se sumaron los jugadores elegibles de ese equipo a la planilla.' });
+      } catch (error) {
+        addToast({
+          type: 'error',
+          title: 'No se pudo traer el plantel',
+          message: error instanceof Error ? error.message : 'Error inesperado',
+        });
+      } finally {
+        setAutocompletandoEquipo(null);
+      }
+    },
+    [planilla, addToast],
   );
 
   const setActivo = useMemo(
@@ -1180,9 +1225,28 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
             </div>
           )}
 
+          {editable && equiposDelPartido.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <span className="text-xs font-medium text-slate-600">Agregar plantel de:</span>
+              {equiposDelPartido.map((eq) => (
+                <button
+                  key={eq.id}
+                  type="button"
+                  disabled={autocompletandoEquipo !== null}
+                  onClick={() => void autocompletarPlantelDe(eq.id)}
+                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition [touch-action:manipulation] hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
+                >
+                  {autocompletandoEquipo === eq.id ? 'Agregando…' : eq.nombre}
+                  {eq.id === equipoIdDePlanilla ? ' (el mío)' : ''}
+                </button>
+              ))}
+            </div>
+          )}
+
           {planilla.presentes.length === 0 ? (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-              La planilla no tiene jugadores. Revisá que tu plantel tenga contratos aceptados.
+              La planilla no tiene jugadores. Revisá que tu plantel tenga contratos aceptados, o
+              agregá el plantel del rival con los botones de arriba.
             </div>
           ) : planilla.modo === 'sets' && !setActivoId ? (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
@@ -1235,10 +1299,17 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                   jugadorId: s.presenteId,
                   estadisticas: s.estadisticas,
                 }))}
-                opcionesJugadores={planilla.presentes.map((p) => ({
-                  value: p._id,
-                  label: nombrePresente(p),
-                }))}
+                opcionesJugadores={planilla.presentes.map((p) => {
+                  const idEquipoP = idEquipoDePresente(p);
+                  const nombreEquipoP = equiposDelPartido.find((eq) => eq.id === idEquipoP)?.nombre;
+                  // Sólo se aclara el equipo cuando la planilla mezcla presentes de los dos
+                  // lados — con un solo equipo cargado, aclararlo en cada fila es ruido.
+                  const hayMezcla = new Set(planilla.presentes.map((pp) => idEquipoDePresente(pp))).size > 1;
+                  return {
+                    value: p._id,
+                    label: hayMezcla && nombreEquipoP ? `${nombrePresente(p)} · ${nombreEquipoP}` : nombrePresente(p),
+                  };
+                })}
                 estadosGuardado={slots.map((_, i) => filasGuardando[i])}
                 onSolicitarIntercambio={solicitarIntercambio}
                 onAsignarJugador={(index, presenteId) => {
