@@ -110,10 +110,39 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
     [addToast, equipoId],
   );
 
-  const partidosOrdenados = useMemo(
-    () => [...partidos].sort((a, b) => (b.fechaISO ?? '').localeCompare(a.fechaISO ?? '')),
-    [partidos],
-  );
+  /**
+   * Agrupados por temporada y, adentro, por fase: dos partidos entre los mismos rivales en
+   * Apertura y Clausura (o en fase de grupos y playoffs) son indistinguibles en una lista plana
+   * de "Equipo A vs Equipo B" — el nombre no alcanza, hace falta saber en qué tramo del
+   * campeonato pasó. El orden de los grupos sigue el de la primera aparición, que ya es el más
+   * reciente primero porque los partidos entran ordenados por fecha.
+   */
+  const gruposPorTemporada = useMemo(() => {
+    const ordenados = [...partidos].sort((a, b) => (b.fechaISO ?? '').localeCompare(a.fechaISO ?? ''));
+
+    const temporadas: Array<{ id: string; nombre: string; fases: Array<{ id: string; nombre: string; partidos: Partido[] }> }> = [];
+    const temporadaPorId = new Map<string, (typeof temporadas)[number]>();
+
+    for (const partido of ordenados) {
+      const tId = partido.temporada?.id ?? '__sin_temporada__';
+      let temporada = temporadaPorId.get(tId);
+      if (!temporada) {
+        temporada = { id: tId, nombre: partido.temporada?.nombre ?? 'Sin temporada', fases: [] };
+        temporadaPorId.set(tId, temporada);
+        temporadas.push(temporada);
+      }
+
+      const fId = partido.fase?.id ?? '__sin_fase__';
+      let fase = temporada.fases.find((f) => f.id === fId);
+      if (!fase) {
+        fase = { id: fId, nombre: partido.fase?.nombre ?? 'Sin fase', partidos: [] };
+        temporada.fases.push(fase);
+      }
+      fase.partidos.push(partido);
+    }
+
+    return temporadas;
+  }, [partidos]);
 
   const elegirPartido = useCallback(
     async (partidoId: string) => {
@@ -226,30 +255,50 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
 
             {cargandoPartidos ? (
               <p className="text-sm text-slate-500">Cargando partidos…</p>
-            ) : partidosOrdenados.length === 0 ? (
+            ) : gruposPorTemporada.length === 0 ? (
               <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
                 No hay partidos ajenos en esta competencia todavía.
               </p>
             ) : (
-              <ul className="max-h-96 space-y-1.5 overflow-y-auto">
-                {partidosOrdenados.map((p) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      disabled={creando !== null}
-                      onClick={() => void elegirPartido(p.id)}
-                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-4 py-2.5 text-left text-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50"
-                    >
-                      <span className="font-medium text-slate-800">
-                        {p.equipoLocal?.nombre ?? 'Local'} vs {p.equipoVisitante?.nombre ?? 'Visitante'}
-                      </span>
-                      <span className="shrink-0 text-xs text-slate-500">
-                        {creando === p.id ? 'Creando…' : formatDateTime(p.fechaISO ?? p.fecha)}
-                      </span>
-                    </button>
-                  </li>
+              <div className="max-h-96 space-y-4 overflow-y-auto">
+                {gruposPorTemporada.map((temporada) => (
+                  <div key={temporada.id}>
+                    <p className="sticky top-0 z-10 bg-white px-1 py-1 text-xs font-bold uppercase tracking-wide text-slate-500">
+                      {temporada.nombre}
+                    </p>
+                    <div className="space-y-3">
+                      {temporada.fases.map((fase) => (
+                        <div key={fase.id}>
+                          {/* Sólo se etiqueta la fase cuando hay más de una en la temporada —
+                              con una sola, repetir el nombre no distingue nada. */}
+                          {temporada.fases.length > 1 && (
+                            <p className="px-1 pb-1 text-[11px] font-semibold text-slate-400">{fase.nombre}</p>
+                          )}
+                          <ul className="space-y-1.5">
+                            {fase.partidos.map((p) => (
+                              <li key={p.id}>
+                                <button
+                                  type="button"
+                                  disabled={creando !== null}
+                                  onClick={() => void elegirPartido(p.id)}
+                                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-4 py-2.5 text-left text-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50"
+                                >
+                                  <span className="font-medium text-slate-800">
+                                    {p.equipoLocal?.nombre ?? 'Local'} vs {p.equipoVisitante?.nombre ?? 'Visitante'}
+                                  </span>
+                                  <span className="shrink-0 text-xs text-slate-500">
+                                    {creando === p.id ? 'Creando…' : formatDateTime(p.fechaISO ?? p.fecha)}
+                                  </span>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         )}
