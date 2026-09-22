@@ -32,6 +32,35 @@ const nombreDeJugador = (j: SetConEstadisticas['estadisticas'][number]['jugador'
   return [j.nombre, j.apellido].filter(Boolean).join(' ').trim() || 'Jugador';
 };
 
+const TablaFilas = ({ filas }: { filas: Fila[] }) => (
+  <TablaScroll>
+    <table className="w-full min-w-[420px] text-sm">
+      <thead>
+        <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+          <th className="pb-2 pr-3">Jugador</th>
+          <th className="pb-2 pr-3 text-right">Sets</th>
+          <th className="pb-2 pr-3 text-right">Throws</th>
+          <th className="pb-2 pr-3 text-right">Hits</th>
+          <th className="pb-2 pr-3 text-right">Outs</th>
+          <th className="pb-2 text-right">Catches</th>
+        </tr>
+      </thead>
+      <tbody className="tabular-nums">
+        {filas.map((fila) => (
+          <tr key={fila.nombre} className="border-b border-slate-100 last:border-0">
+            <td className="py-1.5 pr-3 text-slate-800">{fila.nombre}</td>
+            <td className="py-1.5 pr-3 text-right text-slate-500">{fila.sets}</td>
+            <td className="py-1.5 pr-3 text-right text-slate-600">{fila.throws}</td>
+            <td className="py-1.5 pr-3 text-right font-semibold text-slate-800">{fila.hits}</td>
+            <td className="py-1.5 pr-3 text-right text-slate-600">{fila.outs}</td>
+            <td className="py-1.5 text-right text-slate-600">{fila.catches}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </TablaScroll>
+);
+
 /**
  * Visor de un partido: el contrapunto de solo lectura de los modales de captura.
  *
@@ -112,8 +141,15 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
     if (setElegido !== null && !setsDisponibles.includes(setElegido)) setSetElegido(null);
   }, [setsDisponibles, setElegido]);
 
-  /** Filas del equipo propio. El visor es del equipo, no del partido. */
-  const filas = useMemo<Fila[]>(() => {
+  /**
+   * Filas separadas por lado: propias y del rival. Antes esto descartaba directamente todo lo
+   * que no fuera del equipo propio — pero un partido es de los dos equipos, y tanto lo oficial
+   * (la organización carga el partido entero) como una planilla de scouting con los dos lados
+   * pueden tener datos del rival. Separar en dos baldes en vez de sumarlos evita el problema
+   * original (los totales de "mi equipo" mezclados con los del rival); simplemente ya no se
+   * tira el balde del rival.
+   */
+  const { propias: filasPropias, rival: filasRival } = useMemo<{ propias: Fila[]; rival: Fila[] }>(() => {
     const acumular = (
       acc: Map<string, Fila>,
       nombre: string,
@@ -133,21 +169,20 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
       [...acc.values()].sort((a, b) => b.hits - a.hits || a.nombre.localeCompare(b.nombre, 'es'));
 
     if (fuente === 'oficial') {
-      if (!sets) return [];
-      const acc = new Map<string, Fila>();
+      if (!sets) return { propias: [], rival: [] };
+      const accPropio = new Map<string, Fila>();
+      const accRival = new Map<string, Fila>();
       for (const set of sets) {
         if (setElegido !== null && set.numeroSet !== setElegido) continue;
         for (const stat of set.estadisticas ?? []) {
-          // Sólo el propio equipo: el otro lado puede tener estadísticas que no son asunto
-          // de este panel, y mezclarlas haría que los totales no cierren con nada.
-          if (stat.equipo?._id && String(stat.equipo._id) !== String(equipoId)) continue;
-          acumular(acc, nombreDeJugador(stat.jugador), stat);
+          const esPropio = !stat.equipo?._id || String(stat.equipo._id) === String(equipoId);
+          acumular(esPropio ? accPropio : accRival, nombreDeJugador(stat.jugador), stat);
         }
       }
-      return ordenar(acc);
+      return { propias: ordenar(accPropio), rival: ordenar(accRival) };
     }
 
-    if (!planillaCompleta) return [];
+    if (!planillaCompleta) return { propias: [], rival: [] };
 
     const nombrePresente = (presenteId: string): string => {
       const presente = planillaCompleta.presentes.find((p) => p._id === presenteId);
@@ -156,10 +191,8 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
       return j.alias || [j.nombre, j.apellido].filter(Boolean).join(' ').trim() || 'Jugador';
     };
 
-    // Mismo criterio que la rama oficial de arriba: sólo el propio equipo. Desde que la
-    // planilla puede tener también presentes del rival, sin este filtro sus números se
-    // mezclaban acá con los del equipo — un presente sin `equipo` (de antes de ese campo) se
-    // trata como propio.
+    // Un presente sin `equipo` (de antes de ese campo) se trata como propio, que era la única
+    // posibilidad antes de que la planilla pudiera capturar también al rival.
     const esPresentePropio = (presenteId: string): boolean => {
       const presente = planillaCompleta.presentes.find((p) => p._id === presenteId);
       const idEquipoPresente = typeof presente?.equipo === 'string' ? presente.equipo : presente?.equipo?._id;
@@ -168,28 +201,34 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
 
     if (setElegido === null) {
       const totales = totalizarPorPresente(planillaCompleta);
-      return Object.entries(totales)
-        .filter(([presenteId]) => esPresentePropio(presenteId))
-        .map(([presenteId, t]) => ({
+      const accPropio = new Map<string, Fila>();
+      const accRival = new Map<string, Fila>();
+      for (const [presenteId, t] of Object.entries(totales)) {
+        const acc = esPresentePropio(presenteId) ? accPropio : accRival;
+        acc.set(nombrePresente(presenteId), {
           nombre: nombrePresente(presenteId),
           throws: t.throws,
           hits: t.hits,
           outs: t.outs,
           catches: t.catches,
           sets: t.sets,
-        }))
-        .sort((a, b) => b.hits - a.hits || a.nombre.localeCompare(b.nombre, 'es'));
+        });
+      }
+      return { propias: ordenar(accPropio), rival: ordenar(accRival) };
     }
 
     const idDelSet = planillaCompleta.sets.find((s) => s.numeroSet === setElegido)?._id ?? null;
-    const acc = new Map<string, Fila>();
+    const accPropio = new Map<string, Fila>();
+    const accRival = new Map<string, Fila>();
     for (const stat of planillaCompleta.estadisticas) {
       if (stat.planillaSet !== idDelSet) continue;
-      if (!esPresentePropio(stat.planillaPresente)) continue;
+      const acc = esPresentePropio(stat.planillaPresente) ? accPropio : accRival;
       acumular(acc, nombrePresente(stat.planillaPresente), stat);
     }
-    return ordenar(acc);
+    return { propias: ordenar(accPropio), rival: ordenar(accRival) };
   }, [fuente, sets, planillaCompleta, equipoId, setElegido]);
+
+  const hayFilasRival = filasRival.length > 0;
 
   const cambiarFuente = useCallback(
     async (nueva: FuenteDatos) => {
@@ -329,37 +368,38 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
           </div>
         ) : cargando ? (
           <p className="py-6 text-center text-sm text-slate-500">Cargando estadísticas…</p>
-        ) : filas.length === 0 ? (
+        ) : filasPropias.length === 0 && !hayFilasRival ? (
           <div className="rounded-xl border border-dashed border-slate-200 bg-white px-6 py-8 text-center text-sm text-slate-500">
-            No hay estadísticas de tu equipo en esta fuente.
+            No hay estadísticas de este partido en esta fuente.
           </div>
         ) : (
-          <TablaScroll>
-            <table className="w-full min-w-[420px] text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="pb-2 pr-3">Jugador</th>
-                  <th className="pb-2 pr-3 text-right">Sets</th>
-                  <th className="pb-2 pr-3 text-right">Throws</th>
-                  <th className="pb-2 pr-3 text-right">Hits</th>
-                  <th className="pb-2 pr-3 text-right">Outs</th>
-                  <th className="pb-2 text-right">Catches</th>
-                </tr>
-              </thead>
-              <tbody className="tabular-nums">
-                {filas.map((fila) => (
-                  <tr key={fila.nombre} className="border-b border-slate-100 last:border-0">
-                    <td className="py-1.5 pr-3 text-slate-800">{fila.nombre}</td>
-                    <td className="py-1.5 pr-3 text-right text-slate-500">{fila.sets}</td>
-                    <td className="py-1.5 pr-3 text-right text-slate-600">{fila.throws}</td>
-                    <td className="py-1.5 pr-3 text-right font-semibold text-slate-800">{fila.hits}</td>
-                    <td className="py-1.5 pr-3 text-right text-slate-600">{fila.outs}</td>
-                    <td className="py-1.5 text-right text-slate-600">{fila.catches}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TablaScroll>
+          // Dos tablas lado a lado sólo cuando hay algo del rival para mostrar — la mayoría de
+          // los partidos no lo tienen, y ahí la pantalla se ve exactamente igual que antes.
+          <div className={hayFilasRival ? 'grid gap-4 md:grid-cols-2' : ''}>
+            <div>
+              {hayFilasRival && (
+                <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Mi equipo
+                </p>
+              )}
+              {filasPropias.length > 0 ? (
+                <TablaFilas filas={filasPropias} />
+              ) : (
+                <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-400">
+                  Sin datos propios en esta fuente.
+                </p>
+              )}
+            </div>
+
+            {hayFilasRival && (
+              <div>
+                <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">
+                  {partido.rival?.nombre ?? 'Rival'}
+                </p>
+                <TablaFilas filas={filasRival} />
+              </div>
+            )}
+          </div>
         )}
 
         {fuente === 'oficial' && oficial.existe && !oficial.verificada && (
