@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
-import { getTimelineEquipo, type FuenteDatos, type PartidoTimeline } from '../../services/timelineService';
+import {
+  getTimelineEquipo,
+  type EquipoResumen,
+  type FuenteDatos,
+  type PartidoTimeline,
+} from '../../services/timelineService';
 import { getFilasAnaliticas, type FilaAnalitica } from '../../services/filasService';
 import { clonarFiltros, describirFiltros, useFiltrosPartidos } from '../../hooks/useFiltrosPartidos';
 import PanelFiltrosPartidos from '../PanelFiltrosPartidos';
@@ -72,6 +77,20 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
   const [pestana, setPestana] = useState<Pestana>('resumen');
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
   const [scouteando, setScouteando] = useState(false);
+  /**
+   * A través de qué equipo se arma todo el análisis. Por defecto el propio; se puede apuntar a
+   * cualquier equipo de `equiposDisponibles` (un rival de un partido jugado, o uno de los dos
+   * lados de un partido scouteado a terceros) para ver el mismo motor de filtros/segmentos con
+   * lo que este equipo capturó sobre ellos. Nunca lee la planilla privada del otro equipo — ver
+   * el comentario de `obtenerFilasAnaliticas` en el backend.
+   */
+  const [perspectiva, setPerspectiva] = useState<EquipoResumen>({
+    _id: equipoId,
+    nombre: equipoNombre || 'Mi equipo',
+    escudo: null,
+  });
+  const [equiposDisponibles, setEquiposDisponibles] = useState<EquipoResumen[]>([]);
+  const [perspectivaAbierta, setPerspectivaAbierta] = useState(false);
   const [verHuerfanas, setVerHuerfanas] = useState(false);
   /**
    * Planilla de scouting recién creada, todavía no aparece en `partidos`/`filas` (esas
@@ -83,14 +102,23 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
 
   const filtros = useFiltrosPartidos(partidos);
 
+  // Cambiar de equipo (un DT con más de un plantel) invalida cualquier perspectiva y segmento
+  // que hubiera elegido sobre el equipo anterior — si no, `perspectiva` seguiría apuntando a un
+  // rival del equipo viejo, o directamente al equipo viejo mismo.
+  useEffect(() => {
+    setPerspectiva({ _id: equipoId, nombre: equipoNombre || 'Mi equipo', escudo: null });
+    setSegmentos([]);
+  }, [equipoId, equipoNombre]);
+
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
       const [timeline, analiticas] = await Promise.all([
-        getTimelineEquipo(equipoId),
-        getFilasAnaliticas(equipoId),
+        getTimelineEquipo(equipoId, { perspectiva: perspectiva._id }),
+        getFilasAnaliticas(equipoId, { perspectiva: perspectiva._id }),
       ]);
-      setPartidos(timeline);
+      setPartidos(timeline.partidos);
+      setEquiposDisponibles(timeline.equiposDisponibles);
       setFilas(analiticas);
       setError(null);
     } catch (err) {
@@ -103,7 +131,7 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
     } finally {
       setCargando(false);
     }
-  }, [equipoId, addToast]);
+  }, [equipoId, perspectiva._id, addToast]);
 
   useEffect(() => {
     void cargar();
@@ -145,6 +173,14 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
     ]);
   }, [filtros.filtros, filtros.desde, filtros.hasta, partidos]);
 
+  // Un segmento guardado bajo una perspectiva no significa lo mismo bajo otra — reaplicar sus
+  // filtros a los datos de otro equipo daría una comparación sin sentido, así que se limpian.
+  const elegirPerspectiva = useCallback((equipo: EquipoResumen) => {
+    setPerspectiva(equipo);
+    setSegmentos([]);
+    setPerspectivaAbierta(false);
+  }, []);
+
   const abrirCaptura = useCallback(
     async (partido: PartidoTimeline, fuente: FuenteDatos) => {
       // En los dos casos hace falta el partido con `equipoLocal`/`equipoVisitante` populados:
@@ -171,6 +207,64 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
     void cargar();
   }, [cargar]);
 
+  const otrosEquipos = equiposDisponibles.filter((e) => e._id !== equipoId);
+  const mismoEquipo: EquipoResumen = { _id: equipoId, nombre: equipoNombre || 'Mi equipo', escudo: null };
+
+  /**
+   * El chip vive tanto en la barra sticky como en el estado vacío: sin él ahí, elegir una
+   * perspectiva sin partidos (o volver a "Mi equipo") no tendría por dónde deshacerse.
+   */
+  const selectorPerspectiva = (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setPerspectivaAbierta((v) => !v)}
+        aria-expanded={perspectivaAbierta}
+        className={`flex min-h-[2.75rem] items-center gap-1.5 rounded-full px-3 text-xs font-bold transition [touch-action:manipulation] ${
+          perspectiva._id !== equipoId
+            ? 'bg-amber-500 text-white hover:bg-amber-600'
+            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+        }`}
+      >
+        <span aria-hidden>👁</span>
+        {perspectiva._id === equipoId ? 'Mi equipo' : perspectiva.nombre}
+        <span aria-hidden className={`text-[9px] transition-transform ${perspectivaAbierta ? 'rotate-180' : ''}`}>
+          ▾
+        </span>
+      </button>
+
+      {perspectivaAbierta && (
+        <div className="absolute left-0 top-full z-40 mt-1 w-56 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg">
+          <button
+            type="button"
+            onClick={() => elegirPerspectiva(mismoEquipo)}
+            className={`block w-full rounded-md px-3 py-2 text-left text-sm ${
+              perspectiva._id === equipoId ? 'bg-brand-50 font-semibold text-brand-700' : 'hover:bg-slate-50'
+            }`}
+          >
+            Mi equipo
+          </button>
+          {otrosEquipos.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-slate-400">Todavía no capturaste datos de otro equipo.</p>
+          ) : (
+            otrosEquipos.map((e) => (
+              <button
+                key={e._id}
+                type="button"
+                onClick={() => elegirPerspectiva(e)}
+                className={`block w-full rounded-md px-3 py-2 text-left text-sm ${
+                  perspectiva._id === e._id ? 'bg-brand-50 font-semibold text-brand-700' : 'hover:bg-slate-50'
+                }`}
+              >
+                {e.nombre}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   if (cargando) return <p className="text-sm text-slate-500">Cargando estadísticas…</p>;
 
   if (error) {
@@ -191,8 +285,11 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
   if (partidos.length === 0) {
     return (
       <div className="space-y-3">
+        <div className="flex justify-center">{selectorPerspectiva}</div>
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center text-sm text-slate-500">
-          Tu equipo todavía no tiene partidos cargados.
+          {perspectiva._id === equipoId
+            ? 'Tu equipo todavía no tiene partidos cargados.'
+            : `Todavía no capturaste datos de partidos de ${perspectiva.nombre}.`}
         </div>
         {/* El timeline solo trae partidos donde el equipo jugó — si el único que tenías se
             borró, esta pantalla se queda vacía y el botón de la barra de abajo nunca se monta.
@@ -246,6 +343,8 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
               ▾
             </span>
           </button>
+
+          {selectorPerspectiva}
 
           <button
             type="button"
@@ -301,6 +400,13 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
       {/* Qué se está mirando, en palabras. En el shell no entra —el chip sólo tiene lugar para
           el conteo— y sin esto un segmento filtrado se confunde con el total del equipo. */}
       <p className="text-xs text-slate-500">{descripcionActual}</p>
+
+      {perspectiva._id !== equipoId && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Estás viendo lo que vos capturaste sobre {perspectiva.nombre} — no es su vista oficial
+          ni está necesariamente completo.
+        </p>
+      )}
 
       {pestana === 'resumen' && (
         <EstadisticasFiltradas filas={filasFiltradas} descripcion={descripcionActual} />

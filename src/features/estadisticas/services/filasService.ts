@@ -44,9 +44,17 @@ export type FilaAnalitica = {
   survive: boolean;
 };
 
-export const getFilasAnaliticas = async (equipoId: string): Promise<FilaAnalitica[]> => {
+export const getFilasAnaliticas = async (
+  equipoId: string,
+  opciones?: { desde?: string; hasta?: string; perspectiva?: string },
+): Promise<FilaAnalitica[]> => {
+  const params = new URLSearchParams();
+  if (opciones?.desde) params.set('desde', opciones.desde);
+  if (opciones?.hasta) params.set('hasta', opciones.hasta);
+  if (opciones?.perspectiva) params.set('perspectiva', opciones.perspectiva);
+  const query = params.toString();
   const resp = await authFetch<{ filas: FilaAnalitica[] }>(
-    `/estadisticas/equipo/${equipoId}/filas`,
+    `/estadisticas/equipo/${equipoId}/filas${query ? `?${query}` : ''}`,
   );
   return resp.filas ?? [];
 };

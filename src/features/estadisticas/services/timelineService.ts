@@ -37,6 +37,9 @@ export type DatosPartido = {
   fuenteEfectiva: FuenteEfectiva;
 };
 
+/** Un equipo, para listas de elección (selector de perspectiva, rival de un partido, etc). */
+export type EquipoResumen = { _id: string; nombre: string; escudo: string | null };
+
 export type PartidoTimeline = {
   _id: string;
   /** ISO completo del backend. Convertir a hora local para mostrar; nunca partirlo por la 'T'. */
@@ -51,7 +54,7 @@ export type PartidoTimeline = {
   esLocal: boolean;
   marcadorEquipo: number;
   marcadorRival: number;
-  rival: { _id: string; nombre: string; escudo: string | null } | null;
+  rival: EquipoResumen | null;
   competencia: {
     _id: string;
     nombre: string;
@@ -64,23 +67,35 @@ export type PartidoTimeline = {
   datos: DatosPartido;
 };
 
+export type TimelineEquipo = {
+  partidos: PartidoTimeline[];
+  /**
+   * Equipos sobre los que `equipoId` tiene algún dato propio: él mismo, sus rivales de
+   * partidos jugados, y ambos lados de lo que haya scouteado sin jugar. Alimenta el selector
+   * de perspectiva.
+   */
+  equiposDisponibles: EquipoResumen[];
+};
+
 /**
- * Todos los partidos del equipo, anotados con lo necesario para filtrarlos y para saber qué
+ * Todos los partidos del equipo (o, con `perspectiva`, los de otro equipo dentro de lo que
+ * `equipoId` tiene capturado), anotados con lo necesario para filtrarlos y para saber qué
  * datos tiene cada uno. Se pide una sola vez y el filtrado facetado ocurre en el navegador:
  * un equipo juega decenas de partidos por temporada y así las facetas cascadean al instante,
  * sin un ida y vuelta al backend por cada clic.
  */
 export const getTimelineEquipo = async (
   equipoId: string,
-  rango?: { desde?: string; hasta?: string },
-): Promise<PartidoTimeline[]> => {
+  opciones?: { desde?: string; hasta?: string; perspectiva?: string },
+): Promise<TimelineEquipo> => {
   const params = new URLSearchParams({ equipo: equipoId });
-  if (rango?.desde) params.set('desde', rango.desde);
-  if (rango?.hasta) params.set('hasta', rango.hasta);
-  const resp = await authFetch<{ partidos: PartidoTimeline[] }>(
+  if (opciones?.desde) params.set('desde', opciones.desde);
+  if (opciones?.hasta) params.set('hasta', opciones.hasta);
+  if (opciones?.perspectiva) params.set('perspectiva', opciones.perspectiva);
+  const resp = await authFetch<Partial<TimelineEquipo>>(
     `/partidos/timeline?${params.toString()}`,
   );
-  return resp.partidos ?? [];
+  return { partidos: resp.partidos ?? [], equiposDisponibles: resp.equiposDisponibles ?? [] };
 };
 
 /** Cambia qué fuente alimenta el análisis del equipo para el partido de esa planilla. */

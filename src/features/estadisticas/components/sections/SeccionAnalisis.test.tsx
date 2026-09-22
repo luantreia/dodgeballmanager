@@ -49,10 +49,13 @@ const montar = () =>
   );
 
 beforeEach(() => {
-  getTimelineEquipo.mockResolvedValue([
-    partido('1'),
-    partido('2', { modalidad: 'Cloth', rival: { _id: 'r2', nombre: 'Riestra', escudo: null } }),
-  ]);
+  getTimelineEquipo.mockResolvedValue({
+    partidos: [
+      partido('1'),
+      partido('2', { modalidad: 'Cloth', rival: { _id: 'r2', nombre: 'Riestra', escudo: null } }),
+    ],
+    equiposDisponibles: [{ _id: 'e1', nombre: 'Mi equipo', escudo: null }],
+  });
   getFilasAnaliticas.mockResolvedValue([
     ...alineacion(['j1', 'j2', 'j3'], { partidoId: '1', numeroSet: 1, resultadoSet: 'ganado' }),
     ...alineacion(['j1', 'j2', 'j3'], { partidoId: '1', numeroSet: 2, resultadoSet: 'ganado' }),
