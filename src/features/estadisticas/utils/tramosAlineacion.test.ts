@@ -1,6 +1,6 @@
 import { construirSets } from './setsAnaliticos';
 import { construirTramos, resumirTramos } from './tramosAlineacion';
-import { alineacion } from './__fixtures__/filas';
+import { alineacion, fila } from './__fixtures__/filas';
 import type { FilaAnalitica } from '../services/filasService';
 
 const SEIS = ['j1', 'j2', 'j3', 'j4', 'j5', 'j6'];
@@ -60,10 +60,8 @@ describe('construirTramos', () => {
     expect(segundo.sets).toBe(2);
     expect(segundo.perdidos).toBe(2);
     expect(segundo.porcentaje).toBe(0);
-    expect(segundo.cambio).toEqual({
-      salieron: [{ jugadorId: 'j6', jugador: 'J6' }],
-      entraron: [{ jugadorId: 'j7', jugador: 'J7' }],
-    });
+    expect(segundo.cambio?.salieron.map((j) => j.jugador)).toEqual(['J6']);
+    expect(segundo.cambio?.entraron.map((j) => j.jugador)).toEqual(['J7']);
   });
 
   it('un cambio doble lista los dos que salieron y los dos que entraron', () => {
@@ -72,16 +70,8 @@ describe('construirTramos', () => {
       ...set(['j1', 'j2', 'j3', 'j4', 'j7', 'j8'], 2, 'ganado'),
     ]);
 
-    expect(secuencia.tramos[1].cambio).toEqual({
-      salieron: [
-        { jugadorId: 'j5', jugador: 'J5' },
-        { jugadorId: 'j6', jugador: 'J6' },
-      ],
-      entraron: [
-        { jugadorId: 'j7', jugador: 'J7' },
-        { jugadorId: 'j8', jugador: 'J8' },
-      ],
-    });
+    expect(secuencia.tramos[1].cambio?.salieron.map((j) => j.jugador)).toEqual(['J5', 'J6']);
+    expect(secuencia.tramos[1].cambio?.entraron.map((j) => j.jugador)).toEqual(['J7', 'J8']);
   });
 
   it('volver a la alineación anterior es un tramo nuevo, no una continuación del primero', () => {
@@ -92,10 +82,8 @@ describe('construirTramos', () => {
     ]);
 
     expect(secuencia.tramos).toHaveLength(3);
-    expect(secuencia.tramos[2].cambio).toEqual({
-      salieron: [{ jugadorId: 'j7', jugador: 'J7' }],
-      entraron: [{ jugadorId: 'j6', jugador: 'J6' }],
-    });
+    expect(secuencia.tramos[2].cambio?.salieron.map((j) => j.jugador)).toEqual(['J7']);
+    expect(secuencia.tramos[2].cambio?.entraron.map((j) => j.jugador)).toEqual(['J6']);
   });
 
   describe('capturas incompletas', () => {
@@ -272,6 +260,171 @@ describe('resumirTramos', () => {
       setsLeidos: 0,
       setsIgnorados: 0,
       tramosConRacha: 0,
+    });
+  });
+});
+
+describe('producción del tramo', () => {
+  /** Un set donde cada jugador tiene sus propios contadores. */
+  const setCon = (
+    jugadores: Array<{
+      id: string;
+      throws?: number;
+      hits?: number;
+      outs?: number;
+      catches?: number;
+      survive?: boolean;
+    }>,
+    numeroSet: number,
+    resultadoSet: FilaAnalitica['resultadoSet'] = 'ganado',
+    partidoId = 'p1',
+  ): FilaAnalitica[] =>
+    jugadores.map((j) =>
+      fila({
+        partidoId,
+        numeroSet,
+        resultadoSet,
+        jugadorId: j.id,
+        jugador: j.id.toUpperCase(),
+        throws: j.throws ?? 0,
+        hits: j.hits ?? 0,
+        outs: j.outs ?? 0,
+        catches: j.catches ?? 0,
+        survive: j.survive ?? false,
+      }),
+    );
+
+  /** Seis jugadores con los contadores que se le pasen al primero; el resto en cero. */
+  const seisCon = (primero: {
+    throws?: number;
+    hits?: number;
+    outs?: number;
+    catches?: number;
+    survive?: boolean;
+  }) => [
+    { id: 'j1', ...primero },
+    { id: 'j2' },
+    { id: 'j3' },
+    { id: 'j4' },
+    { id: 'j5' },
+    { id: 'j6' },
+  ];
+
+  it('el ritmo del equipo va por set, no en totales', () => {
+    // Dos tramos de distinto largo sólo se pueden comparar por set: en bruto, el más largo
+    // siempre tiene más de todo.
+    const tramo = unPartido([
+      ...setCon(seisCon({ throws: 10, hits: 4, catches: 2 }), 1),
+      ...setCon(seisCon({ throws: 6, hits: 2, catches: 0 }), 2),
+    ]).tramos[0];
+
+    expect(tramo.sets).toBe(2);
+    expect(tramo.ritmo.throwsPorSet).toBe(8);
+    expect(tramo.ritmo.hitsPorSet).toBe(3);
+    expect(tramo.ritmo.catchesPorSet).toBe(1);
+    expect(tramo.ritmo.efectividad).toBeCloseTo(6 / 16);
+  });
+
+  it('sin tiros no hay efectividad que calcular', () => {
+    const tramo = unPartido(setCon(seisCon({}), 1)).tramos[0];
+    expect(tramo.ritmo.efectividad).toBeNull();
+  });
+
+  it('el aporte es por jugador y ordenado por hits', () => {
+    const tramo = unPartido([
+      ...setCon(
+        [
+          { id: 'j1', throws: 10, hits: 1 },
+          { id: 'j2', throws: 4, hits: 4 },
+          { id: 'j3' },
+          { id: 'j4' },
+          { id: 'j5' },
+          { id: 'j6' },
+        ],
+        1,
+      ),
+    ]).tramos[0];
+
+    expect(tramo.aportes).toHaveLength(6);
+    expect(tramo.aportes[0].jugador).toBe('J2');
+    expect(tramo.aportes[0].hits).toBe(4);
+    // Mucho volumen y poca puntería: es justo lo que el resultado del set no cuenta.
+    const j1 = tramo.aportes.find((a) => a.jugador === 'J1')!;
+    expect(j1.throws).toBe(10);
+    expect(j1.ritmo.efectividad).toBeCloseTo(0.1);
+  });
+
+  it('acumula el aporte de un jugador a lo largo de todo el tramo', () => {
+    const tramo = unPartido([
+      ...setCon(seisCon({ throws: 5, hits: 2, survive: true }), 1),
+      ...setCon(seisCon({ throws: 5, hits: 4, survive: false }), 2),
+    ]).tramos[0];
+
+    const j1 = tramo.aportes.find((a) => a.jugador === 'J1')!;
+    expect(j1.sets).toBe(2);
+    expect(j1.throws).toBe(10);
+    expect(j1.hits).toBe(6);
+    expect(j1.ritmo.hitsPorSet).toBe(3);
+    // Sobrevivió uno de los dos sets.
+    expect(j1.supervivencia).toBe(0.5);
+  });
+
+  describe('el cambio trae los números de los dos lados', () => {
+    /** Racha a favor generando mucho, cambio, racha en contra generando poco. */
+    const conCambio = () =>
+      unPartido([
+        ...setCon(seisCon({ throws: 10, hits: 5 }), 1, 'ganado'),
+        ...setCon(seisCon({ throws: 10, hits: 5 }), 2, 'ganado'),
+        ...setCon(
+          [
+            { id: 'j1', throws: 10, hits: 5 },
+            { id: 'j2' },
+            { id: 'j3' },
+            { id: 'j4' },
+            { id: 'j5' },
+            { id: 'j7', throws: 2, hits: 0 },
+          ],
+          3,
+          'perdido',
+        ),
+      ]);
+
+    it('los números de quien salió son del tramo que terminó', () => {
+      // J6 jugó los sets 1 y 2 sin tirar: su aporte sale de ahí, no del tramo nuevo donde ya
+      // no está.
+      const cambio = conCambio().tramos[1].cambio!;
+      const j6 = cambio.salieron.find((j) => j.jugador === 'J6')!;
+      expect(j6.sets).toBe(2);
+      expect(j6.throws).toBe(0);
+    });
+
+    it('los números de quien entró son del tramo que arranca', () => {
+      const cambio = conCambio().tramos[1].cambio!;
+      const j7 = cambio.entraron.find((j) => j.jugador === 'J7')!;
+      expect(j7.sets).toBe(1);
+      expect(j7.throws).toBe(2);
+      expect(j7.hits).toBe(0);
+      expect(j7.ritmo.efectividad).toBe(0);
+    });
+
+    it('el delta dice cuánto se movió la producción del equipo, por set', () => {
+      // Antes: 10 throws y 5 hits por set. Después: 12 throws y 5 hits en un set.
+      const cambio = conCambio().tramos[1].cambio!;
+      expect(cambio.delta.throwsPorSet).toBe(2);
+      expect(cambio.delta.hitsPorSet).toBe(0);
+      // La efectividad cae aunque los hits se mantengan: se tiró más para lo mismo.
+      expect(cambio.delta.efectividad).toBeCloseTo(5 / 12 - 5 / 10);
+    });
+
+    it('un tramo sin tiros deja el delta de efectividad en null, no en cero', () => {
+      const secuencia = unPartido([
+        ...setCon(seisCon({ throws: 10, hits: 5 }), 1, 'ganado'),
+        ...setCon([{ id: 'j1' }, { id: 'j2' }, { id: 'j3' }, { id: 'j4' }, { id: 'j5' }, { id: 'j7' }], 2, 'perdido'),
+      ]);
+
+      const cambio = secuencia.tramos[1].cambio!;
+      expect(cambio.delta.efectividad).toBeNull();
+      expect(cambio.delta.hitsPorSet).toBe(-5);
     });
   });
 });
