@@ -32,6 +32,17 @@ export type JugadorEstadisticasCardProps = {
   estadoGuardado?: EstadoGuardadoFila;
   /** Sólo tiene sentido si el slot ya tiene un jugador asignado — swap de números con otro slot. */
   onIntercambiar?: () => void;
+  /**
+   * `false` cuando el jugador de esta fila es fijo y no hay nada que elegir: la captura de
+   * totales del partido va contra la convocatoria, que se arma en otro modal. En ese caso el
+   * nombre es un rótulo, no un control — antes se simulaba pasándole al select una sola opción
+   * y un `onCambiarJugador` vacío.
+   */
+  asignable?: boolean;
+  /** El nombre a mostrar cuando `asignable` es false. */
+  nombreJugador?: string;
+  /** `false` donde "sobrevive" no significa nada, como en los totales de todo el partido. */
+  mostrarSurvive?: boolean;
 };
 
 const ETIQUETA_ESTADO: Record<EstadoGuardadoFila, { texto: string; clase: string }> = {
@@ -76,6 +87,9 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
   estadisticasJugador = { throws: 0, hits: 0, outs: 0, catches: 0 },
   estadoGuardado,
   onIntercambiar,
+  asignable = true,
+  nombreJugador,
+  mostrarSurvive = true,
 }) => {
   return (
     <div className="rounded-lg bg-white p-1 shadow-md">
@@ -85,15 +99,24 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
         </p>
       )}
       <div className="mb-1 flex items-center gap-1">
-        <SelectDropdown
-          label={null}
-          name={`jugador-${index}`}
-          value={jugadorId}
-          options={opcionesJugadores}
-          onChange={(e: ChangeEvent<HTMLSelectElement>) => onCambiarJugador(e.target.value)}
-          placeholder="Jugador"
-          className="block h-9 w-full rounded-md border-slate-300 text-sm shadow-sm focus:border-brand-500 focus:ring focus:ring-brand-200 focus:ring-opacity-50"
-        />
+        {asignable ? (
+          <SelectDropdown
+            label={null}
+            name={`jugador-${index}`}
+            value={jugadorId}
+            options={opcionesJugadores}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => onCambiarJugador(e.target.value)}
+            placeholder="Jugador"
+            className="block h-9 w-full rounded-md border-slate-300 text-sm shadow-sm focus:border-brand-500 focus:ring focus:ring-brand-200 focus:ring-opacity-50"
+          />
+        ) : (
+          <p
+            className="flex h-9 min-w-0 flex-1 items-center truncate text-sm font-medium text-slate-700"
+            title={nombreJugador}
+          >
+            {nombreJugador || 'Jugador'}
+          </p>
+        )}
         {/* Swap de números con otro slot — para cuando dos jugadores quedaron anotados al
             revés y no hace falta perder ninguna de las dos capturas para corregirlo. */}
         {jugadorId && onIntercambiar && (
@@ -110,20 +133,22 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
         {/* Antes era una fila propia ("Sobrevive al set" + checkbox, ~44px) debajo de los
             contadores. Como ícono al lado del select, cabe en la misma fila sin gastar el alto
             de una fila entera — necesario para que las seis tarjetas entren juntas en pantalla. */}
-        <button
-          type="button"
-          onClick={() => onCambiarSurvive?.(!estadisticasJugador.survive)}
-          title="Sobrevive al set"
-          aria-label={`Sobrevive al set: ${estadisticasJugador.survive ? 'sí' : 'no'}`}
-          aria-pressed={Boolean(estadisticasJugador.survive)}
-          className={`flex h-9 w-7 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition [touch-action:manipulation] ${
-            estadisticasJugador.survive
-              ? 'border-emerald-400 bg-emerald-100 text-emerald-700'
-              : 'border-slate-200 text-slate-400 hover:bg-slate-50'
-          }`}
-        >
-          S
-        </button>
+        {mostrarSurvive && (
+          <button
+            type="button"
+            onClick={() => onCambiarSurvive?.(!estadisticasJugador.survive)}
+            title="Sobrevive al set"
+            aria-label={`Sobrevive al set: ${estadisticasJugador.survive ? 'sí' : 'no'}`}
+            aria-pressed={Boolean(estadisticasJugador.survive)}
+            className={`flex h-9 w-7 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition [touch-action:manipulation] ${
+              estadisticasJugador.survive
+                ? 'border-emerald-400 bg-emerald-100 text-emerald-700'
+                : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+            }`}
+          >
+            S
+          </button>
+        )}
       </div>
 
       {/* Los cuatro contadores en una sola fila, no apilados — ver el comentario del

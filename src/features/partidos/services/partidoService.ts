@@ -588,6 +588,27 @@ export const actualizarEstadisticaJugadorSet = (
     body: payload,
   });
 
+/**
+ * Guarda la fila de un jugador en un set sin tener que saber si ya existía: el backend hace
+ * upsert por `{set, jugadorPartido}`, que es la clave con el índice único.
+ *
+ * Reemplaza el baile de "¿tengo el id? PUT; si no, GET para ver si existe, y después POST o PUT".
+ * Ese read-then-write era una condición de carrera con la captura simultánea: dos personas
+ * cargando el mismo set podían no encontrar la fila a la vez, las dos terminar en POST, y el
+ * índice único rechazar a la segunda con un error de duplicado.
+ */
+export const guardarEstadisticaJugadorSetDeFila = (
+  setId: string,
+  jugadorPartidoId: string,
+  payload: Partial<Pick<EstadisticasJugadorSet, 'throws' | 'hits' | 'outs' | 'catches' | 'survive'>> & {
+    visibilidadObjetivo?: VisibilidadEstadistica;
+  },
+) =>
+  authFetch<EstadisticasJugadorSet>(
+    `/estadisticas/jugador-set/set/${setId}/jugador-partido/${jugadorPartidoId}`,
+    { method: 'PUT', body: payload },
+  );
+
 export const eliminarEstadisticaJugadorSet = (id: string) =>
   authFetch<{ mensaje: string }>(`/estadisticas/jugador-set/${id}`, {
     method: 'DELETE',

@@ -4,10 +4,9 @@ import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModa
 import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
 import { ListaJugadores } from './ListaJugadores';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
-import { useDebouncedCallback } from '../../../../shared/hooks/useDebouncedCallback';
 import { socket } from '../../../../shared/services/socket';
 import { getAccessToken } from '../../../../shared/utils/authFetch';
-import type { EstadoGuardadoFila } from '../common/JugadorEstadisticasCard';
+import { useCapturaAutoguardado } from '../../hooks/useCapturaAutoguardado';
 import {
   JUGADORES_POR_SET,
   ESTADISTICAS_SLOT_VACIO,
@@ -75,16 +74,17 @@ interface Props {
 }
 
 /**
- * Un slot de la grilla. `presenteId` es quién ocupa ese lugar en cancha este set;
- * vacío significa que todavía no se eligió. Son JUGADORES_POR_SET slots fijos, igual
- * que en la captura set a set del partido, para que las dos vistas se lean igual.
+ * Un lugar de la grilla. `presenteId` es de quién son esos números.
+ *
+ * Cuántos lugares hay depende del modo (ver `capacidadesDeGrupo`): en 'sets' son los
+ * JUGADORES_POR_SET de la cancha y un lugar vacío significa que todavía no se eligió quién lo
+ * ocupa; en 'directa' hay uno por presente y vienen todos asignados de entrada.
  */
 type Slot = { presenteId?: string; estadisticas: EstadisticasSlot };
 
 const slotVacio = (): Slot => ({ estadisticas: { ...ESTADISTICAS_SLOT_VACIO } });
 
-const slotsVacios = (): Slot[] =>
-  Array.from({ length: JUGADORES_POR_SET }, slotVacio);
+const slotsVaciosPara = (total: number): Slot[] => Array.from({ length: total }, slotVacio);
 
 const nombrePresente = (presente: PlanillaPresente): string => {
   const j = presente.jugador;
@@ -98,6 +98,21 @@ const idEquipoDePresente = (presente: PlanillaPresente): string | undefined => {
   if (!eq) return undefined;
   return typeof eq === 'string' ? eq : eq._id;
 };
+
+/**
+ * Los presentes que le corresponden a un grupo de la grilla. Un presente sin `equipo` explícito
+ * (documentos de antes de ese campo) cae en el grupo 0, que `gruposDePlanilla` ya garantiza que
+ * es el dueño de la planilla.
+ */
+const presentesDeGrupo = (
+  presentes: PlanillaPresente[],
+  grupoId: string,
+  grupoIndex: number,
+): PlanillaPresente[] =>
+  presentes.filter((p) => {
+    const idEq = idEquipoDePresente(p);
+    return idEq ? idEq === grupoId : grupoIndex === 0;
+  });
 
 const ModalPlanillaEquipo: React.FC<Props> = ({
   partidoId,
@@ -114,14 +129,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   const [creando, setCreando] = useState(false);
   const [modoNuevo, setModoNuevo] = useState<PlanillaModo>('sets');
   const [setActivoId, setSetActivoId] = useState<string | null>(null);
-  const [slots, setSlots] = useState<Slot[]>(slotsVacios);
-  /**
-   * Autoguardado por fila: cada slot de la grilla se guarda solo, ~600ms después de la última
-   * edición. `filasGuardando` es lo que muestra el estado de esa fila puntual; el viejo
-   * "hay cambios sin guardar" global (más abajo) ahora se deriva de esto en vez de vivir como
-   * estado propio, porque la fuente de la verdad es "¿qué filas no confirmó el backend todavía?".
-   */
-  const [filasGuardando, setFilasGuardando] = useState<Record<number, EstadoGuardadoFila>>({});
+  const [slots, setSlots] = useState<Slot[]>(() => slotsVaciosPara(JUGADORES_POR_SET));
   const [eliminando, setEliminando] = useState(false);
 
   // Refs para leer el estado más fresco desde callbacks que no pueden depender de él sin
@@ -132,8 +140,63 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   slotsRef.current = slots;
   const setActivoIdRef = useRef(setActivoId);
   setActivoIdRef.current = setActivoId;
-  const filasGuardandoRef = useRef(filasGuardando);
-  filasGuardandoRef.current = filasGuardando;
+  /**
+   * Autoguardado por fila: cada lugar de la grilla se guarda solo, ~600ms después de la última
+   * edición, y muestra su propio estado. El motor (debounce por fila, estados, y la regla de que
+   * lo remoto no pisa lo que se está tecleando) es el mismo que usa la captura set a set del
+   * partido oficial — ver `useCapturaAutoguardado`. Lo único propio de la planilla es cómo se
+   * persiste una fila, que es lo que va acá abajo.
+   */
+  const {
+    estadosDeRango,
+    editarFila,
+    olvidarFila,
+    marcarFilas,
+    reset: resetEstadosFilas,
+    debeIgnorarRemoto,
+    hayFilasSinConfirmar,
+    flushAll: flushAllFilas,
+  } = useCapturaAutoguardado({
+    /**
+     * El backend ya hace upsert por fila (`{planillaSet, planillaPresente}`), así que mandar un
+     * array de una sola entrada no pisa las filas de otros jugadores, ni las que esté cargando
+     * otra persona a la vez.
+     */
+    persistirFila: useCallback(async (index: number): Promise<boolean> => {
+      const planillaActual = planillaRef.current;
+      const slot = slotsRef.current[index];
+      // Un lugar sin jugador asignado no es un jugador en cero: no hay nada que guardar.
+      if (!planillaActual || !slot?.presenteId) return false;
+
+      const [guardada] = await guardarEstadisticas(planillaActual._id, {
+        planillaSet: planillaActual.modo === 'sets' ? setActivoIdRef.current : null,
+        estadisticas: [
+          {
+            planillaPresente: slot.presenteId,
+            throws: slot.estadisticas.throws,
+            hits: slot.estadisticas.hits,
+            outs: slot.estadisticas.outs,
+            catches: slot.estadisticas.catches,
+            survive: slot.estadisticas.survive,
+          },
+        ],
+      });
+      if (guardada) {
+        setPlanilla((prev) => (prev ? mergeEstadisticaEnPlanilla(prev, guardada) : prev));
+      }
+      return true;
+    }, []),
+    alFallar: useCallback(
+      (error: unknown) => {
+        addToast({
+          type: 'error',
+          title: 'No se guardó una fila',
+          message: error instanceof Error ? error.message : 'Reintentá tocando algo de esa fila',
+        });
+      },
+      [addToast],
+    ),
+  });
 
   // ListaJugadores lo usa para cargar el plantel cuando no recibe opciones. Acá siempre
   // se las pasamos, así que no llega a consultarlo, pero el prop es obligatorio.
@@ -197,7 +260,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
    * Los grupos que arma la grilla: uno por cada equipo que tiene presentes cargados en esta
    * planilla. Con un solo equipo (el caso común, sin rival agregado) es un único grupo, igual
    * que siempre. Apenas hay presentes de los dos lados, son dos — cada uno con sus propios
-   * JUGADORES_POR_SET lugares, para no compartir 6 slots entre 12 jugadores reales.
+   * lugares (ver `capacidadesDeGrupo`), para no compartir una sola grilla entre dos planteles.
    *
    * El propio equipo va primero cuando es uno de los dos: los presentes viejos sin `equipo`
    * (de antes de que este campo existiera) se tratan como del grupo 0 en `resincronizarSlots`,
@@ -242,7 +305,6 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
 
   const gruposRef = useRef(gruposDePlanilla);
   gruposRef.current = gruposDePlanilla;
-  const gruposKey = gruposDePlanilla.map((g) => g.id).join(',');
 
   /** En qué grupo cae un presente — por su `equipo`, o el grupo 0 si es de antes de ese campo. */
   const indiceGrupoDePresente = useCallback((presenteId: string): number => {
@@ -253,17 +315,64 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     return idx === -1 ? 0 : idx;
   }, []);
 
-  const rangoDeGrupo = useCallback((grupoIndex: number): [number, number] => {
-    const desde = grupoIndex * JUGADORES_POR_SET;
-    return [desde, desde + JUGADORES_POR_SET];
+  /**
+   * Cuántas filas tiene cada grupo de la grilla.
+   *
+   * En modo 'sets' son los JUGADORES_POR_SET de la cancha: ahí el tope es la regla del juego.
+   * En modo 'directa' el eje no es quién está en cancha sino quién jugó el partido —a lo largo
+   * de varios sets eso puede ser 8, 10 o 12 jugadores—, así que la grilla lista a todos los
+   * presentes del grupo y no tiene tope. Antes heredaba los 6 de la captura por set y no había
+   * forma de cargarle los números al séptimo jugador de un partido.
+   */
+  const capacidadesDeGrupo = useMemo<number[]>(() => {
+    if (!planilla) return [];
+    return gruposDePlanilla.map((grupo, grupoIndex) =>
+      planilla.modo === 'sets'
+        ? JUGADORES_POR_SET
+        : presentesDeGrupo(planilla.presentes, grupo.id, grupoIndex).length,
+    );
+  }, [planilla, gruposDePlanilla]);
+
+  /**
+   * Dónde arranca y dónde termina cada grupo dentro del array plano de `slots`. Con bloques de
+   * largo fijo esto era `grupoIndex * JUGADORES_POR_SET`; con bloques de largo variable hay que
+   * acumular los largos reales, o el intercambio y el merge por socket ubican las filas en el
+   * grupo equivocado — y ahí se terminan cruzando números entre dos planteles distintos.
+   */
+  const offsetsDeGrupo = useMemo<Array<[number, number]>>(() => {
+    const offsets: Array<[number, number]> = [];
+    let acumulado = 0;
+    capacidadesDeGrupo.forEach((capacidad) => {
+      offsets.push([acumulado, acumulado + capacidad]);
+      acumulado += capacidad;
+    });
+    return offsets;
+  }, [capacidadesDeGrupo]);
+
+  const offsetsRef = useRef(offsetsDeGrupo);
+  offsetsRef.current = offsetsDeGrupo;
+
+  const rangoDeGrupo = useCallback(
+    (grupoIndex: number): [number, number] => offsetsRef.current[grupoIndex] ?? [0, 0],
+    [],
+  );
+
+  /** A qué grupo pertenece un índice absoluto de la grilla. */
+  const grupoDeIndice = useCallback((index: number): number => {
+    const idx = offsetsRef.current.findIndex(([desde, hasta]) => index >= desde && index < hasta);
+    return idx === -1 ? 0 : idx;
   }, []);
+
+  /**
+   * Cambia cuando cambia el conjunto de grupos O el largo de cualquiera de ellos. Lo segundo
+   * importa en modo 'directa': agregar un presente agranda la grilla, y sin esto el array de
+   * slots se quedaba con el largo viejo y el jugador nuevo no aparecía nunca.
+   */
+  const gruposKey = `${gruposDePlanilla.map((g) => g.id).join(',')}|${capacidadesDeGrupo.join(',')}`;
 
   // "Hay cambios sin guardar" ahora es "hay al menos una fila que el backend todavía no
   // confirmó" — con autoguardado, ya no depende de que alguien se acuerde de tocar "Guardar".
-  const hayCambiosSinGuardar = useMemo(
-    () => Object.values(filasGuardando).some((estado) => estado !== 'guardado'),
-    [filasGuardando],
-  );
+  const hayCambiosSinGuardar = hayFilasSinConfirmar;
   /**
    * Un solo `ConfirmModal` para los tres borrados (planilla, set y presente). Todos destruyen
    * estadísticas ya cargadas y ninguno se puede deshacer, así que ninguno se dispara directo
@@ -332,8 +441,8 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     const actual = planillaRef.current;
     const grupos = gruposRef.current;
     if (!actual || grupos.length === 0) {
-      setSlots(slotsVacios());
-      setFilasGuardando({});
+      setSlots(slotsVaciosPara(JUGADORES_POR_SET));
+      resetEstadosFilas();
       return;
     }
 
@@ -342,9 +451,33 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       actual.modo === 'sets' ? e.planillaSet === setActivoIdRef.current : e.planillaSet === null,
     );
 
-    // Un bloque de JUGADORES_POR_SET slots por grupo, en el mismo orden que `grupos` — el
-    // índice absoluto de un slot es `grupoIndex * JUGADORES_POR_SET + posiciónEnElGrupo`.
+    const estadisticasDeFila = (fila: PlanillaEstadistica): EstadisticasSlot => ({
+      throws: fila.throws ?? 0,
+      hits: fila.hits ?? 0,
+      outs: fila.outs ?? 0,
+      catches: fila.catches ?? 0,
+      survive: Boolean(fila.survive),
+    });
+
+    // Un bloque por grupo, en el mismo orden que `grupos`. El índice absoluto de una fila sale
+    // de `offsetsRef` (ver `offsetsDeGrupo`), no de multiplicar por un largo fijo.
     const bloques: Slot[][] = grupos.map((grupo, grupoIndex) => {
+      // Modo 'directa': una fila por presente del grupo, estén o no cargados sus números. Acá no
+      // hay nada que elegir —la pregunta no es quién estaba en cancha sino cuánto hizo cada uno
+      // en todo el partido—, así que la grilla muestra el plantel entero y no tiene tope.
+      if (actual.modo === 'directa') {
+        const filaPorPresente = new Map(filas.map((fila) => [fila.planillaPresente, fila]));
+        return presentesDeGrupo(actual.presentes, grupo.id, grupoIndex).map((presente) => {
+          const fila = filaPorPresente.get(presente._id);
+          return {
+            presenteId: presente._id,
+            estadisticas: fila ? estadisticasDeFila(fila) : { ...ESTADISTICAS_SLOT_VACIO },
+          };
+        });
+      }
+
+      // Modo 'sets': los JUGADORES_POR_SET lugares de la cancha. Sólo ocupa un lugar quien tiene
+      // fila cargada en ESTE set — un presente sin fila es alguien que no jugó este set.
       const ocupados: Slot[] = filas
         .filter((fila) => {
           const presente = presentePorId.get(fila.planillaPresente);
@@ -353,22 +486,13 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           // `gruposDePlanilla` ya garantiza que es el dueño de la planilla.
           return idEquipo ? idEquipo === grupo.id : grupoIndex === 0;
         })
-        .map((fila) => ({
-          presenteId: fila.planillaPresente,
-          estadisticas: {
-            throws: fila.throws ?? 0,
-            hits: fila.hits ?? 0,
-            outs: fila.outs ?? 0,
-            catches: fila.catches ?? 0,
-            survive: Boolean(fila.survive),
-          },
-        }));
+        .map((fila) => ({ presenteId: fila.planillaPresente, estadisticas: estadisticasDeFila(fila) }));
       return completarSlots(ocupados, slotVacio);
     });
 
     setSlots(bloques.flat());
-    setFilasGuardando({});
-  }, []);
+    resetEstadosFilas();
+  }, [resetEstadosFilas]);
 
   // Los slots en pantalla siempre reflejan el set activo (o los totales, en modo directa). Se
   // recargan al abrir la planilla, al cambiar de set, y cuando cambia el conjunto de grupos
@@ -405,8 +529,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
         let siguiente = prev;
         payload.estadisticas.forEach((fila) => {
           const indiceLocal = slotsRef.current.findIndex((s) => s.presenteId === fila.planillaPresente);
-          const estadoLocal = indiceLocal >= 0 ? filasGuardandoRef.current[indiceLocal] : undefined;
-          if (estadoLocal === 'pendiente' || estadoLocal === 'guardando') return;
+          if (debeIgnorarRemoto(indiceLocal)) return;
           siguiente = mergeEstadisticaEnPlanilla(siguiente, fila);
         });
         return siguiente;
@@ -425,9 +548,8 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           if (!esDelSetActivo) return;
 
           const idxExistente = next.findIndex((s) => s.presenteId === fila.planillaPresente);
-          const estadoLocal = idxExistente >= 0 ? filasGuardandoRef.current[idxExistente] : undefined;
           // No pisar una fila que YO tengo pendiente o en vuelo — mismo criterio que para `planilla`.
-          if (estadoLocal === 'pendiente' || estadoLocal === 'guardando') return;
+          if (debeIgnorarRemoto(idxExistente)) return;
 
           const estadisticasNuevas: EstadisticasSlot = {
             throws: fila.throws ?? 0,
@@ -504,8 +626,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       setSlots((prev) => {
         const idx = prev.findIndex((s) => s.presenteId === payload.planillaPresente);
         if (idx === -1) return prev;
-        const estadoLocal = filasGuardandoRef.current[idx];
-        if (estadoLocal === 'pendiente' || estadoLocal === 'guardando') return prev;
+        if (debeIgnorarRemoto(idx)) return prev;
         const next = [...prev];
         next[idx] = slotVacio();
         return next;
@@ -527,7 +648,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       socket.off('planilla:estadistica_eliminada', alEstadisticaEliminada);
       socket.disconnect();
     };
-  }, [planilla?._id, indiceGrupoDePresente, rangoDeGrupo]);
+  }, [planilla?._id, indiceGrupoDePresente, rangoDeGrupo, debeIgnorarRemoto]);
 
   const editable = planilla?.estado === 'borrador' || planilla?.estado === 'rechazada';
 
@@ -578,60 +699,6 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   }, [planilla, setActivoId, slots]);
 
   /**
-   * Guarda UNA fila de la grilla — la clave del autoguardado. El backend ya hace upsert por
-   * fila (`{planillaSet, planillaPresente}`), así que mandar un array de una sola entrada no
-   * pisa las demás filas de otros jugadores, ni las que esté cargando otra persona a la vez.
-   */
-  const guardarFilaAhora = useCallback(
-    async (index: number) => {
-      const planillaActual = planillaRef.current;
-      const slot = slotsRef.current[index];
-      if (!planillaActual || !slot?.presenteId) return;
-
-      setFilasGuardando((prev) => ({ ...prev, [index]: 'guardando' }));
-      try {
-        const [guardada] = await guardarEstadisticas(planillaActual._id, {
-          planillaSet: planillaActual.modo === 'sets' ? setActivoIdRef.current : null,
-          estadisticas: [
-            {
-              planillaPresente: slot.presenteId,
-              throws: slot.estadisticas.throws,
-              hits: slot.estadisticas.hits,
-              outs: slot.estadisticas.outs,
-              catches: slot.estadisticas.catches,
-              survive: slot.estadisticas.survive,
-            },
-          ],
-        });
-        setFilasGuardando((prev) => ({ ...prev, [index]: 'guardado' }));
-        if (guardada) {
-          setPlanilla((prev) => (prev ? mergeEstadisticaEnPlanilla(prev, guardada) : prev));
-        }
-      } catch (error) {
-        setFilasGuardando((prev) => ({ ...prev, [index]: 'error' }));
-        addToast({
-          type: 'error',
-          title: 'No se guardó una fila',
-          message: error instanceof Error ? error.message : 'Reintentá tocando algo de esa fila',
-        });
-      }
-    },
-    [addToast],
-  );
-
-  const { debounced: programarGuardadoFila, flushAll: flushAllFilas } = useDebouncedCallback(
-    (clave: string) => {
-      void guardarFilaAhora(Number(clave));
-    },
-    600,
-  );
-
-  // Si cierran el modal con una edición reciente todavía en el debounce, se fuerza su guardado
-  // en vez de perderla — el guard de `hasUnsavedChanges` avisa, pero si igual confirman cerrar,
-  // mejor que la última tecleada llegue al backend a que se pierda en silencio.
-  useEffect(() => () => flushAllFilas(), [flushAllFilas]);
-
-  /**
    * Sin ganador el set se oficializa como 'pendiente', y al oficializar se crea un
    * SetPartido en estado 'en_juego' dentro de un partido finalizado. Peor: el marcador
    * del partido se deriva de los sets FINALIZADOS, así que un recálculo posterior los
@@ -672,12 +739,6 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
         message: error instanceof Error ? error.message : 'Error inesperado',
       });
     }
-  };
-
-  /** Marca la fila como pendiente y programa su autoguardado — común a las tres ediciones. */
-  const marcarPendienteYGuardar = (index: number) => {
-    setFilasGuardando((prev) => ({ ...prev, [index]: 'pendiente' }));
-    programarGuardadoFila(String(index));
   };
 
   const filaTieneDatos = (estadisticas: EstadisticasSlot): boolean =>
@@ -731,13 +792,9 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       next[index] = { presenteId: presenteId || undefined, estadisticas: { ...ESTADISTICAS_SLOT_VACIO } };
       return next;
     });
-    setFilasGuardando((prev) => {
-      const next = { ...prev };
-      delete next[index];
-      return next;
-    });
+    olvidarFila(index);
     if (anterior && anterior !== presenteId) void limpiarFilaAnterior(anterior, index);
-    if (presenteId) marcarPendienteYGuardar(index);
+    if (presenteId) editarFila(index);
   };
 
   /**
@@ -751,13 +808,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       if (!planillaActual) return;
       const planillaSetId = planillaActual.modo === 'sets' ? setActivoIdRef.current : null;
 
-      setFilasGuardando((prev) => {
-        const next = { ...prev };
-        indices.forEach((i) => {
-          next[i] = 'guardando';
-        });
-        return next;
-      });
+      marcarFilas(indices, 'guardando');
 
       try {
         const { presenteA: resultA, presenteB: resultB } = await intercambiarEstadisticas(planillaActual._id, {
@@ -766,13 +817,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           presenteB,
         });
 
-        setFilasGuardando((prev) => {
-          const next = { ...prev };
-          indices.forEach((i) => {
-            next[i] = 'guardado';
-          });
-          return next;
-        });
+        marcarFilas(indices, 'guardado');
 
         setPlanilla((prev) => {
           if (!prev) return prev;
@@ -788,13 +833,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           return siguiente;
         });
       } catch (error) {
-        setFilasGuardando((prev) => {
-          const next = { ...prev };
-          indices.forEach((i) => {
-            next[i] = 'error';
-          });
-          return next;
-        });
+        marcarFilas(indices, 'error');
         addToast({
           type: 'error',
           title: 'No se pudo mover/intercambiar los números',
@@ -802,7 +841,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
         });
       }
     },
-    [addToast],
+    [addToast, marcarFilas],
   );
 
   /**
@@ -901,7 +940,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       };
       return next;
     });
-    marcarPendienteYGuardar(index);
+    editarFila(index);
   };
 
   const cambiarSurvive = (index: number, value: boolean): void => {
@@ -913,7 +952,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       };
       return next;
     });
-    marcarPendienteYGuardar(index);
+    editarFila(index);
   };
 
   const guardar = async (): Promise<void> => {
@@ -927,8 +966,25 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     try {
       // Solo los slots con jugador asignado. Un slot vacío no es un jugador en cero:
       // es un lugar que todavía no se completó, y no debe generar una fila.
+      //
+      // Y en modo 'directa' hay un filtro más: la grilla lista a TODOS los presentes, así que un
+      // slot sin números no significa "jugó y no hizo nada", significa que no se cargó. Grabarle
+      // una fila en cero lo haría figurar como participante del partido en todo el análisis. En
+      // 'sets' es al revés: poner a alguien en un slot ya es decir que estuvo en cancha, aunque
+      // no haya sumado nada, así que esa fila sí tiene que existir.
+      const tieneFilaGuardada = (presenteId: string): boolean =>
+        planilla.estadisticas.some(
+          (e) => e.planillaPresente === presenteId && e.planillaSet === null,
+        );
+
       const filas = slots
         .filter((s): s is Slot & { presenteId: string } => Boolean(s.presenteId))
+        .filter(
+          (s) =>
+            planilla.modo !== 'directa' ||
+            filaTieneDatos(s.estadisticas) ||
+            tieneFilaGuardada(s.presenteId),
+        )
         .map((s) => ({
           planillaPresente: s.presenteId,
           throws: s.estadisticas.throws,
@@ -956,13 +1012,10 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       setPlanilla(completa);
       // Todo lo que había en pantalla quedó confirmado — no hace falta esperar a que los
       // autoguardados individuales, si alguno seguía en vuelo, lleguen a marcarlo por su cuenta.
-      setFilasGuardando((prev) => {
-        const next = { ...prev };
-        slots.forEach((s, i) => {
-          if (s.presenteId) next[i] = 'guardado';
-        });
-        return next;
-      });
+      marcarFilas(
+        slots.flatMap((s, i) => (s.presenteId ? [i] : [])),
+        'guardado',
+      );
       addToast({ type: 'success', title: 'Planilla guardada', message: 'Los datos oficiales no se modificaron' });
     } catch (error) {
       addToast({
@@ -1038,7 +1091,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       await eliminarPlanilla(planilla._id);
       // Antes de cerrar: si no, la guardia de cambios sin guardar pregunta por datos que
       // acaban de dejar de existir.
-      setFilasGuardando({});
+      resetEstadosFilas();
       await Promise.resolve(onRefresh?.());
       addToast({
         type: 'success',
@@ -1376,30 +1429,28 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
               )}
 
               <p className="mb-1 text-xs text-slate-500">
-                {JUGADORES_POR_SET} en cancha
-                {planilla.modo === 'sets' ? ' en este set' : ''}
-                {gruposDePlanilla.length > 1 ? ' por equipo' : ''}. Elegí quiénes jugaron y cargá
-                sus números.
+                {planilla.modo === 'sets'
+                  ? `${JUGADORES_POR_SET} en cancha en este set${
+                      gruposDePlanilla.length > 1 ? ' por equipo' : ''
+                    }. Elegí quiénes jugaron y cargá sus números.`
+                  : 'Totales de todo el partido. Está el plantel completo: cargá los números de quienes jugaron y dejá en cero al resto.'}
               </p>
-              {/* Un bloque de JUGADORES_POR_SET slots por grupo (normalmente 1, o 2 si la
-                  planilla tiene presentes de los dos equipos) — mismo componente que usa la
-                  captura set a set del partido oficial, para que las dos vistas se lean igual.
-                  Acá las opciones son los presentes de la planilla (id de PlanillaPresente), no
-                  jugadores sueltos, y cada bloque sólo ofrece los presentes DE ESE equipo. */}
+              {/* Un bloque por grupo (normalmente 1, o 2 si la planilla tiene presentes de los
+                  dos equipos) — mismo componente que usa la captura set a set del partido
+                  oficial, para que las dos vistas se lean igual. El largo de cada bloque sale de
+                  `capacidadesDeGrupo`. Acá las opciones son los presentes de la planilla (id de
+                  PlanillaPresente), no jugadores sueltos, y cada bloque sólo ofrece los presentes
+                  DE ESE equipo. */}
               <div className="space-y-4">
                 {gruposDePlanilla.map((grupo, grupoIndex) => {
                   const [desde, hasta] = rangoDeGrupo(grupoIndex);
                   const slotsDelGrupo = slots.slice(desde, hasta);
-                  const presentesDelGrupo = planilla.presentes.filter((p) => {
-                    const idEq = idEquipoDePresente(p);
-                    return idEq ? idEq === grupo.id : grupoIndex === 0;
-                  });
+                  const presentesDelGrupo = presentesDeGrupo(planilla.presentes, grupo.id, grupoIndex);
                   return (
                     <ListaJugadores
                       key={grupo.id}
                       equipoNombre={grupo.nombre}
-                      equipoId={grupo.id}
-                      token=""
+                      capacidad={planilla.modo === 'sets' ? JUGADORES_POR_SET : undefined}
                       estadisticasJugador={slotsDelGrupo.map((s) => ({
                         jugadorId: s.presenteId,
                         estadisticas: s.estadisticas,
@@ -1408,7 +1459,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                         value: p._id,
                         label: nombrePresente(p),
                       }))}
-                      estadosGuardado={slotsDelGrupo.map((_, i) => filasGuardando[desde + i])}
+                      estadosGuardado={estadosDeRango(desde, slotsDelGrupo.length)}
                       onSolicitarIntercambio={(indexLocal) => solicitarIntercambio(desde + indexLocal)}
                       onAsignarJugador={(indexLocal, presenteId) => {
                         if (editable) solicitarAsignarJugador(desde + indexLocal, presenteId);
@@ -1674,7 +1725,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
         {intercambioAbierto !== null && (() => {
           // Sólo candidatos DEL MISMO GRUPO: cruzar números entre dos equipos distintos no
           // tiene sentido (serían estadísticas de otro plantel).
-          const [desde, hasta] = rangoDeGrupo(Math.floor(intercambioAbierto / JUGADORES_POR_SET));
+          const [desde, hasta] = rangoDeGrupo(grupoDeIndice(intercambioAbierto));
           const candidatosEnRango = slots
             .map((s, i) => ({ s, i }))
             .filter(({ i }) => i >= desde && i < hasta);

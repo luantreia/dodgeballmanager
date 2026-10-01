@@ -11,6 +11,8 @@ export type FilaTablaJugador = {
   opcionesJugadores: Array<{ value: string; label: string }>;
   estadisticas: Partial<EstadisticasJugador>;
   estadoGuardado?: EstadoGuardadoFila;
+  /** Para mostrar el nombre como rótulo cuando la fila no es asignable. */
+  nombreJugador?: string;
 };
 
 type Props = {
@@ -19,6 +21,10 @@ type Props = {
   onCambiarEstadistica: (index: number, campo: CampoNumerico, delta: number) => void;
   onCambiarSurvive?: (index: number, value: boolean) => void;
   onSolicitarIntercambio?: (index: number) => void;
+  /** Ver `JugadorEstadisticasCard.asignable`: el jugador de la fila es fijo. */
+  asignable?: boolean;
+  /** Ver `JugadorEstadisticasCard.mostrarSurvive`. */
+  mostrarSurvive?: boolean;
 };
 
 const ETIQUETA_ESTADO: Record<EstadoGuardadoFila, { texto: string; clase: string }> = {
@@ -51,6 +57,8 @@ const TablaJugadoresEstadisticas: FC<Props> = ({
   onCambiarEstadistica,
   onCambiarSurvive,
   onSolicitarIntercambio,
+  asignable = true,
+  mostrarSurvive = true,
 }) => {
   return (
     // Sin borde exterior propio: la tabla ya vive dentro del modal, y sumarle una caja más
@@ -63,7 +71,7 @@ const TablaJugadoresEstadisticas: FC<Props> = ({
           <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase text-slate-500">
             <th className="w-full px-2 py-1.5 text-left">Jugador</th>
             <th className="px-1 py-1.5" />
-            <th className="px-1 py-1.5">Sob.</th>
+            {mostrarSurvive && <th className="px-1 py-1.5">Sob.</th>}
             {COLUMNAS.map((c) => (
               <th key={c.campo} className="px-1 py-1.5 text-center">
                 {c.abrev}
@@ -76,15 +84,21 @@ const TablaJugadoresEstadisticas: FC<Props> = ({
             <tr key={fila.index}>
               <td className="px-2 py-1">
                 <div className="flex items-center gap-1">
-                  <SelectDropdown
-                    label={null}
-                    name={`jugador-tabla-${fila.index}`}
-                    value={fila.jugadorId}
-                    options={fila.opcionesJugadores}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => onAsignarJugador(fila.index, e.target.value)}
-                    placeholder="Jugador"
-                    className="block h-8 min-w-[9rem] rounded-md border-slate-300 text-sm shadow-sm focus:border-brand-500 focus:ring focus:ring-brand-200 focus:ring-opacity-50"
-                  />
+                  {asignable ? (
+                    <SelectDropdown
+                      label={null}
+                      name={`jugador-tabla-${fila.index}`}
+                      value={fila.jugadorId}
+                      options={fila.opcionesJugadores}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => onAsignarJugador(fila.index, e.target.value)}
+                      placeholder="Jugador"
+                      className="block h-8 min-w-[9rem] rounded-md border-slate-300 text-sm shadow-sm focus:border-brand-500 focus:ring focus:ring-brand-200 focus:ring-opacity-50"
+                    />
+                  ) : (
+                    <span className="text-sm font-medium text-slate-700">
+                      {fila.nombreJugador || 'Jugador'}
+                    </span>
+                  )}
                   {fila.estadoGuardado && (
                     <span className={`shrink-0 text-[10px] font-medium ${ETIQUETA_ESTADO[fila.estadoGuardado].clase}`}>
                       {ETIQUETA_ESTADO[fila.estadoGuardado].texto}
@@ -105,22 +119,24 @@ const TablaJugadoresEstadisticas: FC<Props> = ({
                   </button>
                 )}
               </td>
-              <td className="px-1 py-1 text-center">
-                <button
-                  type="button"
-                  onClick={() => onCambiarSurvive?.(fila.index, !fila.estadisticas.survive)}
-                  title="Sobrevive al set"
-                  aria-label={`Sobrevive al set: ${fila.estadisticas.survive ? 'sí' : 'no'}`}
-                  aria-pressed={Boolean(fila.estadisticas.survive)}
-                  className={`flex h-8 w-7 items-center justify-center rounded-md border text-xs font-bold transition ${
-                    fila.estadisticas.survive
-                      ? 'border-emerald-400 bg-emerald-100 text-emerald-700'
-                      : 'border-slate-200 text-slate-400 hover:bg-slate-50'
-                  }`}
-                >
-                  S
-                </button>
-              </td>
+              {mostrarSurvive && (
+                <td className="px-1 py-1 text-center">
+                  <button
+                    type="button"
+                    onClick={() => onCambiarSurvive?.(fila.index, !fila.estadisticas.survive)}
+                    title="Sobrevive al set"
+                    aria-label={`Sobrevive al set: ${fila.estadisticas.survive ? 'sí' : 'no'}`}
+                    aria-pressed={Boolean(fila.estadisticas.survive)}
+                    className={`flex h-8 w-7 items-center justify-center rounded-md border text-xs font-bold transition ${
+                      fila.estadisticas.survive
+                        ? 'border-emerald-400 bg-emerald-100 text-emerald-700'
+                        : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                    }`}
+                  >
+                    S
+                  </button>
+                </td>
+              )}
               {COLUMNAS.map(({ campo, label }) => (
                 <td key={campo} className="px-1 py-1">
                   <ContadorEstadistica

@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { FC } from 'react';
 import JugadorEstadisticasCard, { type EstadoGuardadoFila } from '../common/JugadorEstadisticasCard';
 import TablaJugadoresEstadisticas from '../common/TablaJugadoresEstadisticas';
-import { getJugadoresEquipo } from '../../../jugadores/services/jugadorEquipoService';
-import { JUGADORES_POR_SET } from '../../constants/capturaSet';
 
 type CampoNumerico = 'throws' | 'hits' | 'outs' | 'catches';
 
@@ -20,132 +18,85 @@ export type EstadisticaJugadorEntrada = {
 
 export type ListaJugadoresProps = {
   equipoNombre: string;
-  equipoId: string;
   estadisticasJugador?: EstadisticaJugadorEntrada[];
-  onAsignarJugador: (index: number, jugadorId: string) => void;
+  /** Opcional: con `asignable` en false la fila tiene su jugador fijo y nunca se llama. */
+  onAsignarJugador?: (index: number, jugadorId: string) => void;
   onCambiarEstadistica: (index: number, campo: CampoNumerico, delta: number) => void;
   onCambiarSurvive?: (index: number, value: boolean) => void;
-  token: string;
-  opcionesJugadores?: Array<{ value: string; label: string }>;
-  /** Estado de autoguardado por slot, en el mismo orden que `estadisticasJugador`. */
+  /**
+   * Quiénes se pueden elegir en cada fila. Es responsabilidad del llamador, a propósito: según
+   * la captura el universo es distinto (los presentes de una planilla, la convocatoria oficial
+   * de un partido) y esta lista no tiene forma de saber cuál corresponde.
+   */
+  opcionesJugadores: Array<{ value: string; label: string }>;
+  /**
+   * Cuántas filas dibujar. Con un número, la grilla tiene ese largo fijo y se rellena con filas
+   * vacías — es el caso de la captura set a set, donde el tope son los jugadores en cancha y es
+   * una regla del juego, no una limitación. Sin valor, se dibuja exactamente una fila por entrada
+   * recibida: el caso de los totales de un partido, donde el eje no es quién está en cancha sino
+   * quién jugó, y eso puede ser cualquier número de jugadores.
+   *
+   * Lo que esta lista NO hace más es recortar: antes tenía su propio `.slice()` además del que
+   * aplicaba el llamador, y una entrada de más no se dibujaba pero igual existía en el estado de
+   * arriba — se veía una cosa y se guardaba otra.
+   */
+  capacidad?: number;
+  /** Estado de autoguardado por fila, en el mismo orden que `estadisticasJugador`. */
   estadosGuardado?: Array<EstadoGuardadoFila | undefined>;
-  /** Pide intercambiar los números de este slot con otro — sólo tiene sentido si ya tiene jugador. */
+  /** Pide intercambiar los números de esta fila con otra — sólo tiene sentido si ya tiene jugador. */
   onSolicitarIntercambio?: (index: number) => void;
+  /**
+   * `false` cuando cada fila tiene su jugador fijo y no hay nada que elegir: es el caso de la
+   * captura de totales del partido, que va contra la convocatoria ya armada. El nombre pasa a ser
+   * un rótulo en vez de un desplegable.
+   */
+  asignable?: boolean;
+  /** `false` donde "sobrevive" no aplica — es un dato por set, no de todo el partido. */
+  mostrarSurvive?: boolean;
 };
 
 export const ListaJugadores: FC<ListaJugadoresProps> = ({
   equipoNombre,
-  equipoId,
   estadisticasJugador = [],
   onAsignarJugador,
   onCambiarEstadistica,
   onCambiarSurvive,
-  token,
   opcionesJugadores,
+  capacidad,
   estadosGuardado,
   onSolicitarIntercambio,
+  asignable = true,
+  mostrarSurvive = true,
 }) => {
-  type JugadorRelacion = {
-    id: string;
-    nombre: string;
-  };
-
-  const [relaciones, setRelaciones] = useState<JugadorRelacion[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const cargarJugadores = async () => {
-      try {
-        setLoading(true);
-        if (opcionesJugadores && opcionesJugadores.length > 0) {
-          if (!isMounted) return;
-          setRelaciones([]);
-          return;
-        }
-        const jugadores = await getJugadoresEquipo({ equipoId });
-        if (!isMounted) return;
-        setRelaciones(
-          jugadores.map((jugador) => ({
-            id: jugador.id,
-            nombre: jugador.nombre,
-          })),
-        );
-      } catch (error) {
-        if (!isMounted) return;
-        console.error('Error cargando jugadores del equipo:', error);
-        setRelaciones([]);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void cargarJugadores();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [equipoId, token, opcionesJugadores]);
-
-  const opcionesSelect = useMemo(() => {
-    if (opcionesJugadores && opcionesJugadores.length > 0) {
-      return opcionesJugadores.filter((opt) => Boolean(opt.value));
-    }
-    return relaciones
-      .map((rel) => ({ value: rel.id, label: rel.nombre ?? 'Sin nombre' }))
-      .filter((opt) => Boolean(opt.value));
-  }, [opcionesJugadores, relaciones]);
-
-  const obtenerJugadoresSeleccionados = (excluirIndex: number) =>
-    estadisticasJugador
-      .filter((_, index) => index !== excluirIndex)
-      .map((j) => j?.jugadorId)
-      .filter((value): value is string => Boolean(value));
-
-  // La grilla es de JUGADORES_POR_SET slots fijos. Ojo: recortar acá NO alcanza —
-  // quien pase más entradas de las que entran va a ver una cosa y guardar otra. El
-  // llamador tiene que mandar exactamente los slots que quiere capturar.
-  const estadisticasCompletas: Array<EstadisticaJugadorEntrada | null> = [
-    ...estadisticasJugador,
-    ...Array.from(
-      { length: Math.max(0, JUGADORES_POR_SET - estadisticasJugador.length) },
-      () => null,
-    ),
-  ].slice(0, JUGADORES_POR_SET);
+  const entradas: Array<EstadisticaJugadorEntrada | null> = useMemo(() => {
+    if (capacidad === undefined) return estadisticasJugador;
+    const faltantes = Math.max(0, capacidad - estadisticasJugador.length);
+    return [...estadisticasJugador, ...Array.from({ length: faltantes }, () => null)];
+  }, [estadisticasJugador, capacidad]);
 
   // Se computa una sola vez y se usa tanto para las tarjetas (mobile) como para la tabla
-  // (`sm:` para arriba) — las dos vistas muestran exactamente los mismos slots, sólo cambia el
+  // (`sm:` para arriba) — las dos vistas muestran exactamente las mismas filas, sólo cambia el
   // layout, así que no tiene sentido filtrar las opciones de cada select dos veces.
-  const filas = useMemo(
-    () =>
-      estadisticasCompletas.map((jugadorObj, idx) => {
-        const jugadorId = jugadorObj?.jugadorId ?? '';
-        const jugadoresSeleccionados = obtenerJugadoresSeleccionados(idx);
-        return {
-          index: idx,
-          jugadorId,
-          estadisticas: jugadorObj?.estadisticas ?? {},
-          opcionesJugadores: opcionesSelect.filter(
-            (op) => !jugadoresSeleccionados.includes(op.value) || op.value === jugadorId,
-          ),
-          estadoGuardado: estadosGuardado?.[idx],
-        };
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [estadisticasCompletas, opcionesSelect, estadosGuardado],
-  );
+  const filas = useMemo(() => {
+    const yaElegidos = entradas
+      .map((entrada) => entrada?.jugadorId)
+      .filter((value): value is string => Boolean(value));
 
-  if (loading) {
-    return (
-      <div className="p-4">
-        <h3 className="mb-2 text-lg font-semibold text-slate-800">{equipoNombre}</h3>
-        <p className="text-slate-500">Cargando jugadores...</p>
-      </div>
-    );
-  }
+    return entradas.map((jugadorObj, idx) => {
+      const jugadorId = jugadorObj?.jugadorId ?? '';
+      return {
+        index: idx,
+        jugadorId,
+        nombreJugador: opcionesJugadores.find((op) => op.value === jugadorId)?.label,
+        estadisticas: jugadorObj?.estadisticas ?? {},
+        // Un jugador ya elegido en otra fila no se vuelve a ofrecer, salvo en la fila que lo tiene.
+        opcionesJugadores: opcionesJugadores.filter(
+          (op) => op.value === jugadorId || !yaElegidos.includes(op.value),
+        ),
+        estadoGuardado: estadosGuardado?.[idx],
+      };
+    });
+  }, [entradas, opcionesJugadores, estadosGuardado]);
 
   return (
     <div className="p-1">
@@ -161,7 +112,7 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
             index={fila.index}
             jugadorId={fila.jugadorId}
             opcionesJugadores={fila.opcionesJugadores}
-            onCambiarJugador={(nuevoId: string) => onAsignarJugador(fila.index, nuevoId)}
+            onCambiarJugador={(nuevoId: string) => onAsignarJugador?.(fila.index, nuevoId)}
             onCambiarEstadistica={(campo: CampoNumerico, delta: number) =>
               onCambiarEstadistica(fila.index, campo, delta)
             }
@@ -169,6 +120,9 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
             onCambiarSurvive={(value) => onCambiarSurvive?.(fila.index, value)}
             estadoGuardado={fila.estadoGuardado}
             onIntercambiar={onSolicitarIntercambio ? () => onSolicitarIntercambio(fila.index) : undefined}
+            asignable={asignable}
+            nombreJugador={fila.nombreJugador}
+            mostrarSurvive={mostrarSurvive}
           />
         ))}
       </div>
@@ -176,10 +130,12 @@ export const ListaJugadores: FC<ListaJugadoresProps> = ({
       <div className="hidden sm:block">
         <TablaJugadoresEstadisticas
           filas={filas}
-          onAsignarJugador={onAsignarJugador}
+          onAsignarJugador={(index, jugadorId) => onAsignarJugador?.(index, jugadorId)}
           onCambiarEstadistica={onCambiarEstadistica}
           onCambiarSurvive={onCambiarSurvive}
           onSolicitarIntercambio={onSolicitarIntercambio}
+          asignable={asignable}
+          mostrarSurvive={mostrarSurvive}
         />
       </div>
     </div>

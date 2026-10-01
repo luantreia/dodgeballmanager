@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
-import JugadorEstadisticasCard from '../common/JugadorEstadisticasCard';
+import { ListaJugadores } from './ListaJugadores';
 import { extractEquipoId, type PartidoDetallado } from '../../services/partidoService';
 import {
   getJugadoresPartido,
@@ -13,34 +13,55 @@ import {
 import { crearSolicitudEdicion } from '../../../../shared/features/solicitudes/services/solicitudesEdicionService';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 
-// (Asignación de jugadores se gestiona en ModalAlineacionPartido)
+type EstadisticasFila = { _id?: string; throws: number; hits: number; outs: number; catches: number };
 
-interface ModalEstadisticasGeneralesCapturaProps {
+const FILA_VACIA: EstadisticasFila = { throws: 0, hits: 0, outs: 0, catches: 0 };
+
+/** El nombre del jugador de una fila de convocatoria, que puede venir poblado o como id. */
+const nombreDeConvocado = (convocado: JugadorPartidoResumen): string => {
+  const j = convocado.jugador as unknown;
+  if (!j) return 'Jugador';
+  if (typeof j === 'string') return 'Jugador';
+  const obj = j as { nombre?: string; apellido?: string; alias?: string };
+  return obj.alias || [obj.nombre, obj.apellido].filter(Boolean).join(' ') || 'Jugador';
+};
+
+interface ModalEstadisticasDirectasCapturaProps {
   partido: PartidoDetallado | null;
   partidoId: string;
-  token: string;
   onClose: () => void;
   onRefresh?: () => Promise<void> | void;
-  datosIniciales?: EstadisticaManualJugador[]; // ignorado en este flujo simplificado
-  hayDatosAutomaticos?: boolean; // ignorado en este flujo simplificado
-  onAbrirAlineacion?: () => void; // ignorado en este flujo simplificado
 }
 
-const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapturaProps> = ({
+/**
+ * Captura de los totales de un partido, por jugador, sin desglose por set.
+ *
+ * Comparte la grilla con las otras dos capturas (`ListaJugadores`), pero con dos diferencias que
+ * son de su naturaleza, no de su implementación:
+ *
+ * - **Sin tope de jugadores.** El eje acá no es quién está en cancha —eso son 6 y es la regla del
+ *   juego— sino quién jugó el partido, que a lo largo de varios sets puede ser cualquier número.
+ *   Por eso va sin `capacidad`: una fila por convocado.
+ * - **Sin asignación ni "sobrevive".** Cada fila ES un convocado (la alineación se arma en
+ *   `ModalAlineacionPartido`), y "sobrevive" es un dato de un set, no de todo el partido.
+ *
+ * A diferencia de la captura set a set y de "Mi planilla", acá **no hay autoguardado por fila**, y
+ * es a propósito: en un partido de competencia el guardado arma UNA sola
+ * `estadisticas-partido-propuesta` con todo. Autoguardar fila por fila exigiría separar "guardo"
+ * de "pido oficial", como hace la captura por set — y eso no existe todavía del lado del backend
+ * para los totales del partido.
+ */
+const ModalEstadisticasDirectasCaptura: React.FC<ModalEstadisticasDirectasCapturaProps> = ({
   partido,
   partidoId,
-  token,
   onClose,
   onRefresh,
-  datosIniciales, // eslint-disable-line @typescript-eslint/no-unused-vars
-  hayDatosAutomaticos, // eslint-disable-line @typescript-eslint/no-unused-vars
-  onAbrirAlineacion, // eslint-disable-line @typescript-eslint/no-unused-vars
 }) => {
   const { addToast } = useToast();
-  const [jugadores, setJugadores] = useState<JugadorPartidoResumen[]>([]);
+  const [convocados, setConvocados] = useState<JugadorPartidoResumen[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [guardando, setGuardando] = useState<boolean>(false);
-  const [statsByJp, setStatsByJp] = useState<Record<string, { _id?: string; throws: number; hits: number; outs: number; catches: number }>>({});
+  const [statsByJp, setStatsByJp] = useState<Record<string, EstadisticasFila>>({});
   /** Números cargados sin guardar: cerrar por backdrop o Escape pide confirmación. */
   const [hayCambiosSinGuardar, setHayCambiosSinGuardar] = useState(false);
 
@@ -57,10 +78,11 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
           getEstadisticasJugadorPartidoManual(partidoId),
         ]);
         if (cancelado) return;
-        setJugadores(Array.isArray(jp) ? jp : []);
+        const lista = Array.isArray(jp) ? jp : [];
+        setConvocados(lista);
 
-        const mapa: Record<string, { _id?: string; throws: number; hits: number; outs: number; catches: number }> = {};
-        const listaManuales = Array.isArray(manuales) ? manuales : [];
+        const mapa: Record<string, EstadisticasFila> = {};
+        const listaManuales: EstadisticaManualJugador[] = Array.isArray(manuales) ? manuales : [];
 
         listaManuales.forEach((m) => {
           const jpId = typeof m.jugadorPartido === 'string' ? m.jugadorPartido : m.jugadorPartido?._id;
@@ -74,10 +96,9 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
           };
         });
 
-        (Array.isArray(jp) ? jp : []).forEach((j) => {
-          if (!mapa[j._id]) {
-            mapa[j._id] = { throws: 0, hits: 0, outs: 0, catches: 0 };
-          }
+        // Todo convocado tiene fila en la grilla, aunque no tenga números cargados todavía.
+        lista.forEach((j) => {
+          if (!mapa[j._id]) mapa[j._id] = { ...FILA_VACIA };
         });
 
         setStatsByJp(mapa);
@@ -91,23 +112,41 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
     };
   }, [partidoId]);
 
-  const jugadoresLocal = useMemo(
-    () => jugadores.filter((j) => (typeof j.equipo === 'string' ? j.equipo === equipoLocalId : j.equipo?._id === equipoLocalId)),
-    [jugadores, equipoLocalId],
+  const convocadosDe = (equipoId: string | undefined): JugadorPartidoResumen[] =>
+    convocados.filter((j) => (typeof j.equipo === 'string' ? j.equipo === equipoId : j.equipo?._id === equipoId));
+
+  const convocadosLocal = useMemo(
+    () => convocadosDe(equipoLocalId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [convocados, equipoLocalId],
   );
-  const jugadoresVisitante = useMemo(
-    () => jugadores.filter((j) => (typeof j.equipo === 'string' ? j.equipo === equipoVisitanteId : j.equipo?._id === equipoVisitanteId)),
-    [jugadores, equipoVisitanteId],
+  const convocadosVisitante = useMemo(
+    () => convocadosDe(equipoVisitanteId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [convocados, equipoVisitanteId],
   );
 
-  const cambiarEstadistica = (jugadorPartidoId: string, campo: 'throws' | 'hits' | 'outs' | 'catches', delta: number) => {
+  const cambiarEstadistica = (
+    jugadorPartidoId: string,
+    campo: 'throws' | 'hits' | 'outs' | 'catches',
+    delta: number,
+  ) => {
     setHayCambiosSinGuardar(true);
     setStatsByJp((prev) => {
-      const actual = prev[jugadorPartidoId] ?? { throws: 0, hits: 0, outs: 0, catches: 0 };
-      const nextVal = Math.max(0, (actual[campo] ?? 0) + delta);
-      return { ...prev, [jugadorPartidoId]: { ...actual, [campo]: nextVal } };
+      const actual = prev[jugadorPartidoId] ?? { ...FILA_VACIA };
+      const siguiente = Math.max(0, (actual[campo] ?? 0) + delta);
+      return { ...prev, [jugadorPartidoId]: { ...actual, [campo]: siguiente } };
     });
   };
+
+  /** Lo que la grilla necesita de un grupo de convocados: valor por fila y opciones (su nombre). */
+  const grillaDe = (lista: JugadorPartidoResumen[]) => ({
+    estadisticas: lista.map((j) => ({
+      jugadorId: j._id,
+      estadisticas: statsByJp[j._id] ?? FILA_VACIA,
+    })),
+    opciones: lista.map((j) => ({ value: j._id, label: nombreDeConvocado(j) })),
+  });
 
   const guardar = async (): Promise<void> => {
     setGuardando(true);
@@ -115,20 +154,21 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
       const esCompetencia = !!partido?.competencia;
 
       if (esCompetencia) {
-        const estadisticas = jugadores.map((j) => {
-          const jpId = j._id;
-          const stats = statsByJp[jpId];
-          if (!stats) return null;
-          return {
-            jugadorPartido: jpId,
-            throws: stats.throws ?? 0,
-            hits: stats.hits ?? 0,
-            outs: stats.outs ?? 0,
-            catches: stats.catches ?? 0,
-            tipoCaptura: 'manual',
-            statId: stats._id
-          };
-        }).filter(Boolean);
+        const estadisticas = convocados
+          .map((j) => {
+            const stats = statsByJp[j._id];
+            if (!stats) return null;
+            return {
+              jugadorPartido: j._id,
+              throws: stats.throws ?? 0,
+              hits: stats.hits ?? 0,
+              outs: stats.outs ?? 0,
+              catches: stats.catches ?? 0,
+              tipoCaptura: 'manual',
+              statId: stats._id,
+            };
+          })
+          .filter(Boolean);
 
         await crearSolicitudEdicion({
           // Mismo caso que en la captura por set: son números que todavía no existen,
@@ -137,22 +177,21 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
           tipo: 'estadisticas-partido-propuesta',
           entidad: partidoId,
           datosPropuestos: {
-            estadisticas
-          }
+            estadisticas,
+          },
         });
-        
+
         addToast({ type: 'success', title: 'Solicitud enviada', message: 'Se solicitó la actualización de estadísticas' });
         onClose();
         return;
       }
 
       const tareas: Array<Promise<unknown>> = [];
-      jugadores.forEach((j) => {
-        const jpId = j._id;
-        const stats = statsByJp[jpId];
+      convocados.forEach((j) => {
+        const stats = statsByJp[j._id];
         if (!stats) return;
         const payload = {
-          jugadorPartido: jpId,
+          jugadorPartido: j._id,
           throws: stats.throws ?? 0,
           hits: stats.hits ?? 0,
           outs: stats.outs ?? 0,
@@ -174,6 +213,18 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
     }
   };
 
+  const nombreLocal =
+    partido?.equipoLocal && typeof partido.equipoLocal !== 'string'
+      ? partido.equipoLocal.nombre || 'Local'
+      : 'Local';
+  const nombreVisitante =
+    partido?.equipoVisitante && typeof partido.equipoVisitante !== 'string'
+      ? partido.equipoVisitante.nombre || 'Visitante'
+      : 'Visitante';
+
+  const grillaLocal = grillaDe(convocadosLocal);
+  const grillaVisitante = grillaDe(convocadosVisitante);
+
   return (
     <ModalBase
       title="Captura de estadísticas directas"
@@ -189,66 +240,37 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-            <div className="space-y-2">
-              <h3 className="text-base sm:text-lg font-semibold text-blue-800">
-                {partido?.equipoLocal && typeof partido.equipoLocal !== 'string'
-                  ? partido.equipoLocal.nombre || 'Local'
-                  : 'Local'}
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[70vh] overflow-y-auto pr-1">
-                {jugadoresLocal.map((j, idx) => {
-                  const nombre = (() => {
-                    const jj = j.jugador as any;
-                    if (!jj) return '';
-                    if (typeof jj === 'string') return jj;
-                    return jj.nombre || jj.apellido || jj.name || jj.fullName || '';
-                  })();
-                  const stats = statsByJp[j._id] ?? { throws: 0, hits: 0, outs: 0, catches: 0 };
-                  return (
-                    <JugadorEstadisticasCard
-                      key={`local-${j._id}`}
-                      index={idx}
-                      jugadorId={j._id}
-                      opcionesJugadores={[{ value: j._id, label: nombre || 'Jugador' }]}
-                      onCambiarJugador={() => { /* no-op, la alineación se gestiona en otro modal */ }}
-                      onCambiarEstadistica={(campo: 'throws' | 'hits' | 'outs' | 'catches', delta: number) => cambiarEstadistica(j._id, campo, delta)}
-                      estadisticasJugador={stats}
-                    />
-                  );
-                })}
-              </div>
-            </div>
+          <p className="text-xs text-slate-500">
+            Totales de todo el partido, sin desglose por set. Está la convocatoria completa: cargá
+            los números de quienes jugaron y dejá en cero al resto.
+          </p>
 
-            <div className="space-y-2">
-              <h3 className="text-base sm:text-lg font-semibold text-red-800">
-                {partido?.equipoVisitante && typeof partido.equipoVisitante !== 'string'
-                  ? partido.equipoVisitante.nombre || 'Visitante'
-                  : 'Visitante'}
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[70vh] overflow-y-auto pr-1">
-                {jugadoresVisitante.map((j, idx) => {
-                  const nombre = (() => {
-                    const jj = j.jugador as any;
-                    if (!jj) return '';
-                    if (typeof jj === 'string') return jj;
-                    return jj.nombre || jj.apellido || jj.name || jj.fullName || '';
-                  })();
-                  const stats = statsByJp[j._id] ?? { throws: 0, hits: 0, outs: 0, catches: 0 };
-                  return (
-                    <JugadorEstadisticasCard
-                      key={`visitante-${j._id}`}
-                      index={idx}
-                      jugadorId={j._id}
-                      opcionesJugadores={[{ value: j._id, label: nombre || 'Jugador' }]}
-                      onCambiarJugador={() => { /* no-op */ }}
-                      onCambiarEstadistica={(campo, delta) => cambiarEstadistica(j._id, campo, delta)}
-                      estadisticasJugador={stats}
-                    />
-                  );
-                })}
-              </div>
-            </div>
+          {/* Una grilla por equipo, sin tope de jugadores y sin selector: cada fila ya es un
+              convocado. En mobile van una debajo de la otra; ver el comentario de
+              `TablaJugadoresEstadisticas` sobre por qué de `sm:` para arriba se usa la tabla. */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+            <ListaJugadores
+              equipoNombre={nombreLocal}
+              estadisticasJugador={grillaLocal.estadisticas}
+              opcionesJugadores={grillaLocal.opciones}
+              asignable={false}
+              mostrarSurvive={false}
+              onCambiarEstadistica={(index, campo, delta) => {
+                const convocado = convocadosLocal[index];
+                if (convocado) cambiarEstadistica(convocado._id, campo, delta);
+              }}
+            />
+            <ListaJugadores
+              equipoNombre={nombreVisitante}
+              estadisticasJugador={grillaVisitante.estadisticas}
+              opcionesJugadores={grillaVisitante.opciones}
+              asignable={false}
+              mostrarSurvive={false}
+              onCambiarEstadistica={(index, campo, delta) => {
+                const convocado = convocadosVisitante[index];
+                if (convocado) cambiarEstadistica(convocado._id, campo, delta);
+              }}
+            />
           </div>
 
           <div className="flex justify-end">
@@ -267,4 +289,4 @@ const ModalEstadisticasGeneralesCaptura: React.FC<ModalEstadisticasGeneralesCapt
   );
 };
 
-export default ModalEstadisticasGeneralesCaptura;
+export default ModalEstadisticasDirectasCaptura;

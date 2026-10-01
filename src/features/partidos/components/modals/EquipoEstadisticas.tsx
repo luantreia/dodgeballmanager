@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { FC } from 'react';
 import { ListaJugadores } from './ListaJugadores';
 import type { EstadoGuardadoFila } from '../common/JugadorEstadisticasCard';
+import { JUGADORES_POR_SET } from '../../constants/capturaSet';
 
 type EquipoResumen = {
   _id: string;
@@ -48,7 +49,6 @@ type EquiposEstadisticasProps = {
   onCambiarEstadistica: CambiarEstadisticaHandler;
   onCambiarSurvive: CambiarSurviveHandler;
   onAsignarJugador: AsignarJugadorHandler;
-  token: string;
   opcionesJugadoresLocal?: Array<{ value: string; label: string }>;
   opcionesJugadoresVisitante?: Array<{ value: string; label: string }>;
   /**
@@ -73,7 +73,6 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
   onCambiarEstadistica,
   onCambiarSurvive,
   onAsignarJugador,
-  token,
   opcionesJugadoresLocal,
   opcionesJugadoresVisitante,
   puedeEditarLocal = true,
@@ -104,15 +103,17 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
       {puedeEditarLocal ? (
         <ListaJugadores
           equipoNombre={equipoLocal.nombre}
-          equipoId={equipoLocal._id}
           estadisticasJugador={estadisticas.local}
+          // Acá el tope de 6 es la regla del juego —los que están en cancha en este set—, no una
+          // limitación de la pantalla: por eso la capacidad va fija. En la captura de totales de
+          // un partido el eje es otro y la grilla va sin tope (ver `ListaJugadores.capacidad`).
+          capacidad={JUGADORES_POR_SET}
           onCambiarEstadistica={(index, campo, delta) =>
             handleCambiarEstadisticaLocal(equipoLocal._id, index, campo, delta)
           }
           onAsignarJugador={(index, jugadorId) => handleAsignarJugador('local', index, jugadorId)}
           onCambiarSurvive={(index, value) => onCambiarSurvive(equipoLocal._id, index, value)}
-          token={token}
-          opcionesJugadores={opcionesJugadoresLocal}
+          opcionesJugadores={opcionesJugadoresLocal ?? []}
           estadosGuardado={estadosGuardadoLocal}
           onSolicitarIntercambio={onSolicitarIntercambio ? (index) => onSolicitarIntercambio('local', index) : undefined}
         />
@@ -120,15 +121,14 @@ const EquiposEstadisticas: FC<EquiposEstadisticasProps> = ({
       {puedeEditarVisitante ? (
         <ListaJugadores
           equipoNombre={equipoVisitante.nombre}
-          equipoId={equipoVisitante._id}
           estadisticasJugador={estadisticas.visitante}
+          capacidad={JUGADORES_POR_SET}
           onCambiarEstadistica={(index, campo, delta) =>
             handleCambiarEstadisticaLocal(equipoVisitante._id, index, campo, delta)
           }
           onAsignarJugador={(index, jugadorId) => handleAsignarJugador('visitante', index, jugadorId)}
           onCambiarSurvive={(index, value) => onCambiarSurvive(equipoVisitante._id, index, value)}
-          token={token}
-          opcionesJugadores={opcionesJugadoresVisitante}
+          opcionesJugadores={opcionesJugadoresVisitante ?? []}
           estadosGuardado={estadosGuardadoVisitante}
           onSolicitarIntercambio={onSolicitarIntercambio ? (index) => onSolicitarIntercambio('visitante', index) : undefined}
         />

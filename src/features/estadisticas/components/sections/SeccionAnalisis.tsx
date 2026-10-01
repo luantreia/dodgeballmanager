@@ -474,7 +474,6 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
           isOpen
           partido={detalle}
           partidoId={vista.partido._id}
-          token={token}
           esCompetencia={Boolean(vista.partido.competencia)}
           onClose={cerrarYRecargar}
           onRefresh={cargar}

@@ -5,7 +5,7 @@ import { SeccionEstadisticasGenerales } from '../sections/SeccionEstadisticasGen
 import { SeccionEstadisticasSetASet } from '../sections/SeccionEstadisticasSetASet';
 import { SeccionEstadisticasDirectas } from '../sections/SeccionEstadisticasDirectas';
 import ModalCapturaSetEstadisticas from './ModalCapturaSetEstadisticas';
-import ModalEstadisticasGeneralesCaptura from './ModalEstadisticasDirectasCaptura';
+import ModalEstadisticasDirectasCaptura from './ModalEstadisticasDirectasCaptura';
 import ModalPlanillaEquipo from './ModalPlanillaEquipo';
 import ModalAlineacionPartido from './ModalAlineacionPartido';
 import ModalGestionSets from './ModalGestionSets';
@@ -18,7 +18,6 @@ import {
   extractEquipoId,
   type PartidoDetallado,
 } from '../../services/partidoService';
-import type { EstadisticaManualBackend } from '../../hooks/useEstadisticasModal';
 
 import type { JugadorPartido } from '../../../../shared/utils/types/types';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
@@ -60,8 +59,6 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
   const [numeroSetEnCaptura, setNumeroSetEnCaptura] = useState<number | null>(null);
   const [gestionSetsAbierta, setGestionSetsAbierta] = useState<boolean>(false);
   const [capturaGeneralesAbierta, setCapturaGeneralesAbierta] = useState<boolean>(false);
-  const [datosInicialesGenerales, setDatosInicialesGenerales] = useState<EstadisticaManualBackend[]>([]);
-  const [hayDatosAutomaticosGenerales, setHayDatosAutomaticosGenerales] = useState<boolean>(false);
   const [alineacionModalAbierta, setAlineacionModalAbierta] = useState<boolean>(false);
   const [confirmEliminarAbierto, setConfirmEliminarAbierto] = useState<boolean>(false);
   const [planillaAbierta, setPlanillaAbierta] = useState<boolean>(false);
@@ -127,19 +124,15 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
     await cargarPartido();
   }, [cargarPartido]);
 
-  const abrirCapturaGenerales = useCallback((config?: {
-    datosIniciales?: EstadisticaManualBackend[];
-    hayDatosAutomaticos?: boolean;
-  }) => {
-    setDatosInicialesGenerales(config?.datosIniciales ?? []);
-    setHayDatosAutomaticosGenerales(config?.hayDatosAutomaticos ?? false);
+  // La captura de totales lee sus propios datos del backend al abrirse. Antes recibía además
+  // `datosIniciales`/`hayDatosAutomaticos` por acá, pero los ignoraba: toda esta cañería
+  // terminaba en dos props marcadas como "ignorado en este flujo simplificado".
+  const abrirCapturaGenerales = useCallback(() => {
     setCapturaGeneralesAbierta(true);
   }, []);
 
   const cerrarCapturaGenerales = useCallback(async () => {
     setCapturaGeneralesAbierta(false);
-    setDatosInicialesGenerales([]);
-    setHayDatosAutomaticosGenerales(false);
     await cargarPartido();
   }, [cargarPartido]);
 
@@ -391,9 +384,7 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
               token={token}
               canCaptureStats={canCaptureStats}
               onRefresh={cargarPartido}
-              setModalEstadisticasGeneralesAbierto={({ datosIniciales, hayDatosAutomaticos }) =>
-                abrirCapturaGenerales({ datosIniciales, hayDatosAutomaticos })
-              }
+              setModalEstadisticasGeneralesAbierto={() => abrirCapturaGenerales()}
             />
           )}
         </div>
@@ -409,7 +400,6 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
         <ModalCapturaSetEstadisticas
           partido={partido}
           partidoId={partidoId}
-          token={token}
           isOpen={capturaSetAbierta}
           onClose={cerrarCapturaSet}
           numeroSetInicial={numeroSetEnCaptura}
@@ -443,15 +433,11 @@ export const ModalPartidoAdmin = ({ partidoId, token, onClose, onPartidoEliminad
       )}
 
       {capturaGeneralesAbierta && (
-        <ModalEstadisticasGeneralesCaptura
+        <ModalEstadisticasDirectasCaptura
           partido={partido}
           partidoId={partidoId}
-          token={token}
           onClose={cerrarCapturaGenerales}
           onRefresh={cargarPartido}
-          datosIniciales={datosInicialesGenerales}
-          hayDatosAutomaticos={hayDatosAutomaticosGenerales}
-          onAbrirAlineacion={() => setAlineacionModalAbierta(true)}
         />
       )}
 

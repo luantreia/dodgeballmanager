@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
-import { useDebouncedCallback } from '../../../../shared/hooks/useDebouncedCallback';
 import { socket } from '../../../../shared/services/socket';
 import { getAccessToken } from '../../../../shared/utils/authFetch';
 import EquiposEstadisticas from './EquipoEstadisticas';
-import type { EstadoGuardadoFila } from '../common/JugadorEstadisticasCard';
+import { useCapturaAutoguardado } from '../../hooks/useCapturaAutoguardado';
 import {
   obtenerSetsDePartido,
   type PartidoDetallado,
@@ -15,8 +14,7 @@ import {
   obtenerJugadoresElegibles,
   type JugadoresElegibles,
   obtenerEstadisticasJugadorSet,
-  crearEstadisticaJugadorSet,
-  actualizarEstadisticaJugadorSet,
+  guardarEstadisticaJugadorSetDeFila,
   pedirOficialSet,
   intercambiarEstadisticasSet,
   getMisPermisosPartido,
@@ -29,7 +27,6 @@ import { completarSlots, ESTADISTICAS_SLOT_VACIO } from '../../constants/captura
 type ModalCapturaSetEstadisticasProps = {
   partido: PartidoDetallado | null;
   partidoId: string;
-  token: string;
   isOpen: boolean;
   onClose: () => void;
   numeroSetInicial?: number | null;
@@ -41,7 +38,7 @@ const ESTADISTICAS_INICIALES = { throws: 0, hits: 0, outs: 0, catches: 0, surviv
 
 type Stats = { throws: number; hits: number; outs: number; catches: number; survive: boolean };
 type CampoNumerico = 'throws' | 'hits' | 'outs' | 'catches';
-type Row = { jugadorId?: string; jugadorPartidoId?: string; estadisticas: Stats; statId?: string };
+type Row = { jugadorId?: string; jugadorPartidoId?: string; estadisticas: Stats };
 type Lado = 'local' | 'visitante';
 
 /**
@@ -60,7 +57,6 @@ type Lado = 'local' | 'visitante';
 const ModalCapturaSetEstadisticas = ({
   partido,
   partidoId,
-  token,
   isOpen,
   onClose,
   numeroSetInicial = null,
@@ -82,11 +78,6 @@ const ModalCapturaSetEstadisticas = ({
 
   const [rowsLocal, setRowsLocal] = useState<Row[]>([]);
   const [rowsVisitante, setRowsVisitante] = useState<Row[]>([]);
-  const [mapJpToStatId, setMapJpToStatId] = useState<Record<string, string>>({});
-
-  /** Autoguardado por fila, un mapa por lado — mismo patrón que ModalPlanillaEquipo. */
-  const [filasGuardandoLocal, setFilasGuardandoLocal] = useState<Record<number, EstadoGuardadoFila>>({});
-  const [filasGuardandoVisitante, setFilasGuardandoVisitante] = useState<Record<number, EstadoGuardadoFila>>({});
 
   /** Con quién intercambiar: sólo tiene sentido dentro del mismo lado. */
   const [intercambioAbierto, setIntercambioAbierto] = useState<{ equipo: Lado; index: number } | null>(null);
@@ -111,21 +102,99 @@ const ModalCapturaSetEstadisticas = ({
   rowsLocalRef.current = rowsLocal;
   const rowsVisitanteRef = useRef(rowsVisitante);
   rowsVisitanteRef.current = rowsVisitante;
-  const filasGuardandoLocalRef = useRef(filasGuardandoLocal);
-  filasGuardandoLocalRef.current = filasGuardandoLocal;
-  const filasGuardandoVisitanteRef = useRef(filasGuardandoVisitante);
-  filasGuardandoVisitanteRef.current = filasGuardandoVisitante;
-  const mapJpToStatIdRef = useRef(mapJpToStatId);
-  mapJpToStatIdRef.current = mapJpToStatId;
   const setActivoRef = useRef(setActivo);
   setActivoRef.current = setActivo;
 
-  const hayCambiosSinGuardar = useMemo(
-    () =>
-      Object.values(filasGuardandoLocal).some((e) => e !== 'guardado') ||
-      Object.values(filasGuardandoVisitante).some((e) => e !== 'guardado'),
-    [filasGuardandoLocal, filasGuardandoVisitante],
+  /**
+   * Autoguardado por fila. Es el mismo motor que usa "Mi planilla" (`useCapturaAutoguardado`):
+   * debounce por fila, estado por fila, y la regla de que una actualización remota no pisa lo que
+   * se está tecleando. Acá hay DOS instancias, una por lado, porque `stats.capture` es un permiso
+   * por equipo y cada lado tiene su propia sala de socket — antes eso eran dos mapas de estado y
+   * un ternario `lado === 'local' ? ... : ...` repetido en cada punto donde se los tocaba.
+   */
+  const persistirFilaDeLado = useCallback(
+    async (lado: Lado, index: number): Promise<boolean> => {
+      const setId = setActivoRef.current?._id;
+      const rowsRef = lado === 'local' ? rowsLocalRef : rowsVisitanteRef;
+      const row = rowsRef.current[index];
+      // Un slot sin jugador asignado no es un jugador en cero: no hay nada que guardar.
+      if (!setId || !row?.jugadorId || !row?.jugadorPartidoId) return false;
+
+      await guardarEstadisticaJugadorSetDeFila(setId, row.jugadorPartidoId, {
+        ...row.estadisticas,
+        visibilidadObjetivo: visibilidad,
+      });
+      return true;
+    },
+    [visibilidad],
   );
+
+  const persistirFilaLocal = useCallback(
+    (index: number) => persistirFilaDeLado('local', index),
+    [persistirFilaDeLado],
+  );
+  const persistirFilaVisitante = useCallback(
+    (index: number) => persistirFilaDeLado('visitante', index),
+    [persistirFilaDeLado],
+  );
+
+  const alFallarFila = useCallback(
+    (error: unknown) => {
+      addToast({
+        type: 'error',
+        title: 'No se guardó una fila',
+        message: error instanceof Error ? error.message : 'Reintentá tocando algo de esa fila',
+      });
+    },
+    [addToast],
+  );
+
+  const autoguardadoLocal = useCapturaAutoguardado({
+    persistirFila: persistirFilaLocal,
+    alFallar: alFallarFila,
+  });
+  const autoguardadoVisitante = useCapturaAutoguardado({
+    persistirFila: persistirFilaVisitante,
+    alFallar: alFallarFila,
+  });
+
+  // Se desestructura en vez de pasarse el objeto entero: lo que devuelve el hook es un objeto
+  // nuevo en cada render, y los callbacks de abajo tienen que seguir siendo estables para no
+  // recrearse con cada tecla. Las funciones de adentro sí lo son.
+  const { editarFila: editarFilaLocal, olvidarFila: olvidarFilaLocal } = autoguardadoLocal;
+  const { editarFila: editarFilaVisitante, olvidarFila: olvidarFilaVisitante } = autoguardadoVisitante;
+  const { marcarFilas: marcarFilasLocal, debeIgnorarRemoto: ignorarRemotoLocal } = autoguardadoLocal;
+  const { marcarFilas: marcarFilasVisitante, debeIgnorarRemoto: ignorarRemotoVisitante } =
+    autoguardadoVisitante;
+
+  const editarFilaDe = useCallback(
+    (lado: Lado, index: number) => (lado === 'local' ? editarFilaLocal : editarFilaVisitante)(index),
+    [editarFilaLocal, editarFilaVisitante],
+  );
+  const olvidarFilaDe = useCallback(
+    (lado: Lado, index: number) => (lado === 'local' ? olvidarFilaLocal : olvidarFilaVisitante)(index),
+    [olvidarFilaLocal, olvidarFilaVisitante],
+  );
+  const marcarFilasDe = useCallback(
+    (lado: Lado, indices: number[], estado: Parameters<typeof marcarFilasLocal>[1]) =>
+      (lado === 'local' ? marcarFilasLocal : marcarFilasVisitante)(indices, estado),
+    [marcarFilasLocal, marcarFilasVisitante],
+  );
+  const debeIgnorarRemotoDe = useCallback(
+    (lado: Lado, index: number) =>
+      (lado === 'local' ? ignorarRemotoLocal : ignorarRemotoVisitante)(index),
+    [ignorarRemotoLocal, ignorarRemotoVisitante],
+  );
+
+  /** Fuerza el guardado de lo pendiente en los dos lados — antes de cambiar de set o pedir oficial. */
+  const flushAllFilas = useCallback(() => {
+    autoguardadoLocal.flushAll();
+    autoguardadoVisitante.flushAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoguardadoLocal.flushAll, autoguardadoVisitante.flushAll]);
+
+  const hayCambiosSinGuardar =
+    autoguardadoLocal.hayFilasSinConfirmar || autoguardadoVisitante.hayFilasSinConfirmar;
 
   const cargarSets = useCallback(async () => {
     try {
@@ -221,7 +290,6 @@ const ModalCapturaSetEstadisticas = ({
         if (cancelado) return;
         let aLocal: Row[] = [];
         let aVisit: Row[] = [];
-        const statMap: Record<string, string> = {};
         data.forEach((stat: any) => {
           const jugadorId = typeof stat.jugador === 'string' ? stat.jugador : stat.jugador?._id;
           const jugadorPartidoId = typeof stat.jugadorPartido === 'string' ? stat.jugadorPartido : stat.jugadorPartido?._id ?? stat.jugadorPartido;
@@ -236,9 +304,7 @@ const ModalCapturaSetEstadisticas = ({
               catches: stat.catches ?? 0,
               survive: Boolean(stat.survive),
             },
-            statId: stat._id,
           };
-          if (jugadorPartidoId) statMap[jugadorPartidoId] = stat._id;
           if (equipoId === equipoLocalId) aLocal.push(row);
           else if (equipoId === equipoVisitanteId) aVisit.push(row);
         });
@@ -247,9 +313,8 @@ const ModalCapturaSetEstadisticas = ({
 
         setRowsLocal(completarSlots(aLocal, slotVacio));
         setRowsVisitante(completarSlots(aVisit, slotVacio));
-        setMapJpToStatId(statMap);
-        setFilasGuardandoLocal({});
-        setFilasGuardandoVisitante({});
+        autoguardadoLocal.reset();
+        autoguardadoVisitante.reset();
       } catch (err) {
         console.error('Error cargando estadísticas del set:', err);
       }
@@ -258,6 +323,7 @@ const ModalCapturaSetEstadisticas = ({
     return () => {
       cancelado = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, numeroSetSeleccionado, equipoLocalId, equipoVisitanteId, sets]);
 
   /**
@@ -282,25 +348,15 @@ const ModalCapturaSetEstadisticas = ({
 
     const aplicarFilasRemotas = (lado: Lado, filas: EstadisticasJugadorSet[]) => {
       const rowsRef = lado === 'local' ? rowsLocalRef : rowsVisitanteRef;
-      const filasGuardandoRef = lado === 'local' ? filasGuardandoLocalRef : filasGuardandoVisitanteRef;
       const setRows = lado === 'local' ? setRowsLocal : setRowsVisitante;
-
-      setMapJpToStatId((prev) => {
-        const next = { ...prev };
-        filas.forEach((f) => {
-          next[f.jugadorPartido] = f._id;
-        });
-        return next;
-      });
 
       setRows((prev) => {
         let next = prev;
         let cambio = false;
         filas.forEach((fila) => {
           const idxExistente = rowsRef.current.findIndex((r) => r.jugadorPartidoId === fila.jugadorPartido);
-          const estadoLocal = idxExistente >= 0 ? filasGuardandoRef.current[idxExistente] : undefined;
           // No pisar una fila que YO tengo pendiente o en vuelo.
-          if (estadoLocal === 'pendiente' || estadoLocal === 'guardando') return;
+          if (debeIgnorarRemotoDe(lado, idxExistente)) return;
 
           const estadisticasNuevas: Stats = {
             throws: fila.throws ?? 0,
@@ -313,7 +369,7 @@ const ModalCapturaSetEstadisticas = ({
           if (idxExistente >= 0) {
             if (!cambio) next = [...next];
             cambio = true;
-            next[idxExistente] = { ...next[idxExistente], statId: fila._id, estadisticas: estadisticasNuevas };
+            next[idxExistente] = { ...next[idxExistente], estadisticas: estadisticasNuevas };
             return;
           }
 
@@ -325,7 +381,6 @@ const ModalCapturaSetEstadisticas = ({
           next[idxVacio] = {
             jugadorId,
             jugadorPartidoId: fila.jugadorPartido,
-            statId: fila._id,
             estadisticas: estadisticasNuevas,
           };
         });
@@ -345,14 +400,12 @@ const ModalCapturaSetEstadisticas = ({
         payload.equipoId === equipoLocalId ? 'local' : payload.equipoId === equipoVisitanteId ? 'visitante' : null;
       if (!lado) return;
       const rowsRef = lado === 'local' ? rowsLocalRef : rowsVisitanteRef;
-      const filasGuardandoRef = lado === 'local' ? filasGuardandoLocalRef : filasGuardandoVisitanteRef;
       const setRows = lado === 'local' ? setRowsLocal : setRowsVisitante;
 
       setRows((prev) => {
         const idx = rowsRef.current.findIndex((r) => r.jugadorPartidoId === payload.jugadorPartido);
         if (idx === -1) return prev;
-        const estadoLocal = filasGuardandoRef.current[idx];
-        if (estadoLocal === 'pendiente' || estadoLocal === 'guardando') return prev;
+        if (debeIgnorarRemotoDe(lado, idx)) return prev;
         const next = [...prev];
         next[idx] = { estadisticas: { ...ESTADISTICAS_SLOT_VACIO } };
         return next;
@@ -375,83 +428,6 @@ const ModalCapturaSetEstadisticas = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setActivo?._id, equipoLocalId, equipoVisitanteId, puedeCapturarLocal, puedeCapturarVisitante, mapJpToJugador]);
 
-  /** Guarda UNA fila — la clave del autoguardado. Crea si hace falta, actualiza si ya existe. */
-  const guardarFilaAhora = useCallback(
-    async (lado: Lado, index: number) => {
-      const setId = setActivoRef.current?._id;
-      const rowsRef = lado === 'local' ? rowsLocalRef : rowsVisitanteRef;
-      const setFilasGuardando = lado === 'local' ? setFilasGuardandoLocal : setFilasGuardandoVisitante;
-      const equipoId = lado === 'local' ? equipoLocalId : equipoVisitanteId;
-      const row = rowsRef.current[index];
-      if (!setId || !row?.jugadorId || !row?.jugadorPartidoId || !equipoId) return;
-
-      setFilasGuardando((prev) => ({ ...prev, [index]: 'guardando' }));
-      try {
-        const existingId = row.statId || mapJpToStatIdRef.current[row.jugadorPartidoId];
-        let statId = existingId;
-
-        if (existingId) {
-          await actualizarEstadisticaJugadorSet(existingId, { ...row.estadisticas, visibilidadObjetivo: visibilidad });
-        } else {
-          const existentes = await obtenerEstadisticasJugadorSet({ set: setId, jugadorPartido: row.jugadorPartidoId });
-          const yaExiste = Array.isArray(existentes) && existentes.length > 0 ? existentes[0] : null;
-          if (yaExiste?._id) {
-            await actualizarEstadisticaJugadorSet(yaExiste._id, { ...row.estadisticas, visibilidadObjetivo: visibilidad });
-            statId = yaExiste._id;
-          } else {
-            const creado = await crearEstadisticaJugadorSet({
-              set: setId,
-              jugadorPartido: row.jugadorPartidoId,
-              jugador: row.jugadorId,
-              equipo: equipoId,
-              ...row.estadisticas,
-              visibilidadObjetivo: visibilidad,
-            });
-            statId = creado._id;
-          }
-        }
-
-        if (statId) {
-          setMapJpToStatId((prev) => ({ ...prev, [row.jugadorPartidoId as string]: statId as string }));
-          const rowsSetter = lado === 'local' ? setRowsLocal : setRowsVisitante;
-          rowsSetter((prev) => {
-            const next = [...prev];
-            if (next[index]) next[index] = { ...next[index], statId };
-            return next;
-          });
-        }
-        setFilasGuardando((prev) => ({ ...prev, [index]: 'guardado' }));
-      } catch (error) {
-        setFilasGuardando((prev) => ({ ...prev, [index]: 'error' }));
-        addToast({
-          type: 'error',
-          title: 'No se guardó una fila',
-          message: error instanceof Error ? error.message : 'Reintentá tocando algo de esa fila',
-        });
-      }
-    },
-    [addToast, equipoLocalId, equipoVisitanteId, visibilidad],
-  );
-
-  const { debounced: programarGuardadoFila, flushAll: flushAllFilas } = useDebouncedCallback(
-    (clave: string) => {
-      const [lado, indexStr] = clave.split(':');
-      void guardarFilaAhora(lado as Lado, Number(indexStr));
-    },
-    600,
-  );
-
-  useEffect(() => () => flushAllFilas(), [flushAllFilas]);
-
-  const marcarPendienteYGuardar = useCallback(
-    (lado: Lado, index: number) => {
-      const setFilasGuardando = lado === 'local' ? setFilasGuardandoLocal : setFilasGuardandoVisitante;
-      setFilasGuardando((prev) => ({ ...prev, [index]: 'pendiente' }));
-      programarGuardadoFila(`${lado}:${index}`);
-    },
-    [programarGuardadoFila],
-  );
-
   const cambiarEstadistica = useCallback(
     (equipoIdTocado: string, idx: number, campo: CampoNumerico, delta: number) => {
       const lado: Lado = equipoIdTocado === equipoLocalId ? 'local' : 'visitante';
@@ -463,9 +439,9 @@ const ModalCapturaSetEstadisticas = ({
         next[idx] = { ...cur, estadisticas: { ...cur.estadisticas, [campo]: Math.max(0, value) } };
         return next;
       });
-      marcarPendienteYGuardar(lado, idx);
+      editarFilaDe(lado, idx);
     },
-    [equipoLocalId, marcarPendienteYGuardar],
+    [equipoLocalId, editarFilaDe],
   );
 
   const cambiarSurvive = useCallback(
@@ -478,9 +454,9 @@ const ModalCapturaSetEstadisticas = ({
         next[idx] = { ...cur, estadisticas: { ...cur.estadisticas, survive: value } };
         return next;
       });
-      marcarPendienteYGuardar(lado, idx);
+      editarFilaDe(lado, idx);
     },
-    [equipoLocalId, marcarPendienteYGuardar],
+    [equipoLocalId, editarFilaDe],
   );
 
   const onAsignarJugador = useCallback(
@@ -490,18 +466,13 @@ const ModalCapturaSetEstadisticas = ({
         const next = [...prev];
         const jpId = mapJugadorToJp[jugadorId] ?? jugadorId;
         const cur = next[index] ?? { estadisticas: { ...ESTADISTICAS_SLOT_VACIO } };
-        next[index] = { ...cur, jugadorId, jugadorPartidoId: jpId, statId: cur.statId && cur.jugadorPartidoId === jpId ? cur.statId : undefined };
+        next[index] = { ...cur, jugadorId, jugadorPartidoId: jpId };
         return next;
       });
-      const setFilasGuardando = equipo === 'local' ? setFilasGuardandoLocal : setFilasGuardandoVisitante;
-      setFilasGuardando((prev) => {
-        const next = { ...prev };
-        delete next[index];
-        return next;
-      });
-      if (jugadorId) marcarPendienteYGuardar(equipo, index);
+      olvidarFilaDe(equipo, index);
+      if (jugadorId) editarFilaDe(equipo, index);
     },
-    [mapJugadorToJp, marcarPendienteYGuardar],
+    [mapJugadorToJp, olvidarFilaDe, editarFilaDe],
   );
 
   const solicitarIntercambio = useCallback((equipo: Lado, index: number) => {
@@ -521,8 +492,7 @@ const ModalCapturaSetEstadisticas = ({
       setIntercambioAbierto(null);
       if (!setId || !jpA || !jpB) return;
 
-      const setFilasGuardando = equipo === 'local' ? setFilasGuardandoLocal : setFilasGuardandoVisitante;
-      setFilasGuardando((prev) => ({ ...prev, [indexA]: 'guardando', [indexB]: 'guardando' }));
+      marcarFilasDe(equipo, [indexA, indexB], 'guardando');
 
       try {
         const { jugadorPartidoA: resultA, jugadorPartidoB: resultB } = await intercambiarEstadisticasSet(setId, {
@@ -535,7 +505,6 @@ const ModalCapturaSetEstadisticas = ({
           if (next[indexA]) {
             next[indexA] = {
               ...next[indexA],
-              statId: resultB?._id,
               estadisticas: resultB
                 ? { throws: resultB.throws, hits: resultB.hits, outs: resultB.outs, catches: resultB.catches, survive: Boolean(resultB.survive) }
                 : { ...ESTADISTICAS_SLOT_VACIO },
@@ -544,7 +513,6 @@ const ModalCapturaSetEstadisticas = ({
           if (next[indexB]) {
             next[indexB] = {
               ...next[indexB],
-              statId: resultA?._id,
               estadisticas: resultA
                 ? { throws: resultA.throws, hits: resultA.hits, outs: resultA.outs, catches: resultA.catches, survive: Boolean(resultA.survive) }
                 : { ...ESTADISTICAS_SLOT_VACIO },
@@ -552,9 +520,9 @@ const ModalCapturaSetEstadisticas = ({
           }
           return next;
         });
-        setFilasGuardando((prev) => ({ ...prev, [indexA]: 'guardado', [indexB]: 'guardado' }));
+        marcarFilasDe(equipo, [indexA, indexB], 'guardado');
       } catch (error) {
-        setFilasGuardando((prev) => ({ ...prev, [indexA]: 'error', [indexB]: 'error' }));
+        marcarFilasDe(equipo, [indexA, indexB], 'error');
         addToast({
           type: 'error',
           title: 'No se pudo intercambiar',
@@ -562,7 +530,7 @@ const ModalCapturaSetEstadisticas = ({
         });
       }
     },
-    [intercambioAbierto, addToast],
+    [intercambioAbierto, addToast, marcarFilasDe],
   );
 
   const pedirOficial = useCallback(async () => {
@@ -720,13 +688,12 @@ const ModalCapturaSetEstadisticas = ({
                   onCambiarEstadistica={(equipoId, idx, campo, delta) => cambiarEstadistica(equipoId, idx, campo, delta)}
                   onCambiarSurvive={cambiarSurvive}
                   onAsignarJugador={(equipo, index, jugadorId) => onAsignarJugador(equipo, index, jugadorId)}
-                  token={token}
                   opcionesJugadoresLocal={opcionesLocal}
                   opcionesJugadoresVisitante={opcionesVisitante}
                   puedeEditarLocal={puedeCapturarLocal}
                   puedeEditarVisitante={puedeCapturarVisitante}
-                  estadosGuardadoLocal={local.map((_, i) => filasGuardandoLocal[i])}
-                  estadosGuardadoVisitante={visitante.map((_, i) => filasGuardandoVisitante[i])}
+                  estadosGuardadoLocal={autoguardadoLocal.estadosDeRango(0, local.length)}
+                  estadosGuardadoVisitante={autoguardadoVisitante.estadosDeRango(0, visitante.length)}
                   onSolicitarIntercambio={solicitarIntercambio}
                 />
               );
