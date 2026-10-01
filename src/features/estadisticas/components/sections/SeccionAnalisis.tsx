@@ -12,6 +12,7 @@ import PanelFiltrosPartidos from '../PanelFiltrosPartidos';
 import LineaTemporalPartidos from '../LineaTemporalPartidos';
 import EstadisticasFiltradas from '../EstadisticasFiltradas';
 import ComparadorSegmentos, { type Segmento } from '../ComparadorSegmentos';
+import ExportarDatos from '../ExportarDatos';
 import AnalisisCruzado from './AnalisisCruzado';
 import SeccionSinergias from './SeccionSinergias';
 import SeccionCondicionesSet from './SeccionCondicionesSet';
@@ -361,6 +362,15 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
           >
             Planillas sin partido
           </button>
+
+          {/* Baja el recorte que está a la vista, no todo el historial — ver `ExportarDatos`. */}
+          <ExportarDatos
+            filasFiltradas={filasFiltradas}
+            partidos={partidos}
+            filas={filas}
+            segmentos={segmentos}
+            descripcion={descripcionActual}
+          />
 
           <button
             type="button"

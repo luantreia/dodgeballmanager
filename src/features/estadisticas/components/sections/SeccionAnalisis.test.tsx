@@ -12,8 +12,16 @@ jest.mock('../../services/filasService', () => ({
   getFilasAnaliticas: jest.fn(),
 }));
 
+// Se mockea SÓLO la descarga: el armado del CSV queda real, así que este test también verifica
+// el contenido que se entrega y no nada más que se haya llamado a algo.
+jest.mock('../../../../shared/utils/csv', () => ({
+  ...jest.requireActual('../../../../shared/utils/csv'),
+  descargarCsv: jest.fn(),
+}));
+
 const { getTimelineEquipo } = jest.requireMock('../../services/timelineService');
 const { getFilasAnaliticas } = jest.requireMock('../../services/filasService');
+const { descargarCsv } = jest.requireMock('../../../../shared/utils/csv');
 
 const partido = (id: string, over: Partial<PartidoTimeline> = {}): PartidoTimeline =>
   ({
@@ -56,6 +64,7 @@ beforeEach(() => {
     ],
     equiposDisponibles: [{ _id: 'e1', nombre: 'Mi equipo', escudo: null }],
   });
+  descargarCsv.mockClear();
   getFilasAnaliticas.mockResolvedValue([
     ...alineacion(['j1', 'j2', 'j3'], { partidoId: '1', numeroSet: 1, resultadoSet: 'ganado' }),
     ...alineacion(['j1', 'j2', 'j3'], { partidoId: '1', numeroSet: 2, resultadoSet: 'ganado' }),
@@ -86,6 +95,52 @@ describe('SeccionAnalisis · shell fijo con pestañas', () => {
     fireEvent.click(tab(/^Sets$/i));
     expect(screen.getByRole('heading', { name: 'Condiciones del set' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Sinergias' })).not.toBeInTheDocument();
+  });
+
+  it('exporta en CSV el recorte que está a la vista', async () => {
+    montar();
+    await screen.findByText('Estadísticas');
+
+    fireEvent.click(tab(/Exportar/));
+    fireEvent.click(screen.getByText('Datos crudos'));
+
+    expect(descargarCsv).toHaveBeenCalledTimes(1);
+    const [nombreArchivo, contenido] = descargarCsv.mock.calls[0];
+
+    expect(nombreArchivo).toMatch(/^overtime-filas-.*\.csv$/);
+    // 8 filas de datos (3+3+2) más el encabezado.
+    expect(contenido.trimEnd().split('\r\n')).toHaveLength(9);
+    expect(contenido).toContain('Jugador;Throws;Hits;Outs;Catches');
+  });
+
+  it('el CSV respeta el filtro: al acotar a una modalidad baja menos filas', async () => {
+    montar();
+    await screen.findByText('Estadísticas');
+
+    // Filtrar a Cloth deja sólo el partido 2, que aporta 2 filas.
+    fireEvent.click(tab(/2 partidos/));
+    fireEvent.click(screen.getByRole('button', { name: /^Cloth/ }));
+
+    fireEvent.click(tab(/Exportar/));
+    fireEvent.click(screen.getByText('Datos crudos'));
+
+    const [nombreArchivo, contenido] = descargarCsv.mock.calls[0];
+    expect(contenido.trimEnd().split('\r\n')).toHaveLength(3);
+    // Y el nombre del archivo dice de qué recorte salió.
+    expect(nombreArchivo).toContain('cloth');
+  });
+
+  it('la comparación de segmentos sólo se ofrece cuando hay segmentos guardados', async () => {
+    montar();
+    await screen.findByText('Estadísticas');
+
+    fireEvent.click(tab(/Exportar/));
+    expect(screen.queryByText('Comparación de segmentos')).not.toBeInTheDocument();
+    fireEvent.click(tab(/Exportar/));
+
+    fireEvent.click(tab(/\+ Segmento/));
+    fireEvent.click(tab(/Exportar/));
+    expect(screen.getByText('Comparación de segmentos')).toBeInTheDocument();
   });
 
   it('el chip de filtros resume cuántos partidos quedan y despliega las facetas', async () => {
