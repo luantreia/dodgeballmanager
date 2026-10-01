@@ -127,3 +127,59 @@ describe('factor: efectividad del set', () => {
     expect(tramoDe(filas, 'efectividad')).toBe('Sin tiros');
   });
 });
+
+describe("factor 'momento del partido'", () => {
+  /** Un partido de `cantidad` sets, todos con la misma alineación y resultado. */
+  const partidoDe = (partidoId: string, cantidad: number): FilaAnalitica[] =>
+    Array.from({ length: cantidad }, (_, i) =>
+      set([1, 1], { partidoId, numeroSet: i + 1 }),
+    ).flat();
+
+  /** A qué cuarto cae cada set de un partido, en orden de set. */
+  const cuartoPorSet = (filas: FilaAnalitica[], partidoId: string): string[] => {
+    const { asignar } = factor('momento').preparar(construirSets(filas));
+    return construirSets(filas)
+      .filter((s) => s.partidoId === partidoId)
+      .sort((a, b) => a.numeroSet - b.numeroSet)
+      .map(asignar);
+  };
+
+  it('parte un partido de 16 sets en cuartos de 4', () => {
+    expect(cuartoPorSet(partidoDe('p1', 16), 'p1')).toEqual([
+      'Primer cuarto', 'Primer cuarto', 'Primer cuarto', 'Primer cuarto',
+      'Segundo cuarto', 'Segundo cuarto', 'Segundo cuarto', 'Segundo cuarto',
+      'Tercer cuarto', 'Tercer cuarto', 'Tercer cuarto', 'Tercer cuarto',
+      'Último cuarto', 'Último cuarto', 'Último cuarto', 'Último cuarto',
+    ]);
+  });
+
+  it('el primer set siempre abre y el último siempre cierra, sea largo o corto el partido', () => {
+    for (const cantidad of [2, 3, 4, 9, 16, 24]) {
+      const cuartos = cuartoPorSet(partidoDe(`p${cantidad}`, cantidad), `p${cantidad}`);
+      expect(cuartos[0]).toBe('Primer cuarto');
+      expect(cuartos[cuartos.length - 1]).toBe('Último cuarto');
+    }
+  });
+
+  it('normaliza por partido: el set 8 es el final de uno de 9 y la mitad de uno de 16', () => {
+    // Es el punto del factor. Agrupar por número absoluto de set mezclaría el principio de un
+    // partido de Cloth con el cierre de uno de Foam.
+    const filas = [...partidoDe('corto', 9), ...partidoDe('largo', 16)];
+    const { asignar } = factor('momento').preparar(construirSets(filas));
+    const setOcho = (partidoId: string) =>
+      asignar(construirSets(filas).find((s) => s.partidoId === partidoId && s.numeroSet === 8)!);
+
+    expect(setOcho('corto')).toBe('Último cuarto');
+    expect(setOcho('largo')).toBe('Segundo cuarto');
+  });
+
+  it('un partido de un solo set no tiene momentos: cae entero en el primero', () => {
+    expect(cuartoPorSet(partidoDe('p1', 1), 'p1')).toEqual(['Primer cuarto']);
+  });
+
+  it('los cuartos vacíos de un partido corto no se muestran', () => {
+    // Con 2 sets sólo hay apertura y cierre; los dos cuartos del medio no existen.
+    const tramos = condicion(partidoDe('p1', 2), 'momento');
+    expect(tramos.map((t) => t.tramo)).toEqual(['Primer cuarto', 'Último cuarto']);
+  });
+});

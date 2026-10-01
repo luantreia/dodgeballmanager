@@ -16,6 +16,7 @@ import ExportarDatos from '../ExportarDatos';
 import AnalisisCruzado from './AnalisisCruzado';
 import SeccionSinergias from './SeccionSinergias';
 import SeccionCondicionesSet from './SeccionCondicionesSet';
+import SeccionTramosAlineacion from './SeccionTramosAlineacion';
 import { construirSets } from '../../utils/setsAnaliticos';
 import ModalVisorPartido from '../ModalVisorPartido';
 import ModalScoutearPartido from '../ModalScoutearPartido';
@@ -427,7 +428,14 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
           filtrado, así que responden sobre el mismo conjunto que el resumen. */}
       {pestana === 'sinergias' && <SeccionSinergias sets={setsAnaliticos} />}
 
-      {pestana === 'sets' && <SeccionCondicionesSet sets={setsAnaliticos} />}
+      {/* Los tramos van primero: responden "qué pasó, en orden" y de ahí sale a qué set ir en el
+          video. Condiciones responde "bajo qué condiciones se gana", que es la lectura agregada. */}
+      {pestana === 'sets' && (
+        <div className="space-y-6">
+          <SeccionTramosAlineacion sets={setsAnaliticos} partidos={filtros.partidosFiltrados} />
+          <SeccionCondicionesSet sets={setsAnaliticos} />
+        </div>
+      )}
 
       {pestana === 'partidos' && (
         <LineaTemporalPartidos

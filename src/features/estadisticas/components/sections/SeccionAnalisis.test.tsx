@@ -97,6 +97,47 @@ describe('SeccionAnalisis · shell fijo con pestañas', () => {
     expect(screen.queryByRole('heading', { name: 'Sinergias' })).not.toBeInTheDocument();
   });
 
+  describe('pestaña Sets · tramos de alineación', () => {
+    const SEIS = ['j1', 'j2', 'j3', 'j4', 'j5', 'j6'];
+    const CON_SUPLENTE = ['j1', 'j2', 'j3', 'j4', 'j5', 'j7'];
+
+    it('muestra los tramos arriba y las condiciones debajo', async () => {
+      montar();
+      await screen.findByText('Estadísticas');
+      fireEvent.click(tab(/^Sets$/i));
+
+      expect(screen.getByRole('heading', { name: 'Tramos de alineación' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Condiciones del set' })).toBeInTheDocument();
+    });
+
+    it('con la alineación incompleta no inventa tramos, y lo dice', async () => {
+      // El fixture de este archivo carga 3 jugadores por set, no 6: ningún set es legible, y un
+      // set incompleto se ve igual que una sustitución. Mejor no mostrar nada que mostrar un
+      // cambio que nunca pasó.
+      montar();
+      await screen.findByText('Estadísticas');
+      fireEvent.click(tab(/^Sets$/i));
+
+      expect(screen.getByText(/sets quedaron afuera/)).toBeInTheDocument();
+      expect(screen.queryByText(/^Sets \d/)).not.toBeInTheDocument();
+    });
+
+    it('con los seis cargados muestra la racha y el cambio que la cortó', async () => {
+      getFilasAnaliticas.mockResolvedValue([
+        ...alineacion(SEIS, { partidoId: '1', numeroSet: 1, resultadoSet: 'ganado' }),
+        ...alineacion(SEIS, { partidoId: '1', numeroSet: 2, resultadoSet: 'ganado' }),
+        ...alineacion(CON_SUPLENTE, { partidoId: '1', numeroSet: 3, resultadoSet: 'perdido' }),
+      ]);
+
+      montar();
+      await screen.findByText('Estadísticas');
+      fireEvent.click(tab(/^Sets$/i));
+
+      expect(screen.getByText('Sets 1–2')).toBeInTheDocument();
+      expect(screen.getByText(/sale J6 · entra J7/)).toBeInTheDocument();
+      expect(screen.getByText('Set 3')).toBeInTheDocument();
+    });
+  });
   it('exporta en CSV el recorte que está a la vista', async () => {
     montar();
     await screen.findByText('Estadísticas');

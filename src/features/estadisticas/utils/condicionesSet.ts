@@ -138,6 +138,55 @@ const factorVolumen = (): FactorCondicion => ({
   },
 });
 
+/** Los cuartos del partido, en orden de lectura. */
+const CUARTOS = ['Primer cuarto', 'Segundo cuarto', 'Tercer cuarto', 'Último cuarto'];
+
+/**
+ * En qué parte del partido se jugó el set.
+ *
+ * Es la línea de base del ORDEN, y existe para poder leer cualquier análisis de secuencia: sin
+ * esto, un "después del cambio nos fue peor" no se puede interpretar, porque no se sabe si el
+ * equipo ya se cae solo hacia el final del partido (cansancio, rival que se acomoda, lo que sea).
+ *
+ * Se normaliza por el largo de SU partido y no por número absoluto de set, porque los partidos no
+ * miden lo mismo: en los datos históricos un partido de Cloth tiene una mediana de 16 sets y uno
+ * de Foam, 9. El set 8 es la mitad de uno y el cierre del otro, y agruparlos por número absoluto
+ * mezclaría el principio de un partido largo con el final de uno corto.
+ *
+ * La normalización manda el primer set a 0 y el último a 1, así que esos dos extremos —los únicos
+ * que de verdad importan para la pregunta— caen siempre donde corresponde. En un partido de menos
+ * de cuatro sets algún cuarto del medio queda vacío, y `calcularCondicion` lo descarta.
+ *
+ * Ojo al leerlo: el largo de cada partido se deduce del set más alto PRESENTE en lo que estás
+ * mirando. Si un filtro recorta sets, o si los últimos nunca se cargaron, el partido parece más
+ * corto y sus sets se corren hacia el final.
+ */
+const factorMomentoDelPartido = (): FactorCondicion => ({
+  clave: 'momento',
+  label: 'Momento del partido',
+  ayuda:
+    'En qué cuarto del partido se jugó el set, según el largo de ese partido. Es la referencia para saber si el rendimiento ya cae solo con el correr de los sets.',
+  preparar: (sets) => {
+    const ultimoSetPorPartido = new Map<string, number>();
+    for (const set of sets) {
+      const actual = ultimoSetPorPartido.get(set.partidoId);
+      if (actual === undefined || set.numeroSet > actual) {
+        ultimoSetPorPartido.set(set.partidoId, set.numeroSet);
+      }
+    }
+
+    return {
+      tramos: CUARTOS,
+      asignar: (set) => {
+        const ultimo = ultimoSetPorPartido.get(set.partidoId) ?? set.numeroSet;
+        // Un partido de un solo set no tiene momentos: no hay progresión que medir.
+        if (ultimo <= 1) return CUARTOS[0];
+        const posicion = (set.numeroSet - 1) / (ultimo - 1);
+        return CUARTOS[Math.min(CUARTOS.length - 1, Math.floor(posicion * CUARTOS.length))];
+      },
+    };
+  },
+});
 /**
  * Los factores disponibles.
  *
@@ -208,6 +257,8 @@ export const FACTORES: FactorCondicion[] = [
     tramosConteo(3),
     (set) => asignarConteo(set.totales.survives, 3),
   ),
+
+  factorMomentoDelPartido(),
 ];
 
 /**
