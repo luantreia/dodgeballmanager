@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import ToastProvider from '../../../../shared/components/Toast/ToastProvider';
 import SeccionAnalisis from './SeccionAnalisis';
-import { alineacion } from '../../utils/__fixtures__/filas';
+import { alineacion, fila } from '../../utils/__fixtures__/filas';
 import type { PartidoTimeline } from '../../services/timelineService';
 
 jest.mock('../../services/timelineService', () => ({
@@ -122,11 +122,33 @@ describe('SeccionAnalisis · shell fijo con pestañas', () => {
       expect(screen.queryByText(/^Sets \d/)).not.toBeInTheDocument();
     });
 
+    /** Un set con los contadores del primer jugador, el resto en cero. */
+    const setCon = (
+      ids: string[],
+      numeroSet: number,
+      resultadoSet: 'ganado' | 'perdido',
+      primero: { throws: number; hits: number },
+    ) =>
+      ids.map((id, i) =>
+        fila({
+          partidoId: '1',
+          numeroSet,
+          resultadoSet,
+          jugadorId: id,
+          jugador: id.toUpperCase(),
+          throws: i === 0 ? primero.throws : 0,
+          hits: i === 0 ? primero.hits : 0,
+          outs: 0,
+          catches: 0,
+          survive: false,
+        }),
+      );
+
     it('con los seis cargados muestra la racha y el cambio que la cortó', async () => {
       getFilasAnaliticas.mockResolvedValue([
-        ...alineacion(SEIS, { partidoId: '1', numeroSet: 1, resultadoSet: 'ganado' }),
-        ...alineacion(SEIS, { partidoId: '1', numeroSet: 2, resultadoSet: 'ganado' }),
-        ...alineacion(CON_SUPLENTE, { partidoId: '1', numeroSet: 3, resultadoSet: 'perdido' }),
+        ...setCon(SEIS, 1, 'ganado', { throws: 10, hits: 5 }),
+        ...setCon(SEIS, 2, 'ganado', { throws: 10, hits: 5 }),
+        ...setCon(CON_SUPLENTE, 3, 'perdido', { throws: 10, hits: 1 }),
       ]);
 
       montar();
@@ -134,8 +156,53 @@ describe('SeccionAnalisis · shell fijo con pestañas', () => {
       fireEvent.click(tab(/^Sets$/i));
 
       expect(screen.getByText('Sets 1–2')).toBeInTheDocument();
-      expect(screen.getByText(/sale J6 · entra J7/)).toBeInTheDocument();
       expect(screen.getByText('Set 3')).toBeInTheDocument();
+    });
+
+    it('la línea del cambio trae los números de quien sale y de quien entra', async () => {
+      getFilasAnaliticas.mockResolvedValue([
+        ...setCon(SEIS, 1, 'ganado', { throws: 10, hits: 5 }),
+        ...setCon(SEIS, 2, 'ganado', { throws: 10, hits: 5 }),
+        ...setCon(CON_SUPLENTE, 3, 'perdido', { throws: 10, hits: 1 }),
+      ]);
+
+      montar();
+      await screen.findByText('Estadísticas');
+      fireEvent.click(tab(/^Sets$/i));
+
+      // `getByText` exacto cae en el <span> de la etiqueta; se sube al <p> para leer la línea.
+      expect(screen.getByText('sale').closest('p')).toHaveTextContent('J6');
+      expect(screen.getByText('entra').closest('p')).toHaveTextContent('J7');
+    });
+
+    it('muestra cuánto se movió la producción del equipo, no sólo el resultado', async () => {
+      // Es el indicio que el resultado del set no da: 5 hits por set antes, 1 después.
+      getFilasAnaliticas.mockResolvedValue([
+        ...setCon(SEIS, 1, 'ganado', { throws: 10, hits: 5 }),
+        ...setCon(SEIS, 2, 'ganado', { throws: 10, hits: 5 }),
+        ...setCon(CON_SUPLENTE, 3, 'perdido', { throws: 10, hits: 1 }),
+      ]);
+
+      montar();
+      await screen.findByText('Estadísticas');
+      fireEvent.click(tab(/^Sets$/i));
+
+      expect(screen.getByText(/equipo\/set/)).toHaveTextContent('hits −4');
+    });
+
+    it('cada tramo puede desplegar el detalle por jugador', async () => {
+      getFilasAnaliticas.mockResolvedValue([
+        ...setCon(SEIS, 1, 'ganado', { throws: 10, hits: 5 }),
+        ...setCon(CON_SUPLENTE, 2, 'perdido', { throws: 10, hits: 1 }),
+      ]);
+
+      montar();
+      await screen.findByText('Estadísticas');
+      fireEvent.click(tab(/^Sets$/i));
+
+      // Un desplegable por tramo.
+      expect(screen.getAllByText('Por jugador')).toHaveLength(2);
+      expect(screen.getAllByText('Hits/set').length).toBeGreaterThan(0);
     });
   });
   it('exporta en CSV el recorte que está a la vista', async () => {
