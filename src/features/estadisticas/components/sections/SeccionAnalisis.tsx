@@ -13,6 +13,8 @@ import LineaTemporalPartidos from '../LineaTemporalPartidos';
 import EstadisticasFiltradas from '../EstadisticasFiltradas';
 import ComparadorSegmentos, { type Segmento } from '../ComparadorSegmentos';
 import ExportarDatos from '../ExportarDatos';
+import { csvDeFilas } from '../../utils/exportaciones';
+import { descargarCsv, nombreArchivoCsv } from '../../../../shared/utils/csv';
 import AnalisisCruzado from './AnalisisCruzado';
 import SeccionSinergias from './SeccionSinergias';
 import SeccionCondicionesSet from './SeccionCondicionesSet';
@@ -201,6 +203,30 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
       }
     },
     [addToast],
+  );
+
+  /**
+   * CSV de un solo partido, en el mismo formato («Datos crudos») que `ExportarDatos` baja para
+   * todo el recorte filtrado. No pide nada al backend: `filas` ya tiene todo el historial en
+   * memoria, así que alcanza con quedarse con las de este partido.
+   */
+  const descargarPartido = useCallback(
+    (partido: PartidoTimeline) => {
+      const filasDelPartido = filas.filter((f) => f.partidoId === partido._id);
+      if (filasDelPartido.length === 0) {
+        addToast({
+          type: 'info',
+          title: 'Sin estadísticas',
+          message: 'Este partido todavía no tiene datos cargados para exportar.',
+        });
+        return;
+      }
+      descargarCsv(
+        nombreArchivoCsv('partido', `${partido.rival?.nombre ?? 'rival'}-${partido.fecha}`),
+        csvDeFilas(filasDelPartido),
+      );
+    },
+    [filas, addToast],
   );
 
   const cerrarYRecargar = useCallback(() => {
@@ -441,6 +467,7 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
         <LineaTemporalPartidos
           partidos={filtros.partidosFiltrados}
           onAbrir={(partido) => setVista({ tipo: 'visor', partido })}
+          onDescargar={descargarPartido}
         />
       )}
 

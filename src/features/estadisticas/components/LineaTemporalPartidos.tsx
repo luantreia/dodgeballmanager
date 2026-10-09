@@ -4,6 +4,8 @@ import type { PartidoTimeline } from '../services/timelineService';
 type Props = {
   partidos: PartidoTimeline[];
   onAbrir: (partido: PartidoTimeline) => void;
+  /** Descarga el CSV (formato «Datos crudos») de ese partido puntual. Ausente si no hay nada que exportar. */
+  onDescargar?: (partido: PartidoTimeline) => void;
 };
 
 /**
@@ -63,7 +65,7 @@ const MESES = [
  * que ya estaba ahí de todos modos; ponerlo además como badge de texto costaba dos renglones
  * más por partido y hacía que veinte partidos no entraran en ninguna pantalla.
  */
-const LineaTemporalPartidos = ({ partidos, onAbrir }: Props) => {
+const LineaTemporalPartidos = ({ partidos, onAbrir, onDescargar }: Props) => {
   const grupos = useMemo(() => {
     const mapa = new Map<string, { titulo: string; partidos: PartidoTimeline[] }>();
 
@@ -126,48 +128,64 @@ const LineaTemporalPartidos = ({ partidos, onAbrir }: Props) => {
                       ocuparan varias pantallas y la línea dejara de leerse como una línea. Lo
                       que sacaba más lugar —el estado de los datos— ahora lo dice el color del
                       punto, que ya estaba ahí, y queda como `title` para quien necesite el texto. */}
-                  <button
-                    type="button"
-                    onClick={() => onAbrir(partido)}
-                    title={`${marca.etiqueta}${partido.competencia ? ` · ${partido.competencia.nombre}` : ' · Amistoso'}`}
-                    className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left transition hover:border-brand-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 [touch-action:manipulation]"
-                  >
-                    <span className="w-10 shrink-0 text-[11px] tabular-nums text-slate-400">
-                      {fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
-                    </span>
-
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
-                      <span className="text-slate-400">{partido.esLocal ? 'vs' : '@'}</span>{' '}
-                      {partido.rival?.nombre ?? 'Rival'}
-                    </span>
-
-                    <span className="shrink-0 text-[10px] font-medium text-slate-400">
-                      {partido.modalidad}
-                    </span>
-
-                    {partido.datos.oficial.existe && partido.datos.planilla && (
-                      <span
-                        title="Este partido tiene estadísticas oficiales y planilla propia"
-                        className="shrink-0 rounded border border-dashed border-slate-300 px-1 text-[10px] font-medium text-slate-500"
-                      >
-                        2
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onAbrir(partido)}
+                      title={`${marca.etiqueta}${partido.competencia ? ` · ${partido.competencia.nombre}` : ' · Amistoso'}`}
+                      className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left transition hover:border-brand-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 [touch-action:manipulation]"
+                    >
+                      <span className="w-10 shrink-0 text-[11px] tabular-nums text-slate-400">
+                        {fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
                       </span>
-                    )}
 
-                    {hayMarcador && (
-                      <span
-                        className={`w-12 shrink-0 rounded px-1.5 py-0.5 text-center text-xs font-bold tabular-nums ${
-                          empate
-                            ? 'bg-slate-100 text-slate-700'
-                            : ganó
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-rose-50 text-rose-700'
-                        }`}
-                      >
-                        {partido.marcadorEquipo}–{partido.marcadorRival}
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
+                        <span className="text-slate-400">{partido.esLocal ? 'vs' : '@'}</span>{' '}
+                        {partido.rival?.nombre ?? 'Rival'}
                       </span>
+
+                      <span className="shrink-0 text-[10px] font-medium text-slate-400">
+                        {partido.modalidad}
+                      </span>
+
+                      {partido.datos.oficial.existe && partido.datos.planilla && (
+                        <span
+                          title="Este partido tiene estadísticas oficiales y planilla propia"
+                          className="shrink-0 rounded border border-dashed border-slate-300 px-1 text-[10px] font-medium text-slate-500"
+                        >
+                          2
+                        </span>
+                      )}
+
+                      {hayMarcador && (
+                        <span
+                          className={`w-12 shrink-0 rounded px-1.5 py-0.5 text-center text-xs font-bold tabular-nums ${
+                            empate
+                              ? 'bg-slate-100 text-slate-700'
+                              : ganó
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-rose-50 text-rose-700'
+                          }`}
+                        >
+                          {partido.marcadorEquipo}–{partido.marcadorRival}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Aparte del botón principal: abre el modal, esto baja el archivo directo.
+                        Sólo si hay algo cargado — nadie exporta un partido sin datos. */}
+                    {onDescargar && partido.datos.fuenteEfectiva !== 'sin_datos' && (
+                      <button
+                        type="button"
+                        onClick={() => onDescargar(partido)}
+                        title="Descargar CSV de este partido"
+                        aria-label={`Descargar CSV del partido contra ${partido.rival?.nombre ?? 'rival'}`}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-brand-300 hover:text-brand-600 [touch-action:manipulation]"
+                      >
+                        <span aria-hidden className="text-sm">↓</span>
+                      </button>
                     )}
-                  </button>
+                  </div>
                 </li>
               );
             })}
