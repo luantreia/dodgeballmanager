@@ -4,8 +4,8 @@ import type { PartidoTimeline } from '../services/timelineService';
 type Props = {
   partidos: PartidoTimeline[];
   onAbrir: (partido: PartidoTimeline) => void;
-  /** Descarga el CSV (formato «Datos crudos») de ese partido puntual. Ausente si no hay nada que exportar. */
-  onDescargar?: (partido: PartidoTimeline) => void;
+  /** Descarga el CSV de ese partido puntual, con los dos equipos. */
+  onDescargar?: (partido: PartidoTimeline) => void | Promise<void>;
 };
 
 /**
@@ -177,7 +177,7 @@ const LineaTemporalPartidos = ({ partidos, onAbrir, onDescargar }: Props) => {
                     {onDescargar && partido.datos.fuenteEfectiva !== 'sin_datos' && (
                       <button
                         type="button"
-                        onClick={() => onDescargar(partido)}
+                        onClick={() => void onDescargar(partido)}
                         title="Descargar CSV de este partido"
                         aria-label={`Descargar CSV del partido contra ${partido.rival?.nombre ?? 'rival'}`}
                         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-brand-300 hover:text-brand-600 [touch-action:manipulation]"

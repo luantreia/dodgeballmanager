@@ -1,6 +1,7 @@
 import { construirCsv, type ColumnaCsv } from '../../../shared/utils/csv';
 import type { FilaAnalitica } from '../services/filasService';
 import type { PartidoTimeline } from '../services/timelineService';
+import type { FilaPartidoAmbosEquipos } from '../services/filasPartidoAmbosService';
 import { aplicarFiltros, type EstadoFiltros } from '../hooks/useFiltrosPartidos';
 import { calcularMetricasEquipo, calcularMetricasJugadores, type MetricasEquipo } from './metricas';
 
@@ -68,6 +69,25 @@ const COLUMNAS_FILAS: Array<ColumnaCsv<FilaAnalitica>> = [
  * si se filtraran acá la cantidad de partidos del CSV no coincidiría con la de la pantalla.
  */
 export const csvDeFilas = (filas: FilaAnalitica[]): string => construirCsv(filas, COLUMNAS_FILAS);
+
+/**
+ * Las mismas columnas de `csvDeFilas`, más `Equipo` e `ID del equipo` — las dos insertadas antes
+ * de `Jugador`, que es de dónde salen las filas de los dos lados de la cancha en
+ * `obtenerFilasAmbosEquipos`. Busca el índice por encabezado en vez de hardcodear la posición
+ * para no desalinearse en silencio si `COLUMNAS_FILAS` cambia de orden.
+ */
+const INDICE_JUGADOR = COLUMNAS_FILAS.findIndex((c) => c.encabezado === 'Jugador');
+
+const COLUMNAS_FILAS_AMBOS_EQUIPOS: Array<ColumnaCsv<FilaPartidoAmbosEquipos>> = [
+  ...COLUMNAS_FILAS.slice(0, INDICE_JUGADOR),
+  { encabezado: 'Equipo', valor: (f) => f.equipo },
+  { encabezado: 'ID del equipo', valor: (f) => f.equipoId },
+  ...COLUMNAS_FILAS.slice(INDICE_JUGADOR),
+];
+
+/** El CSV de un solo partido con las filas de los dos equipos — ver `FilaPartidoAmbosEquipos`. */
+export const csvDeFilasAmbosEquipos = (filas: FilaPartidoAmbosEquipos[]): string =>
+  construirCsv(filas, COLUMNAS_FILAS_AMBOS_EQUIPOS);
 
 type FilaJugador = ReturnType<typeof calcularMetricasJugadores>[number];
 

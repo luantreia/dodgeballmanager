@@ -7,13 +7,14 @@ import {
   type PartidoTimeline,
 } from '../../services/timelineService';
 import { getFilasAnaliticas, type FilaAnalitica } from '../../services/filasService';
+import { obtenerFilasAmbosEquipos } from '../../services/filasPartidoAmbosService';
 import { clonarFiltros, describirFiltros, useFiltrosPartidos } from '../../hooks/useFiltrosPartidos';
 import PanelFiltrosPartidos from '../PanelFiltrosPartidos';
 import LineaTemporalPartidos from '../LineaTemporalPartidos';
 import EstadisticasFiltradas from '../EstadisticasFiltradas';
 import ComparadorSegmentos, { type Segmento } from '../ComparadorSegmentos';
 import ExportarDatos from '../ExportarDatos';
-import { csvDeFilas } from '../../utils/exportaciones';
+import { csvDeFilasAmbosEquipos } from '../../utils/exportaciones';
 import { descargarCsv, nombreArchivoCsv } from '../../../../shared/utils/csv';
 import AnalisisCruzado from './AnalisisCruzado';
 import SeccionSinergias from './SeccionSinergias';
@@ -206,27 +207,37 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
   );
 
   /**
-   * CSV de un solo partido, en el mismo formato («Datos crudos») que `ExportarDatos` baja para
-   * todo el recorte filtrado. No pide nada al backend: `filas` ya tiene todo el historial en
-   * memoria, así que alcanza con quedarse con las de este partido.
+   * CSV de un solo partido, con las filas de los DOS equipos — no sólo el propio.
+   *
+   * `filas` (el dataset de toda la pantalla) está filtrado por perspectiva a propósito: mezclar
+   * ahí al rival arruinaría cualquier total agregado del equipo. Para un partido puntual eso no
+   * aplica, así que esto pide aparte (`obtenerFilasAmbosEquipos`) en vez de reusar `filas`.
    */
   const descargarPartido = useCallback(
-    (partido: PartidoTimeline) => {
-      const filasDelPartido = filas.filter((f) => f.partidoId === partido._id);
-      if (filasDelPartido.length === 0) {
+    async (partido: PartidoTimeline) => {
+      try {
+        const filasDelPartido = await obtenerFilasAmbosEquipos(partido, equipoId, equipoNombre ?? 'Mi equipo');
+        if (filasDelPartido.length === 0) {
+          addToast({
+            type: 'info',
+            title: 'Sin estadísticas',
+            message: 'Este partido todavía no tiene datos cargados para exportar.',
+          });
+          return;
+        }
+        descargarCsv(
+          nombreArchivoCsv('partido', `${partido.rival?.nombre ?? 'rival'}-${partido.fecha}`),
+          csvDeFilasAmbosEquipos(filasDelPartido),
+        );
+      } catch (error) {
         addToast({
-          type: 'info',
-          title: 'Sin estadísticas',
-          message: 'Este partido todavía no tiene datos cargados para exportar.',
+          type: 'error',
+          title: 'No pudimos descargar el CSV',
+          message: error instanceof Error ? error.message : 'Error inesperado',
         });
-        return;
       }
-      descargarCsv(
-        nombreArchivoCsv('partido', `${partido.rival?.nombre ?? 'rival'}-${partido.fecha}`),
-        csvDeFilas(filasDelPartido),
-      );
     },
-    [filas, addToast],
+    [equipoId, equipoNombre, addToast],
   );
 
   const cerrarYRecargar = useCallback(() => {
