@@ -1,5 +1,6 @@
-import { csvDeFilas, csvDeMetricasPorJugador, csvDeComparacionSegmentos } from './exportaciones';
+import { csvDeFilas, csvDeFilasAmbosEquipos, csvDeMetricasPorJugador, csvDeComparacionSegmentos } from './exportaciones';
 import { fila } from './__fixtures__/filas';
+import type { FilaPartidoAmbosEquipos } from '../services/filasPartidoAmbosService';
 import { filtrosVacios, type EstadoFiltros } from '../hooks/useFiltrosPartidos';
 import type { PartidoTimeline } from '../services/timelineService';
 
@@ -207,5 +208,38 @@ describe('csvDeComparacionSegmentos', () => {
   it('sin segmentos deja sólo la columna de métricas', () => {
     const csv = csvDeComparacionSegmentos([], partidos, filas);
     expect(celdas(lineas(csv)[0])).toEqual(['Métrica']);
+  });
+});
+
+describe('csvDeFilasAmbosEquipos', () => {
+  const filaAmbos = (over: Partial<FilaPartidoAmbosEquipos> = {}): FilaPartidoAmbosEquipos => ({
+    ...fila(),
+    equipoId: 'e1',
+    equipo: 'PANTHERS',
+    equipoLocal: 'PANTHERS',
+    equipoVisitante: 'HYDRA',
+    ...over,
+  });
+
+  it('no tiene columna "Rival": es relativa a una perspectiva, y acá hay dos equipos mezclados', () => {
+    const csv = csvDeFilasAmbosEquipos([filaAmbos()]);
+    expect(celdas(lineas(csv)[0])).not.toContain('Rival');
+  });
+
+  it('pone equipo local y visitante en absoluto, iguales para los dos lados de la cancha', () => {
+    const csv = csvDeFilasAmbosEquipos([
+      filaAmbos({ equipo: 'PANTHERS', jugador: 'Juan' }),
+      filaAmbos({ equipo: 'HYDRA', jugador: 'Pedro' }),
+    ]);
+    expect(valorEn(csv, 1, 'Equipo local')).toBe('PANTHERS');
+    expect(valorEn(csv, 2, 'Equipo local')).toBe('PANTHERS');
+    expect(valorEn(csv, 1, 'Equipo visitante')).toBe('HYDRA');
+    expect(valorEn(csv, 2, 'Equipo visitante')).toBe('HYDRA');
+  });
+
+  it('distingue de qué lado es cada fila con "Equipo" e "ID del equipo"', () => {
+    const csv = csvDeFilasAmbosEquipos([filaAmbos({ equipoId: 'e1', equipo: 'PANTHERS' })]);
+    expect(valorEn(csv, 1, 'Equipo')).toBe('PANTHERS');
+    expect(valorEn(csv, 1, 'ID del equipo')).toBe('e1');
   });
 });

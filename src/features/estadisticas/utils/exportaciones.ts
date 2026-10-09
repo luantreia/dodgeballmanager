@@ -71,15 +71,23 @@ const COLUMNAS_FILAS: Array<ColumnaCsv<FilaAnalitica>> = [
 export const csvDeFilas = (filas: FilaAnalitica[]): string => construirCsv(filas, COLUMNAS_FILAS);
 
 /**
- * Las mismas columnas de `csvDeFilas`, más `Equipo` e `ID del equipo` — las dos insertadas antes
- * de `Jugador`, que es de dónde salen las filas de los dos lados de la cancha en
- * `obtenerFilasAmbosEquipos`. Busca el índice por encabezado en vez de hardcodear la posición
- * para no desalinearse en silencio si `COLUMNAS_FILAS` cambia de orden.
+ * Las mismas columnas de `csvDeFilas`, con dos cambios — buscados por encabezado en vez de
+ * hardcodear la posición, para no desalinearse en silencio si `COLUMNAS_FILAS` cambia de orden:
+ *
+ * - `Rival` sale: es relativo a `perspectiva`, y con las dos escuadras ya mezcladas en el mismo
+ *   archivo diría una cosa distinta según de qué fila se trate. En su lugar van `Equipo local` y
+ *   `Equipo visitante`, que no dependen de desde qué lado se mire el partido.
+ * - `Equipo` e `ID del equipo` entran antes de `Jugador`, que es de dónde salen las filas de los
+ *   dos lados de la cancha en `obtenerFilasAmbosEquipos`.
  */
+const INDICE_RIVAL = COLUMNAS_FILAS.findIndex((c) => c.encabezado === 'Rival');
 const INDICE_JUGADOR = COLUMNAS_FILAS.findIndex((c) => c.encabezado === 'Jugador');
 
 const COLUMNAS_FILAS_AMBOS_EQUIPOS: Array<ColumnaCsv<FilaPartidoAmbosEquipos>> = [
-  ...COLUMNAS_FILAS.slice(0, INDICE_JUGADOR),
+  ...COLUMNAS_FILAS.slice(0, INDICE_RIVAL),
+  { encabezado: 'Equipo local', valor: (f) => f.equipoLocal },
+  { encabezado: 'Equipo visitante', valor: (f) => f.equipoVisitante },
+  ...COLUMNAS_FILAS.slice(INDICE_RIVAL + 1, INDICE_JUGADOR),
   { encabezado: 'Equipo', valor: (f) => f.equipo },
   { encabezado: 'ID del equipo', valor: (f) => f.equipoId },
   ...COLUMNAS_FILAS.slice(INDICE_JUGADOR),

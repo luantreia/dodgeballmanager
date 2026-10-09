@@ -15,6 +15,13 @@ import type { FilaAnalitica } from './filasService';
 export type FilaPartidoAmbosEquipos = FilaAnalitica & {
   equipoId: string | null;
   equipo: string;
+  /**
+   * Quién jugó local y quién visitante, en absoluto — no "Rival", que es relativo a
+   * `perspectiva` y por eso dice una cosa distinta según de qué fila se trate cuando el archivo
+   * ya tiene las dos escuadras mezcladas.
+   */
+  equipoLocal: string;
+  equipoVisitante: string;
 };
 
 const nombreDeOficial = (j?: { nombre?: string; apellido?: string } | null): string =>
@@ -110,6 +117,8 @@ export const obtenerFilasAmbosEquipos = async (
     fase: partido.fase?.nombre ?? 'Sin fase',
     rivalId,
     rival: rivalNombre,
+    equipoLocal: partido.esLocal ? perspectivaNombre || 'Mi equipo' : rivalNombre,
+    equipoVisitante: partido.esLocal ? rivalNombre : perspectivaNombre || 'Mi equipo',
     esLocal: partido.esLocal,
     marcadorEquipo: partido.marcadorEquipo,
     marcadorRival: partido.marcadorRival,
