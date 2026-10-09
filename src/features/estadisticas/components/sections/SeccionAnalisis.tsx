@@ -216,7 +216,9 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
   const descargarPartido = useCallback(
     async (partido: PartidoTimeline) => {
       try {
-        const filasDelPartido = await obtenerFilasAmbosEquipos(partido, equipoId, equipoNombre ?? 'Mi equipo');
+        // `perspectiva`, no `equipoId`: en un partido scouteado tu club no jugó, y las filas ya
+        // vienen armadas desde el equipo elegido en el selector de perspectiva.
+        const filasDelPartido = await obtenerFilasAmbosEquipos(partido, perspectiva._id, perspectiva.nombre);
         if (filasDelPartido.length === 0) {
           addToast({
             type: 'info',
@@ -237,7 +239,7 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
         });
       }
     },
-    [equipoId, equipoNombre, addToast],
+    [perspectiva, addToast],
   );
 
   const cerrarYRecargar = useCallback(() => {

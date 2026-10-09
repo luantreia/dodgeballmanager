@@ -61,8 +61,14 @@ const resultadoDesdeGanador = (
  */
 export const obtenerFilasAmbosEquipos = async (
   partido: PartidoTimeline,
-  equipoId: string,
-  equipoNombre: string,
+  /**
+   * El equipo a través del cual se armó `partido` — `perspectiva`, no necesariamente el club
+   * propio. En un partido scouteado (`listarPlanillasScouteadas`) tu club ni jugó: `esLocal` y
+   * `rival` ya vienen resueltos desde ese otro equipo, así que compararlos contra tu club de
+   * verdad hacía que ninguno de los dos lados matcheara y los dos cayeran en "Otro equipo".
+   */
+  perspectivaId: string,
+  perspectivaNombre: string,
 ): Promise<FilaPartidoAmbosEquipos[]> => {
   const { fuenteEfectiva } = partido.datos;
   if (fuenteEfectiva === 'sin_datos') return [];
@@ -71,7 +77,7 @@ export const obtenerFilasAmbosEquipos = async (
   const rivalNombre = partido.rival?.nombre ?? 'Rival';
 
   const nombreDeEquipo = (equipoIdFila: string | null): string => {
-    if (!equipoIdFila || equipoIdFila === equipoId) return equipoNombre || 'Mi equipo';
+    if (!equipoIdFila || equipoIdFila === perspectivaId) return perspectivaNombre || 'Mi equipo';
     if (equipoIdFila === rivalId) return rivalNombre;
     return 'Otro equipo';
   };
@@ -79,7 +85,7 @@ export const obtenerFilasAmbosEquipos = async (
   // Un presente/stat de este mismo equipo juega del mismo lado (local/visitante) que `partido`;
   // uno del rival juega del lado contrario. Sin dato de equipo, se trata como propio.
   const esLocalDe = (equipoIdFila: string | null): boolean =>
-    equipoIdFila && equipoIdFila !== equipoId ? !partido.esLocal : partido.esLocal;
+    equipoIdFila && equipoIdFila !== perspectivaId ? !partido.esLocal : partido.esLocal;
 
   let resultadoPartido: FilaAnalitica['resultadoPartido'] = 'sin definir';
   if (partido.estado === 'finalizado') {
