@@ -75,6 +75,11 @@ describe('csvDeFilas', () => {
   it('sin filas deja sólo el encabezado — es un recorte vacío, no un error', () => {
     expect(lineas(csvDeFilas([]))).toHaveLength(1);
   });
+
+  it('incluye el id estable del jugador, para unirlo entre exports', () => {
+    const csv = csvDeFilas([fila({ jugadorId: 'j1' })]);
+    expect(valorEn(csv, 1, 'ID del jugador')).toBe('j1');
+  });
 });
 
 describe('csvDeMetricasPorJugador', () => {

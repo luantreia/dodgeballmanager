@@ -53,6 +53,10 @@ const COLUMNAS_FILAS: Array<ColumnaCsv<FilaAnalitica>> = [
   { encabezado: 'Sobrevive', valor: (f) => f.survive },
   // Última y técnica: sirve para cruzar con otra exportación o deduplicar en una tabla dinámica.
   { encabezado: 'ID del partido', valor: (f) => f.partidoId },
+  // El id estable de la persona en Overtime (no uno nuevo para este export). Es lo que permite
+  // unir al mismo jugador entre partidos sin depender de que el texto de `Jugador` nunca cambie
+  // de grafía — ver FORMATO_EXPORT_ESTADISTICAS.md.
+  { encabezado: 'ID del jugador', valor: (f) => f.jugadorId },
 ];
 
 /**
