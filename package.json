@@ -43,7 +43,18 @@
     ],
     "rules": {
       "jsx-a11y/no-autofocus": "off",
-      "jsx-a11y/label-has-associated-control": ["error", { "controlComponents": ["Input", "Select", "Textarea", "Toggle"], "depth": 3 }]
+      "jsx-a11y/label-has-associated-control": [
+        "error",
+        {
+          "controlComponents": [
+            "Input",
+            "Select",
+            "Textarea",
+            "Toggle"
+          ],
+          "depth": 3
+        }
+      ]
     }
   },
   "browserslist": {
@@ -60,6 +71,8 @@
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/typography": "^0.5.19"
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/jest-axe": "^3.5.9",
+    "jest-axe": "^9.0.0"
   }
 }

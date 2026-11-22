@@ -35,6 +35,8 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Incluye src/shared/a11y.test.tsx: axe-core sobre componentes compartidos (estructura,
+      # roles, nombres accesibles; no contraste, que jsdom no calcula).
       - name: Tests
         run: npm run test:ci
 
