@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 
 import { getEstadisticasJugadorSet, type EstadisticaJugadorSetDetalle } from '../services/estadisticasService';
+import { DataTable } from 'overtime-kit';
 
 // Colores de fondo por equipo (constante fuera del componente)
 const COLORES_EQUIPO = ['#dbeafe', '#fce7f3', '#fef3c7', '#dcfce7', '#f3e8ff'];
@@ -536,54 +537,26 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
               </div>
 
               {/* Tabla de jugadores */}
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                        Jugador
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
-                        Lanzamientos
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
-                        Golpes
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
-                        Outs
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
-                        Atrapadas
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {equipoInfo.jugadores.map((stat, indexJugador) => {
-                      const jugadorNombre = obtenerNombreJugador(stat?.jugador, { inicial: true });
-                      
-                      return (
-                        <tr key={stat._id ?? `${equipoId}-${indexJugador}`} className={indexJugador % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="px-4 py-2 text-sm text-gray-900 whitespace-nowrap">
-                            {jugadorNombre}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-900 text-center">
-                            {stat.throws || 0}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-900 text-center">
-                            {stat.hits || 0}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-900 text-center">
-                            {stat.outs || 0}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-900 text-center">
-                            {stat.catches || 0}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                caption={`Jugadores del set`}
+                data={equipoInfo.jugadores}
+                rowKey={(stat) => stat._id ?? `${equipoId}-${equipoInfo.jugadores.indexOf(stat)}`}
+                empty="Sin jugadores en este set."
+                pageSize={0}
+                mobile="scroll"
+                columns={[
+                  {
+                    id: 'jugador',
+                    header: 'Jugador',
+                    sortValue: (stat) => obtenerNombreJugador(stat?.jugador, { inicial: true }),
+                    cell: (stat) => <span className="whitespace-nowrap">{obtenerNombreJugador(stat?.jugador, { inicial: true })}</span>,
+                  },
+                  { id: 'throws', header: 'Lanzamientos', align: 'center', sortValue: (stat) => stat.throws || 0, cell: (stat) => stat.throws || 0 },
+                  { id: 'hits', header: 'Golpes', align: 'center', sortValue: (stat) => stat.hits || 0, cell: (stat) => stat.hits || 0 },
+                  { id: 'outs', header: 'Outs', align: 'center', sortValue: (stat) => stat.outs || 0, cell: (stat) => stat.outs || 0 },
+                  { id: 'catches', header: 'Atrapadas', align: 'center', sortValue: (stat) => stat.catches || 0, cell: (stat) => stat.catches || 0 },
+                ]}
+              />
             </div>
           ))}
         </>
