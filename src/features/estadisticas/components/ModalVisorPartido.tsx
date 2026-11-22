@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import ModalBase from '../../../shared/components/ModalBase/ModalBase';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { formatDateTime } from '../../../shared/utils/formatDate';
-import TablaScroll from '../../../shared/components/TablaScroll/TablaScroll';
 import { getSetsConEstadisticas, type SetConEstadisticas } from '../services/estadisticasService';
 import {
   obtenerPlanilla,
@@ -14,6 +13,7 @@ import {
   type FuenteDatos,
   type PartidoTimeline,
 } from '../services/timelineService';
+import { DataTable } from 'overtime-kit';
 
 type Props = {
   partido: PartidoTimeline;
@@ -33,32 +33,22 @@ const nombreDeJugador = (j: SetConEstadisticas['estadisticas'][number]['jugador'
 };
 
 const TablaFilas = ({ filas }: { filas: Fila[] }) => (
-  <TablaScroll>
-    <table className="w-full min-w-[420px] text-sm">
-      <thead>
-        <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-          <th className="pb-2 pr-3">Jugador</th>
-          <th className="pb-2 pr-3 text-right">Sets</th>
-          <th className="pb-2 pr-3 text-right">Throws</th>
-          <th className="pb-2 pr-3 text-right">Hits</th>
-          <th className="pb-2 pr-3 text-right">Outs</th>
-          <th className="pb-2 text-right">Catches</th>
-        </tr>
-      </thead>
-      <tbody className="tabular-nums">
-        {filas.map((fila) => (
-          <tr key={fila.nombre} className="border-b border-slate-100 last:border-0">
-            <td className="py-1.5 pr-3 text-slate-800">{fila.nombre}</td>
-            <td className="py-1.5 pr-3 text-right text-slate-500">{fila.sets}</td>
-            <td className="py-1.5 pr-3 text-right text-slate-600">{fila.throws}</td>
-            <td className="py-1.5 pr-3 text-right font-semibold text-slate-800">{fila.hits}</td>
-            <td className="py-1.5 pr-3 text-right text-slate-600">{fila.outs}</td>
-            <td className="py-1.5 text-right text-slate-600">{fila.catches}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </TablaScroll>
+  <DataTable
+    caption="Estadísticas por jugador"
+    data={filas}
+    rowKey={(f) => f.nombre}
+    empty="Sin estadísticas en este partido."
+    pageSize={0}
+    mobile="scroll"
+    columns={[
+      { id: 'nombre', header: 'Jugador', sortValue: (f) => f.nombre, cell: (f) => <span className="text-slate-800">{f.nombre}</span> },
+      { id: 'sets', header: 'Sets', align: 'right', sortValue: (f) => f.sets, cell: (f) => f.sets },
+      { id: 'throws', header: 'Throws', align: 'right', sortValue: (f) => f.throws, cell: (f) => f.throws },
+      { id: 'hits', header: 'Hits', align: 'right', sortValue: (f) => f.hits, cell: (f) => <span className="font-semibold text-slate-800">{f.hits}</span> },
+      { id: 'outs', header: 'Outs', align: 'right', sortValue: (f) => f.outs, cell: (f) => f.outs },
+      { id: 'catches', header: 'Catches', align: 'right', sortValue: (f) => f.catches, cell: (f) => f.catches },
+    ]}
+  />
 );
 
 /**

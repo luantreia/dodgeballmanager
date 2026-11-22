@@ -18,7 +18,7 @@ import {
 } from '../services/entrenamientoService';
 import ModalAsistencia from '../components/ModalAsistencia';
 import SeccionTests from '../components/SeccionTests';
-import { Tabs } from 'overtime-kit';
+import { Tabs, DataTable } from 'overtime-kit';
 
 const TIPOS: Array<{ valor: EntrenamientoTipo; label: string }> = [
   { valor: 'general', label: 'General' },
@@ -236,34 +236,27 @@ const EntrenamientosPage = () => {
               {resumen.totalEntrenamientos === 1 ? '' : 's'}. Los justificados no cuentan como falta.
             </p>
           </header>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[30rem] text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-500">
-                  <th className="py-1.5 pr-2 font-semibold">Jugador</th>
-                  <th className="py-1.5 pr-2 text-right font-semibold">Presente</th>
-                  <th className="py-1.5 pr-2 text-right font-semibold">Tarde</th>
-                  <th className="py-1.5 pr-2 text-right font-semibold">Ausente</th>
-                  <th className="py-1.5 pr-2 text-right font-semibold">Justif.</th>
-                  <th className="py-1.5 text-right font-semibold">%</th>
-                </tr>
-              </thead>
-              <tbody className="tabular-nums">
-                {resumen.jugadores.map((j) => (
-                  <tr key={j.jugadorId} className="border-b border-slate-100 last:border-0">
-                    <td className="py-1.5 pr-2 text-slate-800">{j.jugador}</td>
-                    <td className="py-1.5 pr-2 text-right text-slate-600">{j.presente}</td>
-                    <td className="py-1.5 pr-2 text-right text-slate-600">{j.tarde}</td>
-                    <td className="py-1.5 pr-2 text-right text-slate-600">{j.ausente}</td>
-                    <td className="py-1.5 pr-2 text-right text-muted">{j.justificado}</td>
-                    <td className={`py-1.5 text-right font-bold ${claseAsistencia(j.porcentaje)}`}>
-                      {porcentaje(j.porcentaje)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            caption="Asistencia por jugador"
+            data={resumen.jugadores}
+            rowKey={(j) => j.jugadorId}
+            empty="Todavía no hay asistencia registrada."
+            pageSize={0}
+            columns={[
+              { id: 'jugador', header: 'Jugador', sortValue: (j) => j.jugador, cell: (j) => <span className="text-slate-800">{j.jugador}</span> },
+              { id: 'presente', header: 'Presente', align: 'right', sortValue: (j) => j.presente, cell: (j) => j.presente },
+              { id: 'tarde', header: 'Tarde', align: 'right', sortValue: (j) => j.tarde, cell: (j) => j.tarde },
+              { id: 'ausente', header: 'Ausente', align: 'right', sortValue: (j) => j.ausente, cell: (j) => j.ausente },
+              { id: 'justificado', header: 'Justif.', align: 'right', sortValue: (j) => j.justificado, cell: (j) => <span className="text-muted">{j.justificado}</span> },
+              {
+                id: 'porcentaje',
+                header: '%',
+                align: 'right',
+                sortValue: (j) => j.porcentaje,
+                cell: (j) => <span className={`font-bold ${claseAsistencia(j.porcentaje)}`}>{porcentaje(j.porcentaje)}</span>,
+              },
+            ]}
+          />
         </section>
       )}
 

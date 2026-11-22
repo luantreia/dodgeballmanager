@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
 import ConfirmModal from '../../../../shared/components/ConfirmModal/ConfirmModal';
-import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
 import { ListaJugadores } from './ListaJugadores';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 import { socket } from '../../../../shared/services/socket';
@@ -35,6 +34,7 @@ import {
   type PlanillaSet as PlanillaSetTipo,
 } from '../../services/planillaEquipoService';
 import { extractEquipoId, extractEquipoNombre, type PartidoDetallado } from '../../services/partidoService';
+import { DataTable } from 'overtime-kit';
 
 /**
  * Upsert de una fila dentro de `planilla.estadisticas`, sin tocar el resto — ni el autoguardado
@@ -1523,41 +1523,36 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
               <summary className="cursor-pointer text-sm font-semibold text-gray-700">
                 Totales del partido según esta planilla
               </summary>
-              <TablaScroll className="mt-3">
-                <table className="w-full min-w-[420px] text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-300 text-left text-xs uppercase tracking-wide text-gray-500">
-                      <th className="pb-2 pr-3">Jugador</th>
-                      <th className="pb-2 pr-3 text-right">Throws</th>
-                      <th className="pb-2 pr-3 text-right">Hits</th>
-                      <th className="pb-2 pr-3 text-right">Outs</th>
-                      <th className="pb-2 text-right">Catches</th>
-                    </tr>
-                  </thead>
-                  <tbody className="tabular-nums">
-                    {planilla.presentes.map((presente) => {
-                      const t = totales[presente._id];
-                      if (!t) return null;
-                      return (
-                        <tr key={presente._id} className="border-b border-gray-200 last:border-0">
-                          <td className="py-1.5 pr-3 text-gray-800">
-                            {nombrePresente(presente)}
-                            {gruposDePlanilla.length > 1 && (
-                              <span className="ml-1.5 text-xs text-muted">
-                                · {gruposDePlanilla.find((g) => g.id === (idEquipoDePresente(presente) ?? gruposDePlanilla[0]?.id))?.nombre}
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-1.5 pr-3 text-right text-gray-600">{t.throws}</td>
-                          <td className="py-1.5 pr-3 text-right text-gray-600">{t.hits}</td>
-                          <td className="py-1.5 pr-3 text-right text-gray-600">{t.outs}</td>
-                          <td className="py-1.5 text-right text-gray-600">{t.catches}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </TablaScroll>
+              <div className="mt-3">
+                <DataTable
+                  caption="Totales del partido según esta planilla"
+                  data={planilla.presentes.filter((presente) => totales[presente._id])}
+                  rowKey={(presente) => presente._id}
+                  empty="Sin totales."
+                  pageSize={0}
+                  mobile="scroll"
+                  columns={[
+                    {
+                      id: 'jugador',
+                      header: 'Jugador',
+                      cell: (presente) => (
+                        <span className="text-gray-800">
+                          {nombrePresente(presente)}
+                          {gruposDePlanilla.length > 1 && (
+                            <span className="ml-1.5 text-xs text-muted">
+                              · {gruposDePlanilla.find((g) => g.id === (idEquipoDePresente(presente) ?? gruposDePlanilla[0]?.id))?.nombre}
+                            </span>
+                          )}
+                        </span>
+                      ),
+                    },
+                    { id: 'throws', header: 'Throws', align: 'right', sortValue: (p) => totales[p._id].throws, cell: (p) => totales[p._id].throws },
+                    { id: 'hits', header: 'Hits', align: 'right', sortValue: (p) => totales[p._id].hits, cell: (p) => totales[p._id].hits },
+                    { id: 'outs', header: 'Outs', align: 'right', sortValue: (p) => totales[p._id].outs, cell: (p) => totales[p._id].outs },
+                    { id: 'catches', header: 'Catches', align: 'right', sortValue: (p) => totales[p._id].catches, cell: (p) => totales[p._id].catches },
+                  ]}
+                />
+              </div>
             </details>
           )}
 

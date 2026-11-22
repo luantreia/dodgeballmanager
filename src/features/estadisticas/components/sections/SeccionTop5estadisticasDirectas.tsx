@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FC } from 'react';
 import { authFetch } from '../../../../shared/utils/authFetch';
 import { getEstadisticasJugadorPartidoManualPorEquipo } from '../../services/estadisticasService';
 import { formatNumber } from '../../../../shared/utils/formatNumber';
+import { DataTable } from 'overtime-kit';
 
 interface Props {
   equipoId: string;
@@ -97,45 +98,24 @@ export const SeccionTop5estadisticasDirectas: FC<Props> = ({ equipoId, titulo = 
         </div>
       </header>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        {loading ? (
-          <div className="p-4 text-sm text-slate-500">Cargando ranking...</div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                <tr>
-                  <th className="px-4 py-3 text-left">Jugador</th>
-                  <th className="px-4 py-3 text-right">% Efectividad</th>
-                  <th className="px-4 py-3 text-right">HOC</th>
-                  <th className="px-4 py-3 text-right">Throws</th>
-                  <th className="px-4 py-3 text-right">Hits</th>
-                  <th className="px-4 py-3 text-right">Catches</th>
-                  <th className="px-4 py-3 text-right">Outs</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {top5.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/60">
-                    <td className="px-4 py-3 font-medium text-slate-900">{p.nombre}</td>
-                    <td className="px-4 py-3 text-right">{formatNumber(p.efectividad)}%</td>
-                    <td className="px-4 py-3 text-right">{formatNumber(p.hoc)}</td>
-                    <td className="px-4 py-3 text-right">{formatNumber(p.throws)}</td>
-                    <td className="px-4 py-3 text-right">{formatNumber(p.hits)}</td>
-                    <td className="px-4 py-3 text-right">{formatNumber(p.catches)}</td>
-                    <td className="px-4 py-3 text-right">{formatNumber(p.outs)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-            {top5.length === 0 ? (
-              <p className="px-4 py-5 text-sm text-slate-500">Aún no hay estadísticas registradas.</p>
-            ) : null}
-          </>
-        )}
-      </div>
+      <DataTable
+        caption="Top 5 por estadísticas directas"
+        data={top5}
+        rowKey={(p) => p.id}
+        loading={loading}
+        empty="Aún no hay estadísticas registradas."
+        pageSize={0}
+        mobile="scroll"
+        columns={[
+          { id: 'nombre', header: 'Jugador', sortValue: (p) => p.nombre, cell: (p) => <span className="font-medium text-slate-900">{p.nombre}</span> },
+          { id: 'efectividad', header: '% Efectividad', align: 'right', sortValue: (p) => p.efectividad, cell: (p) => `${formatNumber(p.efectividad)}%` },
+          { id: 'hoc', header: 'HOC', align: 'right', sortValue: (p) => p.hoc, cell: (p) => formatNumber(p.hoc) },
+          { id: 'throws', header: 'Throws', align: 'right', sortValue: (p) => p.throws, cell: (p) => formatNumber(p.throws) },
+          { id: 'hits', header: 'Hits', align: 'right', sortValue: (p) => p.hits, cell: (p) => formatNumber(p.hits) },
+          { id: 'catches', header: 'Catches', align: 'right', sortValue: (p) => p.catches, cell: (p) => formatNumber(p.catches) },
+          { id: 'outs', header: 'Outs', align: 'right', sortValue: (p) => p.outs, cell: (p) => formatNumber(p.outs) },
+        ]}
+      />
     </div>
   );
 };

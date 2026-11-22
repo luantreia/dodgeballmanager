@@ -5,7 +5,7 @@ import {
   calcularMetricasJugadores,
   formatearPorcentaje,
 } from '../utils/metricas';
-import TablaScroll from '../../../shared/components/TablaScroll/TablaScroll';
+import { DataTable } from 'overtime-kit';
 
 type Props = {
   filas: FilaAnalitica[];
@@ -80,85 +80,25 @@ const EstadisticasFiltradas = ({ filas, descripcion }: Props) => {
         </div>
       ) : (
         <>
-          {/* En mobile, una tarjeta por jugador. Las ocho columnas necesitan 560px y en un
-              teléfono dejaban visible el nombre y poco más: hits y efectividad, que son las que
-              se miran, caían fuera de la pantalla sin ningún indicio de que estuvieran ahí. */}
-          <ul className="space-y-2 sm:hidden">
-            {jugadores.map((jugador) => (
-              <li
-                key={jugador.jugadorId}
-                className="rounded-xl border border-slate-200 bg-white p-3"
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium text-slate-900">{jugador.jugador}</span>
-                  <span className="shrink-0 text-xs text-slate-500">
-                    {jugador.partidos} PJ · {jugador.sets} sets
-                  </span>
-                </div>
-                <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-2 text-xs">
-                  <div>
-                    <dt className="text-[11px] text-slate-500">Hits</dt>
-                    <dd className="font-semibold tabular-nums text-slate-900">{jugador.hits}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] text-slate-500">Efectividad</dt>
-                    <dd className="tabular-nums text-slate-800">
-                      {formatearPorcentaje(jugador.efectividad, 1)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] text-slate-500">Throws</dt>
-                    <dd className="tabular-nums text-slate-800">{jugador.throws}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] text-slate-500">Catches</dt>
-                    <dd className="tabular-nums text-slate-800">{jugador.catches}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] text-slate-500">Supervivencia</dt>
-                    <dd className="tabular-nums text-slate-800">
-                      {formatearPorcentaje(jugador.supervivencia)}
-                    </dd>
-                  </div>
-                </dl>
-              </li>
-            ))}
-          </ul>
-
-          <TablaScroll className="hidden rounded-xl border border-slate-200 bg-white sm:block">
-            <table className="w-full min-w-[560px] text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-3 py-2">Jugador</th>
-                <th className="px-3 py-2 text-right">PJ</th>
-                <th className="px-3 py-2 text-right">Sets</th>
-                <th className="px-3 py-2 text-right">Throws</th>
-                <th className="px-3 py-2 text-right">Hits</th>
-                <th className="px-3 py-2 text-right">Efec.</th>
-                <th className="px-3 py-2 text-right">Catches</th>
-                <th className="px-3 py-2 text-right">Superv.</th>
-              </tr>
-            </thead>
-            <tbody className="tabular-nums">
-              {jugadores.map((jugador) => (
-                <tr key={jugador.jugadorId} className="border-b border-slate-100 last:border-0">
-                  <td className="px-3 py-2 text-slate-800">{jugador.jugador}</td>
-                  <td className="px-3 py-2 text-right text-slate-500">{jugador.partidos}</td>
-                  <td className="px-3 py-2 text-right text-slate-500">{jugador.sets}</td>
-                  <td className="px-3 py-2 text-right text-slate-600">{jugador.throws}</td>
-                  <td className="px-3 py-2 text-right font-semibold text-slate-800">{jugador.hits}</td>
-                  <td className="px-3 py-2 text-right text-slate-700">
-                    {formatearPorcentaje(jugador.efectividad, 1)}
-                  </td>
-                  <td className="px-3 py-2 text-right text-slate-600">{jugador.catches}</td>
-                  <td className="px-3 py-2 text-right text-slate-600">
-                    {formatearPorcentaje(jugador.supervivencia)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </TablaScroll>
+          {/* En mobile DataTable pasa a una tarjeta por jugador: las ocho columnas necesitan 560px
+              y en un teléfono hits y efectividad, que son las que se miran, quedaban fuera. */}
+          <DataTable
+            caption="Estadísticas por jugador"
+            data={jugadores}
+            rowKey={(j) => j.jugadorId}
+            empty="Ninguno de estos partidos tiene estadísticas cargadas todavía."
+            pageSize={0}
+            columns={[
+              { id: 'jugador', header: 'Jugador', sortValue: (j) => j.jugador, cell: (j) => <span className="text-slate-800">{j.jugador}</span> },
+              { id: 'hits', header: 'Hits', align: 'right', sortValue: (j) => j.hits, cell: (j) => <span className="font-semibold text-slate-800">{j.hits}</span> },
+              { id: 'efectividad', header: 'Efec.', align: 'right', sortValue: (j) => j.efectividad, cell: (j) => formatearPorcentaje(j.efectividad, 1) },
+              { id: 'throws', header: 'Throws', align: 'right', sortValue: (j) => j.throws, cell: (j) => j.throws },
+              { id: 'catches', header: 'Catches', align: 'right', sortValue: (j) => j.catches, cell: (j) => j.catches },
+              { id: 'supervivencia', header: 'Superv.', align: 'right', sortValue: (j) => j.supervivencia, cell: (j) => formatearPorcentaje(j.supervivencia) },
+              { id: 'partidos', header: 'PJ', align: 'right', hideOnMobile: true, sortValue: (j) => j.partidos, cell: (j) => j.partidos },
+              { id: 'sets', header: 'Sets', align: 'right', hideOnMobile: true, sortValue: (j) => j.sets, cell: (j) => j.sets },
+            ]}
+          />
         </>
       )}
     </section>
