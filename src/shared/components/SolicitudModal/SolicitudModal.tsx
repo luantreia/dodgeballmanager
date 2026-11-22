@@ -373,6 +373,31 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
         </div>
       );
 
+    // No existía: el formulario salía vacío ('Formulario no disponible') y la solicitud se
+    // mandaba con datosPropuestos {}, que el aprobador veía como 'Sin datos adicionales'.
+    case 'usuario-crear-organizacion':
+      return (
+        <div className="space-y-4">
+          <InputField
+            label="Nombre de la organización"
+            value={valores.nombre || ''}
+            onChange={(v) => handleChange('nombre', v)}
+            required
+          />
+          <TextAreaField
+            label="Descripción (opcional)"
+            value={valores.descripcion || ''}
+            onChange={(v) => handleChange('descripcion', v)}
+          />
+          <InputField
+            label="Sitio web (opcional)"
+            type="url"
+            value={valores.sitioWeb || ''}
+            onChange={(v) => handleChange('sitioWeb', v)}
+          />
+        </div>
+      );
+
     case 'usuario-crear-jugador':
       return (
         <div className="space-y-4">
