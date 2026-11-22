@@ -35,8 +35,8 @@ export const NotificacionesFilters: React.FC<NotificacionesFiltersProps> = ({
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       {/* Estado */}
       <div className="flex items-center gap-2">
-        <label className="text-sm text-slate-600">Estado:</label>
-        <select
+        <label htmlFor="notificacionesfilters-estado" className="text-sm text-slate-600">Estado:</label>
+        <select id="notificacionesfilters-estado"
           value={fEstado}
           onChange={(e) => setFEstado(e.target.value as SolicitudEdicionEstado | 'todos')}
           className="rounded-lg border-slate-300 text-sm"
@@ -52,8 +52,8 @@ export const NotificacionesFilters: React.FC<NotificacionesFiltersProps> = ({
       {/* Categoría */}
       {showCategoriaFilter && (
         <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-600">Categoría:</label>
-          <select
+          <label htmlFor="notificacionesfilters-categoria" className="text-sm text-slate-600">Categoría:</label>
+          <select id="notificacionesfilters-categoria"
             value={fCategoria}
             onChange={(e) => setFCategoria(e.target.value)}
             className="rounded-lg border-slate-300 text-sm"
@@ -69,8 +69,8 @@ export const NotificacionesFilters: React.FC<NotificacionesFiltersProps> = ({
       {/* Entidad (para jugadores/equipos) */}
       {showEntidadFilter && entidadesDisponibles.length > 0 && (
         <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-600">Filtrar:</label>
-          <select
+          <label htmlFor="notificacionesfilters-filtrar" className="text-sm text-slate-600">Filtrar:</label>
+          <select id="notificacionesfilters-filtrar"
             value={entidadSeleccionada}
             onChange={(e) => onEntidadChange?.(e.target.value)}
             className="rounded-lg border-slate-300 text-sm"

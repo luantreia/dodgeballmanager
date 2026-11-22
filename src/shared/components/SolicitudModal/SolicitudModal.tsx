@@ -117,17 +117,17 @@ export const SolicitudModal: React.FC<SolicitudModalProps> = ({
           {/* Selector de tipo de solicitud. Si el modal fue abierto con prefillTipo, mostrarlo fijo y no permitir cambiarlo */}
           {prefillTipo ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Solicitud</label>
+              <p className="block text-sm font-medium text-gray-700 mb-2">Tipo de Solicitud</p>
               <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">
                 {formatearTipo(prefillTipo)}
               </div>
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="solicitudmodal-campo-127" className="block text-sm font-medium text-gray-700 mb-2">
                 Tipo de Solicitud
               </label>
-              <select
+              <select id="solicitudmodal-campo-127"
                 value={tipoSeleccionado}
                 onChange={(e) => {
                   setTipoSeleccionado(e.target.value as SolicitudEdicionTipo);
@@ -225,7 +225,7 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
           {/* Jugador: mostrar nombre/alias si vienen en prefill, sino mostrar ID o input editable */}
           {valores.jugadorNombre ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Jugador</label>
+              <p className="block text-sm font-medium text-gray-700 mb-1">Jugador</p>
               <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">
                 <div className="font-medium">{valores.jugadorNombre}</div>
                 {valores.jugadorAlias ? <div className="text-xs text-slate-500">Alias: {valores.jugadorAlias}</div> : null}
@@ -234,7 +234,7 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
             </div>
           ) : valores.jugadorId ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Jugador</label>
+              <p className="block text-sm font-medium text-gray-700 mb-1">Jugador</p>
               <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">{valores.jugadorId}</div>
             </div>
           ) : (
@@ -249,7 +249,7 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
           {/* Equipo: mostrar nombre si viene en prefill, sino mostrar ID o input editable */}
           {valores.equipoNombre ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Equipo</label>
+              <p className="block text-sm font-medium text-gray-700 mb-1">Equipo</p>
               <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">
             <div className="font-medium">{valores.equipoNombre}</div>
             {valores.equipoId ? <div className="text-xs text-muted mt-1">ID: {valores.equipoId}</div> : null}
@@ -257,7 +257,7 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
             </div>
           ) : valores.equipoId ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Equipo</label>
+              <p className="block text-sm font-medium text-gray-700 mb-1">Equipo</p>
               <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">{valores.equipoId}</div>
             </div>
           ) : (
@@ -487,16 +487,19 @@ const InputField: React.FC<InputFieldProps> = ({
   placeholder,
 }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {label} {required && <span className="text-red-500">*</span>}
+    {/* El control va adentro del label: así queda asociado sin necesidad de ids. */}
+    <label className="block">
+      <span className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </span>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+      />
     </label>
-    <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-    />
   </div>
 );
 
@@ -516,20 +519,23 @@ const SelectField: React.FC<SelectFieldProps> = ({
   required,
 }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {label} {required && <span className="text-red-500">*</span>}
+    {/* El control va adentro del label: así queda asociado sin necesidad de ids. */}
+    <label className="block">
+      <span className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
     </label>
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-    >
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
   </div>
 );
 
@@ -549,16 +555,19 @@ const TextAreaField: React.FC<TextAreaFieldProps> = ({
   placeholder,
 }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {label} {required && <span className="text-red-500">*</span>}
+    {/* El control va adentro del label: así queda asociado sin necesidad de ids. */}
+    <label className="block">
+      <span className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </span>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={3}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+      />
     </label>
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      rows={3}
-      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-    />
   </div>
 );
 

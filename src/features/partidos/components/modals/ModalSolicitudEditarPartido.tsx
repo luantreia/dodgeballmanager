@@ -84,11 +84,11 @@ const ModalSolicitudEditarPartido: React.FC<ModalSolicitudEditarPartidoProps> = 
         ) : null}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Qué necesitás corregir</label>
+          <label htmlFor="modalsolicitudeditarpartido-que-necesitas-corregir" className="block text-sm font-medium text-gray-700">Qué necesitás corregir</label>
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {opcionesCampo.map((opcion) => (
               <label key={opcion.value} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm">
-                <input
+                <input id="modalsolicitudeditarpartido-que-necesitas-corregir"
                   type="checkbox"
                   checked={campos.includes(opcion.value)}
                   onChange={() => toggleCampo(opcion.value)}
@@ -100,8 +100,8 @@ const ModalSolicitudEditarPartido: React.FC<ModalSolicitudEditarPartidoProps> = 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Prioridad</label>
-          <select
+          <label htmlFor="modalsolicitudeditarpartido-prioridad" className="block text-sm font-medium text-gray-700">Prioridad</label>
+          <select id="modalsolicitudeditarpartido-prioridad"
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             value={prioridad}
             onChange={(e) => setPrioridad(e.target.value as 'baja' | 'media' | 'alta')}
@@ -113,10 +113,10 @@ const ModalSolicitudEditarPartido: React.FC<ModalSolicitudEditarPartidoProps> = 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label htmlFor="modalsolicitudeditarpartido-campo-116" className="block text-sm font-medium text-gray-700">
             Descripción de la solicitud
           </label>
-          <textarea
+          <textarea id="modalsolicitudeditarpartido-campo-116"
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             rows={4}
             value={mensaje}

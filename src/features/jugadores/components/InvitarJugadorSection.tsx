@@ -63,20 +63,21 @@ const InvitarJugadorSection: React.FC<Props> = ({ equipoId, onSuccess }) => {
               {opcionesJugadores.map((jugador) => {
                 const seleccionado = inviteSeleccionado?.id === jugador.id;
                 return (
-                  <li
-                    key={jugador.id}
-                    className={`cursor-pointer px-3 py-2 text-sm hover:bg-slate-50 ${seleccionado ? 'bg-brand-50 text-brand-700' : 'text-slate-600'}`}
-                    onClick={() => {
-                      setInviteSeleccionado(jugador);
-                      // abrir modal prellenado para crear solicitud de invitación
-                      setOpenSolicitudJugadorId(jugador.id);
-                    }}
-                    role="button"
-                  >
-                    <p className="font-medium text-slate-900">{jugador.nombre}</p>
-                    {jugador.alias ? (
-                      <p className="text-xs text-slate-500">Alias: {jugador.alias}</p>
-                    ) : null}
+                  <li key={jugador.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInviteSeleccionado(jugador);
+                        // abrir modal prellenado para crear solicitud de invitación
+                        setOpenSolicitudJugadorId(jugador.id);
+                      }}
+                      className={`block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 cursor-pointer px-3 py-2 text-sm hover:bg-slate-50 ${seleccionado ? 'bg-brand-50 text-brand-700' : 'text-slate-600'}`}
+                    >
+                      <p className="font-medium text-slate-900">{jugador.nombre}</p>
+                      {jugador.alias ? (
+                        <p className="text-xs text-slate-500">Alias: {jugador.alias}</p>
+                      ) : null}
+                    </button>
                   </li>
                 );
               })}

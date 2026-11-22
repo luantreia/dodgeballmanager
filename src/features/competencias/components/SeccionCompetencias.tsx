@@ -128,8 +128,8 @@ const SeccionCompetencias = () => {
 
         <form className="mt-4 grid gap-4 md:grid-cols-2" onSubmit={handleInscripcion}>
           <div className="md:col-span-1">
-            <label className="mb-1 block text-sm font-medium text-slate-700">Buscar temporada</label>
-            <input
+            <label htmlFor="seccioncompetencias-buscar-temporada" className="mb-1 block text-sm font-medium text-slate-700">Buscar temporada</label>
+            <input id="seccioncompetencias-buscar-temporada"
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
               placeholder="Nombre de la temporada"
               value={tempSearch}

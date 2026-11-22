@@ -57,8 +57,8 @@ const ModalSolicitudVideoPartido: React.FC<ModalSolicitudVideoPartidoProps> = ({
         </p>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Link de YouTube</label>
-          <input
+          <label htmlFor="modalsolicitudvideopartido-link-de-youtube" className="block text-sm font-medium text-gray-700">Link de YouTube</label>
+          <input id="modalsolicitudvideopartido-link-de-youtube"
             type="text"
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
@@ -69,8 +69,8 @@ const ModalSolicitudVideoPartido: React.FC<ModalSolicitudVideoPartidoProps> = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Comentario (opcional)</label>
-          <textarea
+          <label htmlFor="modalsolicitudvideopartido-comentario-opcional" className="block text-sm font-medium text-gray-700">Comentario (opcional)</label>
+          <textarea id="modalsolicitudvideopartido-comentario-opcional"
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             rows={3}
             value={mensaje}

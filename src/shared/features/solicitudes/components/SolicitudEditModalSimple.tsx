@@ -51,10 +51,10 @@ export default function SolicitudEditModalSimple({ solicitud, onClose, onSaved }
     >
       {solicitud && (
         <div className="space-y-3">
-          <label className="block text-xs text-slate-600">Fecha inicio</label>
-          <input value={datos.fechaInicio || ''} onChange={(e) => handleChange('fechaInicio', e.target.value)} className="w-full rounded border px-2 py-1 text-sm" />
-          <label className="block text-xs text-slate-600">Fecha fin</label>
-          <input value={datos.fechaFin || ''} onChange={(e) => handleChange('fechaFin', e.target.value)} className="w-full rounded border px-2 py-1 text-sm" />
+          <label htmlFor="solicitudeditmodalsimple-fecha-inicio" className="block text-xs text-slate-600">Fecha inicio</label>
+          <input id="solicitudeditmodalsimple-fecha-inicio" value={datos.fechaInicio || ''} onChange={(e) => handleChange('fechaInicio', e.target.value)} className="w-full rounded border px-2 py-1 text-sm" />
+          <label htmlFor="solicitudeditmodalsimple-fecha-fin" className="block text-xs text-slate-600">Fecha fin</label>
+          <input id="solicitudeditmodalsimple-fecha-fin" value={datos.fechaFin || ''} onChange={(e) => handleChange('fechaFin', e.target.value)} className="w-full rounded border px-2 py-1 text-sm" />
         </div>
       )}
     </Overlay>

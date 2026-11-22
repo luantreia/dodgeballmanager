@@ -106,8 +106,8 @@ const CapturaEstadisticas: FC<CapturaEstadisticasProps> = ({
             </div>
             <div className="grid grid-cols-4 gap-1 text-xs">
               <div>
-                <label className="block text-gray-500 dark:text-gray-400 text-xs">Throws</label>
-                <input
+                <label htmlFor="capturaestadisticas-throws" className="block text-gray-500 dark:text-gray-400 text-xs">Throws</label>
+                <input id="capturaestadisticas-throws"
                   type="number"
                   min="0"
                   value={stats?.throws ?? 0}
@@ -116,8 +116,8 @@ const CapturaEstadisticas: FC<CapturaEstadisticasProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-gray-500 dark:text-gray-400 text-xs">Hits</label>
-                <input
+                <label htmlFor="capturaestadisticas-hits" className="block text-gray-500 dark:text-gray-400 text-xs">Hits</label>
+                <input id="capturaestadisticas-hits"
                   type="number"
                   min="0"
                   value={stats?.hits ?? 0}
@@ -126,8 +126,8 @@ const CapturaEstadisticas: FC<CapturaEstadisticasProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-gray-500 dark:text-gray-400 text-xs">Outs</label>
-                <input
+                <label htmlFor="capturaestadisticas-outs" className="block text-gray-500 dark:text-gray-400 text-xs">Outs</label>
+                <input id="capturaestadisticas-outs"
                   type="number"
                   min="0"
                   value={stats?.outs ?? 0}
@@ -136,8 +136,8 @@ const CapturaEstadisticas: FC<CapturaEstadisticasProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-gray-500 dark:text-gray-400 text-xs">Catches</label>
-                <input
+                <label htmlFor="capturaestadisticas-catches" className="block text-gray-500 dark:text-gray-400 text-xs">Catches</label>
+                <input id="capturaestadisticas-catches"
                   type="number"
                   min="0"
                   value={stats?.catches ?? 0}

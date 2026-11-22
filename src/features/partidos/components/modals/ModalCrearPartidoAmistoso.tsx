@@ -200,14 +200,17 @@ export const ModalCrearPartido = ({ isOpen, equipoId, onClose, onSuccess }: Moda
                 return (
                   <li
                     key={equipo.id}
-                    className={`cursor-pointer px-3 py-2 text-sm hover:bg-slate-50 ${
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleSeleccionarRival(equipo)}
+                      className={`block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 cursor-pointer px-3 py-2 text-sm hover:bg-slate-50 ${
                       seleccionado ? 'bg-brand-50 text-brand-700' : 'text-slate-600'
                     }`}
-                    onClick={() => handleSeleccionarRival(equipo)}
-                    role="button"
-                  >
-                    <p className="font-medium text-slate-900">{equipo.nombre}</p>
-                    {equipo.pais ? <p className="text-xs text-slate-500">{equipo.pais}</p> : null}
+                    >
+                      <p className="font-medium text-slate-900">{equipo.nombre}</p>
+                      {equipo.pais ? <p className="text-xs text-slate-500">{equipo.pais}</p> : null}
+                    </button>
                   </li>
                 );
               })}

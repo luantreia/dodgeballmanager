@@ -222,8 +222,8 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
             {modoEdicion ? (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Nombre del Partido</label>
-                  <input
+                  <label htmlFor="modalinformacionpartido-nombre-del-partido" className="block text-sm font-medium text-gray-700">Nombre del Partido</label>
+                  <input id="modalinformacionpartido-nombre-del-partido"
                     type="text"
                     value={datosEdicion.nombrePartido}
                     onChange={(e) =>
@@ -234,8 +234,8 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Fecha y Hora</label>
-                    <input
+                    <label htmlFor="modalinformacionpartido-fecha-y-hora" className="block text-sm font-medium text-gray-700">Fecha y Hora</label>
+                    <input id="modalinformacionpartido-fecha-y-hora"
                       type="datetime-local"
                       value={datosEdicion.fecha}
                       onChange={(e) =>
@@ -245,8 +245,8 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Ubicación</label>
-                    <input
+                    <label htmlFor="modalinformacionpartido-ubicacion" className="block text-sm font-medium text-gray-700">Ubicación</label>
+                    <input id="modalinformacionpartido-ubicacion"
                       type="text"
                       value={datosEdicion.ubicacion}
                       onChange={(e) =>
@@ -258,8 +258,8 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Estado</label>
-                    <select
+                    <label htmlFor="modalinformacionpartido-estado" className="block text-sm font-medium text-gray-700">Estado</label>
+                    <select id="modalinformacionpartido-estado"
                       value={datosEdicion.estado}
                       onChange={(e) =>
                         setDatosEdicion((prev) => (prev ? { ...prev, estado: e.target.value } : prev))
@@ -273,8 +273,8 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Modalidad</label>
-                    <select
+                    <label htmlFor="modalinformacionpartido-modalidad" className="block text-sm font-medium text-gray-700">Modalidad</label>
+                    <select id="modalinformacionpartido-modalidad"
                       value={datosEdicion.modalidad}
                       onChange={(e) =>
                         setDatosEdicion((prev) => (prev ? { ...prev, modalidad: e.target.value } : prev))
@@ -287,8 +287,8 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Categoría</label>
-                    <select
+                    <label htmlFor="modalinformacionpartido-categoria" className="block text-sm font-medium text-gray-700">Categoría</label>
+                    <select id="modalinformacionpartido-categoria"
                       value={datosEdicion.categoria}
                       onChange={(e) =>
                         setDatosEdicion((prev) => (prev ? { ...prev, categoria: e.target.value } : prev))
@@ -303,8 +303,8 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Competencia</label>
-                  <select
+                  <label htmlFor="modalinformacionpartido-competencia" className="block text-sm font-medium text-gray-700">Competencia</label>
+                  <select id="modalinformacionpartido-competencia"
                     value={datosEdicion.competencia}
                     onChange={(e) =>
                       setDatosEdicion((prev) => (prev ? { ...prev, competencia: e.target.value } : prev))
@@ -321,8 +321,8 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Marcador Local</label>
-                    <input
+                    <label htmlFor="modalinformacionpartido-marcador-local" className="block text-sm font-medium text-gray-700">Marcador Local</label>
+                    <input id="modalinformacionpartido-marcador-local"
                       type="number"
                       value={datosEdicion.marcadorLocal}
                       onChange={(e) =>
@@ -341,8 +341,8 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Marcador Visitante</label>
-                    <input
+                    <label htmlFor="modalinformacionpartido-marcador-visitante" className="block text-sm font-medium text-gray-700">Marcador Visitante</label>
+                    <input id="modalinformacionpartido-marcador-visitante"
                       type="number"
                       value={datosEdicion.marcadorVisitante}
                       onChange={(e) =>
@@ -362,8 +362,8 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Video de YouTube (en vivo o final)</label>
-                  <input
+                  <label htmlFor="modalinformacionpartido-video-de-youtube-en-vivo-o-fin" className="block text-sm font-medium text-gray-700">Video de YouTube (en vivo o final)</label>
+                  <input id="modalinformacionpartido-video-de-youtube-en-vivo-o-fin"
                     type="text"
                     value={datosEdicion.videoUrl}
                     onChange={(e) =>

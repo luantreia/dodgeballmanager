@@ -56,10 +56,10 @@ export const SetManager: FC<SetManagerProps> = ({
 
       {/* Selector de set */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="setmanager-campo-59" className="block text-sm font-medium text-gray-700 mb-2">
           Set a editar:
         </label>
-        <select
+        <select id="setmanager-campo-59"
           value={numeroSetSeleccionado}
           onChange={(e) => setNumeroSetSeleccionado(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -77,10 +77,10 @@ export const SetManager: FC<SetManagerProps> = ({
         <div className="border-t pt-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="setmanager-campo-80" className="block text-sm font-medium text-gray-700 mb-1">
                 Ganador del set:
               </label>
-              <select
+              <select id="setmanager-campo-80"
                 value={estadisticasSet.ganadorSet || 'pendiente'}
                 onChange={(e) => handleChangeGanador(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -92,9 +92,9 @@ export const SetManager: FC<SetManagerProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <p className="block text-sm font-medium text-gray-700 mb-1">
                 Estado:
-              </label>
+              </p>
               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                 estadisticasSet.estadoSet === 'finalizado'
                   ? 'bg-green-100 text-green-800'
