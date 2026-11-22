@@ -21,6 +21,8 @@ export const AprobarButton: React.FC<AprobarButtonProps> = ({
   const { addToast } = useToast();
   const [puedeAprobar, setPodeAprobar] = useState<boolean | null>(null);
   const [loadingAprobadores, setLoadingAprobadores] = useState(false);
+  // Por qué no se puede aprobar, en palabras (lo arma el backend: quién sí puede, o que ya se resolvió).
+  const [motivo, setMotivo] = useState<string | null>(null);
 
   // Verificar si el usuario puede aprobar esta solicitud
   useEffect(() => {
@@ -36,7 +38,10 @@ export const AprobarButton: React.FC<AprobarButtonProps> = ({
       setLoadingAprobadores(true);
       try {
         const res = await getSolicitudAprobadores(solicitud._id);
-        if (mounted) setPodeAprobar(res.puedeAprobar);
+        if (mounted) {
+          setPodeAprobar(res.puedeAprobar);
+          setMotivo((res as { motivo?: string | null }).motivo ?? null);
+        }
       } catch {
         if (mounted) setPodeAprobar(false);
       } finally {
@@ -54,7 +59,7 @@ export const AprobarButton: React.FC<AprobarButtonProps> = ({
       addToast({
         type: 'info',
         title: 'No autorizado',
-        message: 'No estás habilitado para aprobar esta solicitud.'
+        message: motivo ?? 'No estás habilitado para aprobar esta solicitud.'
       });
       return;
     }
@@ -64,6 +69,7 @@ export const AprobarButton: React.FC<AprobarButtonProps> = ({
   const isDisabled = disabled || accionando === solicitud._id || solicitud.estado !== 'pendiente' || loadingAprobadores;
 
   return (
+    <span className="inline-flex flex-col items-start gap-0.5">
     <button
       disabled={isDisabled}
       onClick={handleClick}
@@ -72,10 +78,14 @@ export const AprobarButton: React.FC<AprobarButtonProps> = ({
           ? 'bg-slate-400 cursor-not-allowed'
           : 'bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300'
       }`}
-      title={puedeAprobar === false ? 'No podes aprobar esta solicitud' : 'Aprobar solicitud'}
+      title={puedeAprobar === false ? motivo ?? 'No podés aprobar esta solicitud' : 'Aprobar solicitud'}
     >
       {loadingAprobadores ? '...' : 'Aprobar'}
     </button>
+    {puedeAprobar === false && motivo ? (
+      <span className="max-w-[16rem] text-2xs leading-snug text-slate-500">{motivo}</span>
+    ) : null}
+    </span>
   );
 };
 
