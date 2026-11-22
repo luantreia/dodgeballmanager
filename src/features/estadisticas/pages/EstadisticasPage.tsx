@@ -1,6 +1,8 @@
 import { useEquipo } from '../../../app/providers/EquipoContext';
 import { useToken } from '../../../app/providers/AuthContext';
 import SeccionAnalisis from '../components/sections/SeccionAnalisis';
+import BandejaAportes from '../components/BandejaAportes';
+import { useState } from 'react';
 
 /**
  * Estadísticas del equipo.
@@ -18,6 +20,8 @@ import SeccionAnalisis from '../components/sections/SeccionAnalisis';
 const EstadisticasPage = () => {
   const { equipoSeleccionado } = useEquipo();
   const token = useToken();
+  // Sube cuando un aporte aceptado cambia la planilla del equipo: remonta el análisis.
+  const [version, setVersion] = useState(0);
 
   if (!equipoSeleccionado) {
     return (
@@ -39,7 +43,10 @@ const EstadisticasPage = () => {
         </p>
       </header>
 
+      <BandejaAportes equipoId={equipoSeleccionado.id} onCambio={() => setVersion((v) => v + 1)} />
+
       <SeccionAnalisis
+        key={`${equipoSeleccionado.id}:${version}`}
         equipoId={equipoSeleccionado.id}
         equipoNombre={equipoSeleccionado.nombre}
         token={token ?? ''}
