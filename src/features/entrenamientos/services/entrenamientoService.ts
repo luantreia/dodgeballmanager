@@ -1,6 +1,7 @@
 import { authFetch } from '../../../shared/utils/authFetch';
 import type {
   AsistenciaEntrenamientoEstado,
+  AsistenciaEntrenamientoRespuesta,
   EntrenamientoEstado,
   EntrenamientoTipo,
 } from '../../../shared/types/modelos.generado';
@@ -32,6 +33,8 @@ export type EntrenamientoResumen = {
   titulo: string;
   notas: string;
   asistencia: ConteoAsistencia;
+  /** Lo que anticiparon los jugadores desde Overtime-Manager ("voy / no voy"). */
+  respuestas?: { voy: number; no_voy: number };
 };
 
 export type FilaAsistencia = {
@@ -41,6 +44,8 @@ export type FilaAsistencia = {
   estado: AsistenciaEntrenamientoEstado;
   minutosTarde: number;
   notas: string;
+  respuesta?: AsistenciaEntrenamientoRespuesta;
+  respuestaMotivo?: string;
 };
 
 export type EntrenamientoDetalle = Omit<EntrenamientoResumen, 'asistencia'> & {

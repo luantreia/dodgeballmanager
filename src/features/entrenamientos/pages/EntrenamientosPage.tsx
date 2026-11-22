@@ -307,6 +307,15 @@ const EntrenamientosPage = () => {
                       {e.estado === 'programado' ? ' · sin asistencia tomada' : ''}
                       {e.estado === 'cancelado' ? ' · cancelado' : ''}
                     </p>
+                    {e.estado === 'programado' && e.respuestas && (e.respuestas.voy > 0 || e.respuestas.no_voy > 0) ? (
+                      <p className="text-xs font-medium text-slate-600">
+                        <span className="text-emerald-700">{e.respuestas.voy} van</span>
+                        {' · '}
+                        <span className="text-red-700">{e.respuestas.no_voy} no van</span>
+                        {' · '}
+                        {Math.max(0, total - e.respuestas.voy - e.respuestas.no_voy)} sin responder
+                      </p>
+                    ) : null}
                   </div>
 
                   <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-700">

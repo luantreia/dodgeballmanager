@@ -177,6 +177,16 @@ const ModalAsistencia = ({ entrenamientoId, onClose, onGuardado }: Props) => {
               <li key={fila.jugadorId} className="flex items-center gap-2 py-2">
                 <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
                   {fila.jugador}
+                  {fila.respuesta === 'voy' || fila.respuesta === 'no_voy' ? (
+                    <span
+                      className={`ml-2 rounded-full px-1.5 py-0.5 text-2xs font-semibold ${
+                        fila.respuesta === 'voy' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                      }`}
+                      title={fila.respuestaMotivo || undefined}
+                    >
+                      {fila.respuesta === 'voy' ? 'Dijo que va' : 'Avisó que no va'}
+                    </span>
+                  ) : null}
                 </span>
                 <div className="flex shrink-0 gap-1" role="group" aria-label={`Asistencia de ${fila.jugador}`}>
                   {ESTADOS.map((e) => {
