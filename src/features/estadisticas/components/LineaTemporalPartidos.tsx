@@ -99,9 +99,9 @@ const LineaTemporalPartidos = ({ partidos, onAbrir, onDescargar }: Props) => {
     <div className="space-y-4" role="region" aria-label="Línea temporal de partidos">
       {grupos.map((grupo) => (
         <section key={grupo.clave}>
-          <h4 className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">
+          <h4 className="mb-1 text-xs font-bold uppercase tracking-wider text-muted">
             {grupo.titulo}
-            <span className="ml-2 font-medium normal-case tracking-normal text-slate-400">
+            <span className="ml-2 font-medium normal-case tracking-normal text-muted">
               · {grupo.partidos.length} {grupo.partidos.length === 1 ? 'partido' : 'partidos'}
             </span>
           </h4>
@@ -135,23 +135,23 @@ const LineaTemporalPartidos = ({ partidos, onAbrir, onDescargar }: Props) => {
                       title={`${marca.etiqueta}${partido.competencia ? ` · ${partido.competencia.nombre}` : ' · Amistoso'}`}
                       className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left transition hover:border-brand-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 [touch-action:manipulation]"
                     >
-                      <span className="w-10 shrink-0 text-[11px] tabular-nums text-slate-400">
+                      <span className="w-10 shrink-0 text-[11px] tabular-nums text-muted">
                         {fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
                       </span>
 
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
-                        <span className="text-slate-400">{partido.esLocal ? 'vs' : '@'}</span>{' '}
+                        <span className="text-muted">{partido.esLocal ? 'vs' : '@'}</span>{' '}
                         {partido.rival?.nombre ?? 'Rival'}
                       </span>
 
-                      <span className="shrink-0 text-[10px] font-medium text-slate-400">
+                      <span className="shrink-0 text-2xs font-medium text-muted">
                         {partido.modalidad}
                       </span>
 
                       {partido.datos.oficial.existe && partido.datos.planilla && (
                         <span
                           title="Este partido tiene estadísticas oficiales y planilla propia"
-                          className="shrink-0 rounded border border-dashed border-slate-300 px-1 text-[10px] font-medium text-slate-500"
+                          className="shrink-0 rounded border border-dashed border-slate-300 px-1 text-2xs font-medium text-slate-500"
                         >
                           2
                         </span>

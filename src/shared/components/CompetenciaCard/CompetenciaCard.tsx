@@ -16,7 +16,7 @@ const CompetenciaCard = ({ participacion, acciones }: CompetenciaCardProps) => (
   <article className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
     <header className="flex items-start justify-between gap-4">
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-400">Competencia</p>
+        <p className="text-xs uppercase tracking-wide text-muted">Competencia</p>
         <h3 className="text-lg font-semibold text-slate-900">{participacion.competencia.nombre}</h3>
         {participacion.competencia.faseActual ? (
           <p className="text-sm text-slate-500">Fase: {participacion.competencia.faseActual}</p>

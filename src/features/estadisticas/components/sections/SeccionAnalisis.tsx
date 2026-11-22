@@ -269,7 +269,7 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
       >
         <span aria-hidden>👁</span>
         {perspectiva._id === equipoId ? 'Mi equipo' : perspectiva.nombre}
-        <span aria-hidden className={`text-[9px] transition-transform ${perspectivaAbierta ? 'rotate-180' : ''}`}>
+        <span aria-hidden className={`text-2xs transition-transform ${perspectivaAbierta ? 'rotate-180' : ''}`}>
           ▾
         </span>
       </button>
@@ -286,7 +286,7 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
             Mi equipo
           </button>
           {otrosEquipos.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-slate-400">Todavía no capturaste datos de otro equipo.</p>
+            <p className="px-3 py-2 text-xs text-muted">Todavía no capturaste datos de otro equipo.</p>
           ) : (
             otrosEquipos.map((e) => (
               <button
@@ -379,7 +379,7 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
               : `${filtros.partidosFiltrados.length} de ${partidos.length}`}
             <span
               aria-hidden
-              className={`text-[9px] transition-transform ${filtrosAbiertos ? 'rotate-180' : ''}`}
+              className={`text-2xs transition-transform ${filtrosAbiertos ? 'rotate-180' : ''}`}
             >
               ▾
             </span>

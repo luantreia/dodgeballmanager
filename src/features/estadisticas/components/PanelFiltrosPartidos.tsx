@@ -77,7 +77,7 @@ const PanelFiltrosPartidos = ({ filtros }: Props) => {
               <summary className="flex min-h-[2.25rem] cursor-pointer items-center justify-between gap-2 text-sm font-medium text-slate-700 [touch-action:manipulation]">
                 <span>{label}</span>
                 {elegidas > 0 && (
-                  <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                  <span className="rounded-full bg-brand-600 px-2 py-0.5 text-2xs font-bold text-white">
                     {elegidas}
                   </span>
                 )}
@@ -99,7 +99,7 @@ const PanelFiltrosPartidos = ({ filtros }: Props) => {
                     {opcion.label}
                     <span
                       className={`ml-1.5 tabular-nums ${
-                        opcion.seleccionada ? 'text-brand-100' : 'text-slate-400'
+                        opcion.seleccionada ? 'text-brand-100' : 'text-muted'
                       }`}
                     >
                       {opcion.cantidad}

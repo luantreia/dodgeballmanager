@@ -190,7 +190,7 @@ const ModalAsistencia = ({ entrenamientoId, onClose, onGuardado }: Props) => {
                         aria-label={`${ETIQUETAS[e.valor]}: ${fila.jugador}`}
                         title={ETIQUETAS[e.valor]}
                         className={`h-11 w-11 rounded-lg text-sm font-bold transition [touch-action:manipulation] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 ${
-                          activo ? e.clase : 'border border-slate-200 bg-white text-slate-400 hover:border-slate-300'
+                          activo ? e.clase : 'border border-slate-200 bg-white text-muted hover:border-slate-300'
                         }`}
                       >
                         {e.corto}

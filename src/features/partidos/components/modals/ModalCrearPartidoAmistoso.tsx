@@ -185,7 +185,7 @@ export const ModalCrearPartido = ({ isOpen, equipoId, onClose, onSuccess }: Moda
             required
           />
           {equiposLoading ? (
-            <p className="mt-2 text-xs text-slate-400">Buscando equipos…</p>
+            <p className="mt-2 text-xs text-muted">Buscando equipos…</p>
           ) : null}
           {!equiposLoading && !equiposError && form.rival.trim().length >= 2 && equiposOpciones.length === 0 ? (
             <p className="mt-2 text-xs text-slate-500">No encontramos equipos. Probá con otro nombre.</p>

@@ -245,7 +245,7 @@ const SeccionTests = ({ equipoId }: Props) => {
                   {t.nombre}
                   {t.unidad ? <span className="font-normal text-slate-500"> · {t.unidad}</span> : null}
                 </span>
-                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-600">
                   {ETIQUETA_DIRECCION[t.mejorEs]}
                 </span>
                 <button
@@ -381,7 +381,7 @@ const SeccionTests = ({ equipoId }: Props) => {
                       placeholder="—"
                       className="h-11 w-24 shrink-0 rounded-lg border border-slate-300 px-2 text-right text-sm tabular-nums"
                     />
-                    <span className="w-12 shrink-0 text-xs text-slate-400">{tipoActual?.unidad}</span>
+                    <span className="w-12 shrink-0 text-xs text-muted">{tipoActual?.unidad}</span>
                   </li>
                 ))}
               </ul>
@@ -439,7 +439,7 @@ const SeccionTests = ({ equipoId }: Props) => {
                         <td
                           className={`py-1.5 pr-2 text-right font-medium ${
                             f.mejoro === null
-                              ? 'text-slate-400'
+                              ? 'text-muted'
                               : f.mejoro
                               ? 'text-emerald-700'
                               : 'text-rose-700'
@@ -455,7 +455,7 @@ const SeccionTests = ({ equipoId }: Props) => {
                             </>
                           )}
                         </td>
-                        <td className="py-1.5 text-right text-slate-400">{f.mediciones.length}</td>
+                        <td className="py-1.5 text-right text-muted">{f.mediciones.length}</td>
                       </tr>
                     ))}
                   </tbody>

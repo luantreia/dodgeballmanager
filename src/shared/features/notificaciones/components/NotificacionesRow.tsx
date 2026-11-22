@@ -42,7 +42,7 @@ function renderDatos(datos: Record<string, any>) {
     return true;
   });
 
-  if (keys.length === 0) return <span className="text-slate-400 text-xs">Sin datos adicionales</span>;
+  if (keys.length === 0) return <span className="text-muted text-xs">Sin datos adicionales</span>;
 
   return (
     <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
@@ -61,7 +61,7 @@ function renderDatos(datos: Record<string, any>) {
         }
         return (
           <div key={k}>
-            <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+            <dt className="text-2xs font-bold uppercase tracking-wide text-muted">
               {FIELD_LABELS[k] ?? k}
             </dt>
             <dd className="text-sm text-slate-800 truncate" title={value}>{value}</dd>
@@ -229,14 +229,14 @@ export const NotificacionesRow: React.FC<NotificacionesRowProps> = ({
               {/* Meta: quién pidió + doble confirmación */}
               <div className="flex flex-wrap items-start gap-x-6 gap-y-2 border-b border-slate-100 pb-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Solicitado por</p>
+                  <p className="text-2xs font-bold uppercase tracking-wide text-muted">Solicitado por</p>
                   {(() => {
                     const cp = solicitud.creadoPor;
                     if (typeof cp === 'object' && cp !== null) {
                       return (
                         <p className="text-sm font-medium text-slate-800">
                           {cp.nombre ?? '—'}
-                          {cp.email && <span className="ml-1 text-xs text-slate-400">({cp.email})</span>}
+                          {cp.email && <span className="ml-1 text-xs text-muted">({cp.email})</span>}
                         </p>
                       );
                     }
@@ -246,38 +246,38 @@ export const NotificacionesRow: React.FC<NotificacionesRowProps> = ({
 
                 {solicitud.requiereDobleConfirmacion && (
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Aprobaciones</p>
+                    <p className="text-2xs font-bold uppercase tracking-wide text-muted">Aprobaciones</p>
                     <p className="text-sm font-medium text-slate-800">
                       {solicitud.aceptadoPor?.length ?? 0}
-                      <span className="text-slate-400"> / 2</span>
-                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">Doble confirmación</span>
+                      <span className="text-muted"> / 2</span>
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-bold text-amber-700">Doble confirmación</span>
                     </p>
                   </div>
                 )}
 
                 {solicitud.entidad && (
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Entidad</p>
+                    <p className="text-2xs font-bold uppercase tracking-wide text-muted">Entidad</p>
                     <p className="font-mono text-xs text-slate-500">{solicitud.entidad}</p>
                   </div>
                 )}
 
                 <div className="ml-auto text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Fecha</p>
+                  <p className="text-2xs font-bold uppercase tracking-wide text-muted">Fecha</p>
                   <p className="text-xs text-slate-500">{formatDate(solicitud.createdAt)}</p>
                 </div>
               </div>
 
               {/* Datos propuestos — legibles */}
               <div>
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">Datos propuestos</p>
+                <p className="mb-2 text-2xs font-bold uppercase tracking-wide text-muted">Datos propuestos</p>
                 {renderDatos(solicitud.datosPropuestos || {})}
               </div>
 
               {/* Motivo de rechazo */}
               {solicitud.estado === 'rechazado' && solicitud.motivoRechazo && (
                 <div className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-rose-500 mb-0.5">Motivo de rechazo</p>
+                  <p className="text-2xs font-bold uppercase tracking-wide text-rose-500 mb-0.5">Motivo de rechazo</p>
                   <p className="text-sm text-rose-800">{solicitud.motivoRechazo}</p>
                 </div>
               )}

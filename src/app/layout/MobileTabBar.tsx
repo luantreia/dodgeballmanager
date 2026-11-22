@@ -69,8 +69,8 @@ export default function MobileTabBar() {
   if (!isAuthenticated) return null;
 
   const claseTab = ({ isActive }: { isActive: boolean }) =>
-    `flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-bold [touch-action:manipulation] ${
-      isActive ? 'text-brand-600' : 'text-slate-400'
+    `flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 text-2xs font-bold [touch-action:manipulation] ${
+      isActive ? 'text-brand-600' : 'text-muted'
     }`;
 
   return (
@@ -96,7 +96,7 @@ export default function MobileTabBar() {
               <span aria-hidden className="text-base">{enlace.icon}</span>
               {enlace.label}
               {enlace.to === '/notificaciones' && pendientes > 0 && (
-                <span className="ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                <span className="ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-600 px-1.5 py-0.5 text-2xs font-bold text-white">
                   {pendientes}
                 </span>
               )}
@@ -133,8 +133,8 @@ export default function MobileTabBar() {
           type="button"
           onClick={() => setMasAbierto((v) => !v)}
           aria-expanded={masAbierto}
-          className={`relative flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-bold [touch-action:manipulation] ${
-            masAbierto ? 'text-brand-600' : 'text-slate-400'
+          className={`relative flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 text-2xs font-bold [touch-action:manipulation] ${
+            masAbierto ? 'text-brand-600' : 'text-muted'
           }`}
         >
           <span aria-hidden className="text-lg leading-none">⋯</span>

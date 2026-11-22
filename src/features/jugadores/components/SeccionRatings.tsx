@@ -13,7 +13,7 @@ const nombreBucket = (b: BucketRating): string =>
   [b.modalidad, b.categoria].filter(Boolean).join(' · ') || 'Competencia';
 
 const Delta = ({ valor }: { valor: number }) => {
-  if (!valor) return <span className="text-slate-300">—</span>;
+  if (!valor) return <span className="text-muted">—</span>;
   const sube = valor > 0;
   return (
     <span className={sube ? 'text-emerald-600' : 'text-rose-600'}>
@@ -101,7 +101,7 @@ const SeccionRatings = ({ equipoId }: Props) => {
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
                     {jugador.nombre}
                   </span>
-                  <span className="shrink-0 text-xs text-slate-400 tabular-nums">
+                  <span className="shrink-0 text-xs text-muted tabular-nums">
                     {global.matchesPlayed} PJ
                   </span>
                   <span className="w-12 shrink-0 text-right text-xs tabular-nums">
@@ -110,7 +110,7 @@ const SeccionRatings = ({ equipoId }: Props) => {
                   <span className="w-14 shrink-0 text-right text-base font-bold tabular-nums text-slate-900">
                     {Math.round(global.rating)}
                   </span>
-                  <span aria-hidden className="w-3 shrink-0 text-slate-300">
+                  <span aria-hidden className="w-3 shrink-0 text-muted">
                     {otros.length > 0 ? (abierto ? '▲' : '▼') : ''}
                   </span>
                 </button>
@@ -125,7 +125,7 @@ const SeccionRatings = ({ equipoId }: Props) => {
                         <span className="min-w-0 flex-1 truncate text-slate-600">
                           {nombreBucket(bucket)}
                         </span>
-                        <span className="shrink-0 text-slate-400 tabular-nums">
+                        <span className="shrink-0 text-muted tabular-nums">
                           {bucket.wins}G-{bucket.draws}E-{bucket.losses}P
                         </span>
                         <span className="w-14 shrink-0 text-right font-semibold tabular-nums text-slate-700">
@@ -142,7 +142,7 @@ const SeccionRatings = ({ equipoId }: Props) => {
       )}
 
       {conRating.length < ordenados.length && (
-        <p className="mt-3 text-xs text-slate-400">
+        <p className="mt-3 text-xs text-muted">
           {ordenados.length - conRating.length} jugador
           {ordenados.length - conRating.length === 1 ? '' : 'es'} del plantel sin partidos ranked.
         </p>

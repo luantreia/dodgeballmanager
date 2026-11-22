@@ -57,7 +57,7 @@ export default function Navbar() {
               <span className="inline-flex items-center gap-2">
                 {l.label}
                 {l.to === '/notificaciones' && pendientes > 0 ? (
-                  <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-brand-600 px-1.5 py-0.5 text-2xs font-semibold text-white">
                     {pendientes}
                   </span>
                 ) : null}

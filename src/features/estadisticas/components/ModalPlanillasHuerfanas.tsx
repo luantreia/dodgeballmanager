@@ -192,7 +192,7 @@ const ModalPlanillasHuerfanas = ({ equipoId, onClose, onCambio }: Props) => {
                         </button>
                       ) : (
                         <span
-                          className="shrink-0 text-xs text-slate-400"
+                          className="shrink-0 text-xs text-muted"
                           title="Sólo se puede reasignar una planilla en borrador"
                         >
                           No editable

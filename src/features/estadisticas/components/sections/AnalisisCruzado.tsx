@@ -445,7 +445,7 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
                 </ResponsiveContainer>
               </div>
               {tabla.clavesFila.length > MAX_BARRAS && (
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-muted">
                   El gráfico muestra las {MAX_BARRAS} primeras filas; la tabla las tiene todas.
                 </p>
               )}

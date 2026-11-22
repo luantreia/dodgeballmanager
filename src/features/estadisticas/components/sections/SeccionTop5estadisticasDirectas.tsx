@@ -85,7 +85,7 @@ export const SeccionTop5estadisticasDirectas: FC<Props> = ({ equipoId, titulo = 
       <header className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-slate-900">{titulo}</h2>
         <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-wide text-slate-400">Ordenar por</span>
+          <span className="text-xs uppercase tracking-wide text-muted">Ordenar por</span>
           <select
             value={ordenTop}
             onChange={(e) => setOrdenTop(e.target.value as 'efectividad' | 'hoc')}

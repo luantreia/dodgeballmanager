@@ -169,7 +169,7 @@ const SeccionCondicionesSet = ({ sets }: Props) => {
                     <td className="sticky left-0 bg-white px-2 py-2 font-medium text-slate-900">
                       {t.tramo}
                       {t.decididos > 0 && t.decididos < MUESTRA_CONFIABLE && (
-                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-amber-700">
                           Poca muestra
                         </span>
                       )}

@@ -46,7 +46,7 @@ export type JugadorEstadisticasCardProps = {
 };
 
 const ETIQUETA_ESTADO: Record<EstadoGuardadoFila, { texto: string; clase: string }> = {
-  pendiente: { texto: 'Sin guardar', clase: 'text-slate-400' },
+  pendiente: { texto: 'Sin guardar', clase: 'text-muted' },
   guardando: { texto: 'Guardando…', clase: 'text-amber-600' },
   guardado: { texto: 'Guardado', clase: 'text-emerald-600' },
   error: { texto: 'No se guardó — tocá algo de esta fila para reintentar', clase: 'text-rose-600' },
@@ -94,7 +94,7 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
   return (
     <div className="rounded-lg bg-white p-1 shadow-md">
       {estadoGuardado && (
-        <p className={`text-right text-[9px] font-medium leading-tight ${ETIQUETA_ESTADO[estadoGuardado].clase}`}>
+        <p className={`text-right text-2xs font-medium leading-tight ${ETIQUETA_ESTADO[estadoGuardado].clase}`}>
           {ETIQUETA_ESTADO[estadoGuardado].texto}
         </p>
       )}
@@ -143,7 +143,7 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
             className={`flex h-9 w-7 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition [touch-action:manipulation] ${
               estadisticasJugador.survive
                 ? 'border-emerald-400 bg-emerald-100 text-emerald-700'
-                : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                : 'border-slate-200 text-muted hover:bg-slate-50'
             }`}
           >
             S
@@ -158,7 +158,7 @@ const JugadorEstadisticasCard: FC<JugadorEstadisticasCardProps> = ({
           const valor = estadisticasJugador[campo] ?? 0;
           return (
             <div key={campo} className="flex flex-col items-center gap-0.5">
-              <span className="text-[9px] font-medium uppercase leading-none text-slate-500">{abrev}</span>
+              <span className="text-2xs font-medium uppercase leading-none text-slate-500">{abrev}</span>
               <ContadorEstadistica
                 valor={valor}
                 disposicion="vertical"

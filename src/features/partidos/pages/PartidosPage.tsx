@@ -616,7 +616,7 @@ const PartidosPage = () => {
           {/* El conteo reemplaza a la etiqueta «En agenda», que repetía el título con otras
               palabras y no decía nada que no se viera. */}
           <h2 className="text-base font-semibold text-slate-900">
-            Próximos <span className="font-normal text-slate-400">{proximos.length}</span>
+            Próximos <span className="font-normal text-muted">{proximos.length}</span>
           </h2>
           {loading ? (
             <div className="space-y-3">
@@ -667,7 +667,7 @@ const PartidosPage = () => {
 
         <div className="space-y-4">
           <h2 className="text-base font-semibold text-slate-900">
-            Resultados <span className="font-normal text-slate-400">{recientes.length}</span>
+            Resultados <span className="font-normal text-muted">{recientes.length}</span>
           </h2>
           {loading ? (
             <div className="space-y-3">

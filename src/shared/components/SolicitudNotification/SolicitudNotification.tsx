@@ -66,7 +66,7 @@ export const SolicitudNotification: React.FC<SolicitudNotificationProps> = ({
       {pendientes > 0 && (
         <span
           aria-hidden
-          className="absolute right-1 top-1 inline-flex min-w-[1.15rem] items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-4 text-white"
+          className="absolute right-1 top-1 inline-flex min-w-[1.15rem] items-center justify-center rounded-full bg-rose-600 px-1 text-2xs font-bold leading-4 text-white"
         >
           {pendientes > 99 ? '99+' : pendientes}
         </span>

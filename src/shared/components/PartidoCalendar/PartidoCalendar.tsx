@@ -194,7 +194,7 @@ const PartidoCalendar = ({
               {visibles.map((p, i) => (
                 <span
                   key={p.id ?? i}
-                  className="flex items-center gap-1 truncate text-[10px] font-medium text-slate-600"
+                  className="flex items-center gap-1 truncate text-2xs font-medium text-slate-600"
                 >
                   <span
                     className={`h-1.5 w-1.5 shrink-0 rounded-full ${PUNTO_ESTADO[p.estado ?? 'programado']}`}
@@ -203,7 +203,7 @@ const PartidoCalendar = ({
                 </span>
               ))}
               {sobrantes > 0 && (
-                <span className="block text-[10px] font-semibold text-brand-600">+{sobrantes} más</span>
+                <span className="block text-2xs font-semibold text-brand-600">+{sobrantes} más</span>
               )}
             </div>
           </>
@@ -269,7 +269,7 @@ const PartidoCalendar = ({
           <div className="grid grid-cols-7 gap-1">
             {semana.map((fecha, i) => (
               <div key={i} className="space-y-1">
-                <div className="text-center text-[10px] font-bold uppercase text-slate-400">{DIAS[i]}</div>
+                <div className="text-center text-2xs font-bold uppercase text-muted">{DIAS[i]}</div>
                 {renderCelda(fecha, { maxChips: MAX_CHIPS_SEMANAL })}
               </div>
             ))}
@@ -284,7 +284,7 @@ const PartidoCalendar = ({
           </h3>
           <div className="mb-1 grid grid-cols-7 gap-1 text-center">
             {DIAS.map((d) => (
-              <div key={d} className="text-[10px] font-bold uppercase text-slate-400">{d}</div>
+              <div key={d} className="text-2xs font-bold uppercase text-muted">{d}</div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-1">

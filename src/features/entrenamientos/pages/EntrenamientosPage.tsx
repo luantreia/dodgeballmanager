@@ -32,7 +32,7 @@ const porcentaje = (valor: number | null) => (valor === null ? '—' : `${Math.r
 
 /** Semáforo del porcentaje de asistencia. Un número suelto no dice si está bien o mal. */
 const claseAsistencia = (valor: number | null): string => {
-  if (valor === null) return 'text-slate-400';
+  if (valor === null) return 'text-muted';
   if (valor >= 0.85) return 'text-emerald-700';
   if (valor >= 0.6) return 'text-amber-700';
   return 'text-rose-700';
@@ -265,7 +265,7 @@ const EntrenamientosPage = () => {
                     <td className="py-1.5 pr-2 text-right text-slate-600">{j.presente}</td>
                     <td className="py-1.5 pr-2 text-right text-slate-600">{j.tarde}</td>
                     <td className="py-1.5 pr-2 text-right text-slate-600">{j.ausente}</td>
-                    <td className="py-1.5 pr-2 text-right text-slate-400">{j.justificado}</td>
+                    <td className="py-1.5 pr-2 text-right text-muted">{j.justificado}</td>
                     <td className={`py-1.5 text-right font-bold ${claseAsistencia(j.porcentaje)}`}>
                       {porcentaje(j.porcentaje)}
                     </td>

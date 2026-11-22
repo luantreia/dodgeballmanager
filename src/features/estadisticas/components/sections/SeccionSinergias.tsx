@@ -43,7 +43,7 @@ const formatearSinergia = (valor: number | null): string => {
 };
 
 const colorSinergia = (valor: number | null): string => {
-  if (valor === null) return 'text-slate-400';
+  if (valor === null) return 'text-muted';
   if (valor > 0.05) return 'text-emerald-700';
   if (valor < -0.05) return 'text-rose-700';
   return 'text-slate-600';
@@ -54,7 +54,7 @@ const NombresGrupo = ({ nombres }: { nombres: string[] }) => (
 );
 
 const EtiquetaInseparables = () => (
-  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-slate-500">
     Inseparables
   </span>
 );

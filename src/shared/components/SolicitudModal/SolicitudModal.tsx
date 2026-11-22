@@ -229,7 +229,7 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
               <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">
                 <div className="font-medium">{valores.jugadorNombre}</div>
                 {valores.jugadorAlias ? <div className="text-xs text-slate-500">Alias: {valores.jugadorAlias}</div> : null}
-                {valores.jugadorId ? <div className="text-xs text-slate-400 mt-1">ID: {valores.jugadorId}</div> : null}
+                {valores.jugadorId ? <div className="text-xs text-muted mt-1">ID: {valores.jugadorId}</div> : null}
               </div>
             </div>
           ) : valores.jugadorId ? (
@@ -252,7 +252,7 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
               <label className="block text-sm font-medium text-gray-700 mb-1">Equipo</label>
               <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">
             <div className="font-medium">{valores.equipoNombre}</div>
-            {valores.equipoId ? <div className="text-xs text-slate-400 mt-1">ID: {valores.equipoId}</div> : null}
+            {valores.equipoId ? <div className="text-xs text-muted mt-1">ID: {valores.equipoId}</div> : null}
               </div>
             </div>
           ) : valores.equipoId ? (

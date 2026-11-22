@@ -41,13 +41,13 @@ const TeamSelector = () => {
             {equipoSeleccionado && equipoSeleccionado.verificado === false ? (
               <span
                 title="Equipo sin verificar: todavía no puede inscribirse a competencias"
-                className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-700"
+                className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-2xs font-semibold uppercase text-amber-700"
               >
                 Sin verificar
               </span>
             ) : null}
           </span>
-          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400">
+          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-muted">
             <ChevronUpDownIcon aria-hidden className="h-5 w-5" />
           </span>
         </Listbox.Button>

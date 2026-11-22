@@ -57,7 +57,7 @@ const EstadisticasFiltradas = ({ filas, descripcion }: Props) => {
           <div key={tarjeta.label} className="rounded-xl border border-slate-200 bg-white p-3 shadow-card">
             <p className="text-xs font-medium text-slate-500">{tarjeta.label}</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{tarjeta.valor}</p>
-            <p className="mt-0.5 text-[11px] text-slate-400">{tarjeta.pie}</p>
+            <p className="mt-0.5 text-[11px] text-muted">{tarjeta.pie}</p>
           </div>
         ))}
       </div>

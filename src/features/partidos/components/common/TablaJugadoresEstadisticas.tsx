@@ -28,7 +28,7 @@ type Props = {
 };
 
 const ETIQUETA_ESTADO: Record<EstadoGuardadoFila, { texto: string; clase: string }> = {
-  pendiente: { texto: 'Sin guardar', clase: 'text-slate-400' },
+  pendiente: { texto: 'Sin guardar', clase: 'text-muted' },
   guardando: { texto: 'Guardando…', clase: 'text-amber-600' },
   guardado: { texto: 'Guardado', clase: 'text-emerald-600' },
   error: { texto: 'Error', clase: 'text-rose-600' },
@@ -100,7 +100,7 @@ const TablaJugadoresEstadisticas: FC<Props> = ({
                     </span>
                   )}
                   {fila.estadoGuardado && (
-                    <span className={`shrink-0 text-[10px] font-medium ${ETIQUETA_ESTADO[fila.estadoGuardado].clase}`}>
+                    <span className={`shrink-0 text-2xs font-medium ${ETIQUETA_ESTADO[fila.estadoGuardado].clase}`}>
                       {ETIQUETA_ESTADO[fila.estadoGuardado].texto}
                     </span>
                   )}
@@ -130,7 +130,7 @@ const TablaJugadoresEstadisticas: FC<Props> = ({
                     className={`flex h-8 w-7 items-center justify-center rounded-md border text-xs font-bold transition ${
                       fila.estadisticas.survive
                         ? 'border-emerald-400 bg-emerald-100 text-emerald-700'
-                        : 'border-slate-200 text-slate-400 hover:bg-slate-50'
+                        : 'border-slate-200 text-muted hover:bg-slate-50'
                     }`}
                   >
                     S

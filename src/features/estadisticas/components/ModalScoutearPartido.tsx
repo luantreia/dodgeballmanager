@@ -272,7 +272,7 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
                           {/* Sólo se etiqueta la fase cuando hay más de una en la temporada —
                               con una sola, repetir el nombre no distingue nada. */}
                           {temporada.fases.length > 1 && (
-                            <p className="px-1 pb-1 text-[11px] font-semibold text-slate-400">{fase.nombre}</p>
+                            <p className="px-1 pb-1 text-[11px] font-semibold text-muted">{fase.nombre}</p>
                           )}
                           <ul className="space-y-1.5">
                             {fase.partidos.map((p) => (

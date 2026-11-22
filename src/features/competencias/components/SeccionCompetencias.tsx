@@ -201,12 +201,12 @@ const SeccionCompetencias = () => {
                 <p className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                   <span>{participacion.temporada.nombre}</span>
                   {participacion.temporada.estado === 'en_curso' && (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-2xs font-bold uppercase tracking-wide text-emerald-700">
                       En curso
                     </span>
                   )}
                   {participacion.temporada.estado === 'finalizada' && (
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-bold uppercase tracking-wide text-slate-500">
                       Finalizada
                     </span>
                   )}

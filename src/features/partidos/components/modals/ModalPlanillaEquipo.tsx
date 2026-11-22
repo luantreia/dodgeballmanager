@@ -1170,7 +1170,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
         <span className="text-base font-semibold sm:text-base">
           Mi planilla
           {equipoNombre && (
-            <span className="ml-1.5 align-middle text-xs font-normal text-slate-400">
+            <span className="ml-1.5 align-middle text-xs font-normal text-muted">
               · {equipoNombre}
             </span>
           )}
@@ -1319,7 +1319,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                         className={`px-2 text-sm font-bold transition disabled:opacity-40 ${
                           activo
                             ? 'text-blue-100 hover:bg-blue-700 hover:text-white'
-                            : 'text-gray-400 hover:bg-gray-200 hover:text-rose-600'
+                            : 'text-muted hover:bg-gray-200 hover:text-rose-600'
                         }`}
                       >
                         ×
@@ -1491,7 +1491,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                     <span className="text-sm text-gray-800">
                       {nombrePresente(presente)}
                       {gruposDePlanilla.length > 1 && (
-                        <span className="ml-1.5 text-xs text-slate-400">
+                        <span className="ml-1.5 text-xs text-muted">
                           · {gruposDePlanilla.find((g) => g.id === (idEquipoDePresente(presente) ?? gruposDePlanilla[0]?.id))?.nombre}
                         </span>
                       )}
@@ -1543,7 +1543,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                           <td className="py-1.5 pr-3 text-gray-800">
                             {nombrePresente(presente)}
                             {gruposDePlanilla.length > 1 && (
-                              <span className="ml-1.5 text-xs text-slate-400">
+                              <span className="ml-1.5 text-xs text-muted">
                                 · {gruposDePlanilla.find((g) => g.id === (idEquipoDePresente(presente) ?? gruposDePlanilla[0]?.id))?.nombre}
                               </span>
                             )}

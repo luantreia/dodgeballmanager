@@ -48,7 +48,7 @@ const BarraFiltros = ({ resumen, activo = false, acciones, children }: Props) =>
         >
           <span aria-hidden>⚙</span>
           {resumen}
-          <span aria-hidden className={`text-[9px] transition-transform ${abierto ? 'rotate-180' : ''}`}>
+          <span aria-hidden className={`text-2xs transition-transform ${abierto ? 'rotate-180' : ''}`}>
             ▾
           </span>
         </button>

@@ -385,7 +385,7 @@ const ModalVisorPartido = ({ partido, equipoId, onClose, onEditar, onCambio }: P
               {filasPropias.length > 0 ? (
                 <TablaFilas filas={filasPropias} />
               ) : (
-                <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-xs text-slate-400">
+                <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-xs text-muted">
                   Sin datos propios en esta fuente.
                 </p>
               )}

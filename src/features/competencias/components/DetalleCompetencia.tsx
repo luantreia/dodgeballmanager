@@ -401,7 +401,7 @@ const DetalleCompetencia = ({ competenciaId, competenciaNombre, equipoId, onVolv
                   <li key={jugador.id} className="flex items-center justify-between gap-3 py-2">
                     <span className="truncate text-sm text-slate-800">{nombreJugador(jugador)}</span>
                     <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-2xs font-bold uppercase tracking-wide ${
                         estado === 'aceptado'
                           ? 'bg-emerald-100 text-emerald-700'
                           : estado === 'suspendido'

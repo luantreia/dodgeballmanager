@@ -55,7 +55,7 @@ const Delta = ({ actual, base }: { actual: number | null; base: number | null })
   if (actual === null || base === null || actual === base) return null;
   const mejor = actual > base;
   return (
-    <span className={`ml-1 text-[10px] font-bold ${mejor ? 'text-emerald-600' : 'text-rose-600'}`}>
+    <span className={`ml-1 text-2xs font-bold ${mejor ? 'text-emerald-600' : 'text-rose-600'}`}>
       {mejor ? '▲' : '▼'}
     </span>
   );
@@ -140,7 +140,7 @@ const ComparadorSegmentos = ({ segmentos, partidos, filas, onQuitar, onLimpiar }
                       type="button"
                       onClick={() => onQuitar(segmento.id)}
                       aria-label={`Quitar ${segmento.nombre}`}
-                      className="shrink-0 rounded px-1 text-slate-400 hover:text-rose-600"
+                      className="shrink-0 rounded px-1 text-muted hover:text-rose-600"
                     >
                       ×
                     </button>
@@ -199,7 +199,7 @@ const ComparadorSegmentos = ({ segmentos, partidos, filas, onQuitar, onLimpiar }
                           {m ? (
                             <>
                               {formatearPorcentaje(m.efectividad, 1)}
-                              <span className="ml-1 text-[10px] text-slate-400">
+                              <span className="ml-1 text-2xs text-muted">
                                 {m.hits}/{m.throws}
                               </span>
                               {indice > 0 && (
@@ -207,7 +207,7 @@ const ComparadorSegmentos = ({ segmentos, partidos, filas, onQuitar, onLimpiar }
                               )}
                             </>
                           ) : (
-                            <span className="text-slate-300">—</span>
+                            <span className="text-muted">—</span>
                           )}
                         </td>
                       );

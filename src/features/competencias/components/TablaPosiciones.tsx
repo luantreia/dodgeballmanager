@@ -113,7 +113,7 @@ const TablaPosiciones = ({ competenciaId, competenciaNombre, equipoId }: Props) 
           Tabla de posiciones
           <span className="ml-2 font-normal text-slate-500">{competenciaNombre}</span>
         </span>
-        <span aria-hidden className="text-slate-400">
+        <span aria-hidden className="text-muted">
           {abierta ? '▲' : '▼'}
         </span>
       </button>
@@ -175,7 +175,7 @@ const TablaPosiciones = ({ competenciaId, competenciaNombre, equipoId }: Props) 
               {bloques.map(([titulo, filas]) => (
                 <div key={titulo || 'general'} className="space-y-1">
                   {titulo && (
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{titulo}</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted">{titulo}</h4>
                   )}
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[26rem] text-sm">
@@ -208,7 +208,7 @@ const TablaPosiciones = ({ competenciaId, competenciaNombre, equipoId }: Props) 
                                   {fila.clasificado && (
                                     <span
                                       title="Clasificado"
-                                      className="rounded bg-emerald-100 px-1 text-[10px] font-bold text-emerald-700"
+                                      className="rounded bg-emerald-100 px-1 text-2xs font-bold text-emerald-700"
                                     >
                                       C
                                     </span>
@@ -216,7 +216,7 @@ const TablaPosiciones = ({ competenciaId, competenciaNombre, equipoId }: Props) 
                                   {fila.eliminado && (
                                     <span
                                       title="Eliminado"
-                                      className="rounded bg-rose-100 px-1 text-[10px] font-bold text-rose-700"
+                                      className="rounded bg-rose-100 px-1 text-2xs font-bold text-rose-700"
                                     >
                                       E
                                     </span>

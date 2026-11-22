@@ -237,7 +237,7 @@ const OnboardingPage = () => {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700" htmlFor="pais-equipo">
-                  País <span className="font-normal text-slate-400">(opcional)</span>
+                  País <span className="font-normal text-muted">(opcional)</span>
                 </label>
                 <input
                   id="pais-equipo"

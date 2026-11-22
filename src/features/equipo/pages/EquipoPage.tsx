@@ -552,7 +552,7 @@ const EquipoPage = () => {
                     }}
                   />
                 ) : (
-                  <span className="text-xs text-slate-400">Sin escudo</span>
+                  <span className="text-xs text-muted">Sin escudo</span>
                 )}
               </div>
               {logoInvalido && formData.logoUrl ? (
@@ -812,7 +812,7 @@ const EquipoPage = () => {
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex gap-2">
                       {isMiembroDirty(miembro) ? (
-                        <span className="rounded bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                        <span className="rounded bg-amber-100 px-2 py-1 text-2xs font-semibold uppercase tracking-wide text-amber-800">
                           Sin guardar
                         </span>
                       ) : null}

@@ -77,7 +77,7 @@ const PartidoCard = ({ partido, actions, onClick }: PartidoCardProps) => {
       return <img src={equipo.escudo} alt="" className="h-9 w-9 shrink-0 object-contain" />;
     }
     return (
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-400">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-muted">
         {equipo?.nombre?.charAt(0) || fallback}
       </div>
     );
@@ -110,7 +110,7 @@ const PartidoCard = ({ partido, actions, onClick }: PartidoCardProps) => {
           {contexto}
         </span>
         <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badge.className}`}
+          className={`shrink-0 rounded-full px-2 py-0.5 text-2xs font-bold uppercase tracking-wide ${badge.className}`}
         >
           {badge.label}
         </span>
@@ -128,11 +128,11 @@ const PartidoCard = ({ partido, actions, onClick }: PartidoCardProps) => {
           {mostrarMarcador ? (
             <span className="text-lg font-bold tabular-nums text-slate-900">
               {partido.marcadorLocal ?? 0}
-              <span className="mx-1 text-slate-300">-</span>
+              <span className="mx-1 text-muted">-</span>
               {partido.marcadorVisitante ?? 0}
             </span>
           ) : (
-            <span className="text-sm font-bold text-slate-300">VS</span>
+            <span className="text-sm font-bold text-muted">VS</span>
           )}
         </div>
 
@@ -146,7 +146,7 @@ const PartidoCard = ({ partido, actions, onClick }: PartidoCardProps) => {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 px-3 pb-2 text-[11px] text-slate-400">
+      <div className="flex items-center gap-2 px-3 pb-2 text-[11px] text-muted">
         <span className="truncate">{fechaTexto}</span>
         {partido.escenario ? <span className="truncate">· {partido.escenario}</span> : null}
       </div>

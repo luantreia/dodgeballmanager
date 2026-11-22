@@ -84,14 +84,14 @@ const ExportarDatos = ({ filasFiltradas, partidos, filas, segmentos, descripcion
       >
         <span aria-hidden>↓</span>
         Exportar
-        <span aria-hidden className={`text-[9px] transition-transform ${abierto ? 'rotate-180' : ''}`}>
+        <span aria-hidden className={`text-2xs transition-transform ${abierto ? 'rotate-180' : ''}`}>
           ▾
         </span>
       </button>
 
       {abierto && hayDatos && (
         <div className="absolute left-0 top-full z-40 mt-1 w-64 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg">
-          <p className="px-2 py-1 text-[10px] uppercase tracking-wide text-slate-400">
+          <p className="px-2 py-1 text-2xs uppercase tracking-wide text-muted">
             Se exporta lo que tenés filtrado
           </p>
           {opciones.map((opcion) => (
@@ -105,7 +105,7 @@ const ExportarDatos = ({ filasFiltradas, partidos, filas, segmentos, descripcion
               <span className="block text-[11px] text-slate-500">{opcion.detalle}</span>
             </button>
           ))}
-          <p className="border-t border-slate-100 px-2 pb-1 pt-1.5 text-[10px] leading-snug text-slate-400">
+          <p className="border-t border-slate-100 px-2 pb-1 pt-1.5 text-2xs leading-snug text-muted">
             CSV para Excel o Sheets, con punto y coma como separador.
           </p>
         </div>

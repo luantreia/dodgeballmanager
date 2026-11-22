@@ -55,7 +55,7 @@ const Flecha = ({ valor }: { valor: number }) => {
   if (Math.abs(valor) < 0.001) return null;
   const mejor = valor > 0;
   return (
-    <span className={`ml-0.5 text-[10px] font-bold ${mejor ? 'text-emerald-600' : 'text-rose-600'}`}>
+    <span className={`ml-0.5 text-2xs font-bold ${mejor ? 'text-emerald-600' : 'text-rose-600'}`}>
       {mejor ? '▲' : '▼'}
     </span>
   );
@@ -173,7 +173,7 @@ const SeccionTramosAlineacion = ({ sets, partidos }: Props) => {
             {tramo.ritmo.efectividad !== null && ` · ${formatearPorcentaje(tramo.ritmo.efectividad)}`}
           </span>
           {pocaMuestra && (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-amber-700">
               {tramo.sets === 1 ? '1 set' : `${tramo.sets} sets`}
             </span>
           )}
@@ -193,7 +193,7 @@ const SeccionTramosAlineacion = ({ sets, partidos }: Props) => {
           <TablaScroll className="mt-1.5">
             <table className="w-full min-w-[460px] text-xs">
               <thead>
-                <tr className="border-b border-slate-200 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-slate-200 text-2xs font-semibold uppercase tracking-wide text-slate-500">
                   <th className="sticky left-0 bg-white px-1.5 py-1 text-left">Jugador</th>
                   <th className="px-1.5 py-1 text-right">Sets</th>
                   <th className="px-1.5 py-1 text-right">Tiros/set</th>
