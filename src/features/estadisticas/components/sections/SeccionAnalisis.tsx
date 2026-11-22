@@ -27,6 +27,7 @@ import ModalPlanillasHuerfanas from '../ModalPlanillasHuerfanas';
 import ModalPlanillaEquipo from '../../../partidos/components/modals/ModalPlanillaEquipo';
 import ModalCapturaSetEstadisticas from '../../../partidos/components/modals/ModalCapturaSetEstadisticas';
 import { getPartidoDetallado, type PartidoDetallado } from '../../../partidos/services/partidoService';
+import { Tabs } from 'overtime-kit';
 
 type Props = {
   equipoId: string;
@@ -430,20 +431,8 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
           </div>
         )}
 
-        <div className="flex gap-1 overflow-x-auto border-t border-slate-200 bg-slate-100/70 px-2 py-1.5">
-          {PESTANAS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setPestana(p.id)}
-              aria-current={pestana === p.id ? 'page' : undefined}
-              className={`min-h-[2.5rem] flex-1 rounded-md px-2 text-[11px] font-bold uppercase tracking-tight transition-colors [touch-action:manipulation] ${
-                pestana === p.id ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="border-t border-slate-200 px-2 py-1.5">
+          <Tabs aria-label="Secciones del análisis" variante="segmentado" fullWidth items={PESTANAS} value={pestana} onChange={setPestana} />
         </div>
       </div>
 

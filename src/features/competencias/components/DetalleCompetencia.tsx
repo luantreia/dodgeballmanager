@@ -12,6 +12,7 @@ import {
 } from '../../partidos/services/partidoService';
 import { getJugadoresEquipo } from '../../jugadores/services/jugadorEquipoService';
 import type { Jugador, Partido } from '../../../shared/utils/types/types';
+import { Tabs } from 'overtime-kit';
 
 type Props = {
   competenciaId: string;
@@ -236,22 +237,7 @@ const DetalleCompetencia = ({ competenciaId, competenciaNombre, equipoId, onVolv
         )}
       </div>
 
-      <div className="flex gap-1 rounded-lg bg-slate-100/70 p-1" role="tablist">
-        {PESTANAS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            role="tab"
-            aria-selected={pestana === p.id}
-            onClick={() => setPestana(p.id)}
-            className={`min-h-[2.5rem] flex-1 rounded-md px-2 text-[11px] font-bold uppercase tracking-tight transition-colors [touch-action:manipulation] ${
-              pestana === p.id ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      <Tabs aria-label="Secciones de la competencia" variante="segmentado" fullWidth items={PESTANAS} value={pestana} onChange={setPestana} />
 
       {(temporadas.length > 1 || fases.length > 1) && (
         <div className="grid gap-2 sm:grid-cols-2">

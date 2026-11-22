@@ -13,6 +13,7 @@ import {
   type ResumenEstadisticasManual,
 } from '../services/estadisticasService';
 import { actualizarModoVisualizacionPartido } from '../../partidos/services/partidoService';
+import { Tabs } from 'overtime-kit';
 
 type VistaEstadisticas = 'general' | 'equipos' | 'jugadores';
 type ModoEstadisticas = 'automatico' | 'manual';
@@ -336,39 +337,17 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
             </select>
           </div>
 
-          {/* Botones de vista de estadísticas */}
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setVista('general')}
-              className={`px-4 py-2 rounded-md ${
-                vista === 'general'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              General
-            </button>
-            <button
-              onClick={() => setVista('equipos')}
-              className={`px-4 py-2 rounded-md ${
-                vista === 'equipos'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Equipos
-            </button>
-            <button
-              onClick={() => setVista('jugadores')}
-              className={`px-4 py-2 rounded-md ${
-                vista === 'jugadores'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Jugadores
-            </button>
-          </div>
+          <Tabs
+            aria-label="Vista de estadísticas"
+            size="sm"
+            items={[
+              { id: 'general', label: 'General' },
+              { id: 'equipos', label: 'Equipos' },
+              { id: 'jugadores', label: 'Jugadores' },
+            ]}
+            value={vista}
+            onChange={setVista}
+          />
         </div>
       </div>
 

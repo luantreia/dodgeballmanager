@@ -18,6 +18,7 @@ import {
 } from '../services/entrenamientoService';
 import ModalAsistencia from '../components/ModalAsistencia';
 import SeccionTests from '../components/SeccionTests';
+import { Tabs } from 'overtime-kit';
 
 const TIPOS: Array<{ valor: EntrenamientoTipo; label: string }> = [
   { valor: 'general', label: 'General' },
@@ -162,27 +163,16 @@ const EntrenamientosPage = () => {
         </p>
       </header>
 
-      <div className="flex gap-1 border-b border-slate-200" role="tablist">
-        {([
-          ['sesiones', 'Sesiones y asistencia'],
-          ['tests', 'Tests'],
-        ] as const).map(([clave, label]) => (
-          <button
-            key={clave}
-            type="button"
-            role="tab"
-            aria-selected={pestania === clave}
-            onClick={() => setPestania(clave)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition [touch-action:manipulation] ${
-              pestania === clave
-                ? 'border-brand-600 text-brand-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        aria-label="Secciones de entrenamientos"
+        variante="subrayado"
+        items={[
+          { id: 'sesiones', label: 'Sesiones y asistencia' },
+          { id: 'tests', label: 'Tests' },
+        ]}
+        value={pestania}
+        onChange={setPestania}
+      />
 
       {pestania === 'tests' ? (
         <SeccionTests equipoId={equipoSeleccionado.id} />

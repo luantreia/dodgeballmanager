@@ -16,6 +16,7 @@ import ModalInformacionPartido from '../components/modals/ModalInformacionPartid
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
 import { AdjustmentsHorizontalIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { getParticipaciones } from '../../competencias/services/equipoCompetenciaService';
+import { Tabs } from 'overtime-kit';
 
 type FiltroTipoPartido = 'todos' | 'competencia' | 'amistoso';
 
@@ -383,22 +384,14 @@ const PartidosPage = () => {
         </button>
       </header>
 
-      <div className="flex gap-1 rounded-lg bg-slate-100/70 p-1" role="tablist">
-        {(['agenda', 'competencias'] as const).map((id) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={pestana === id}
-            onClick={() => setPestana(id)}
-            className={`min-h-[2.5rem] flex-1 rounded-md px-2 text-[11px] font-bold uppercase tracking-tight transition-colors [touch-action:manipulation] ${
-              pestana === id ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'
-            }`}
-          >
-            {id === 'agenda' ? 'Agenda' : 'Competencias'}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        aria-label="Secciones de partidos"
+        variante="segmentado"
+        fullWidth
+        items={[{ id: 'agenda', label: 'Agenda' }, { id: 'competencias', label: 'Competencias' }]}
+        value={pestana}
+        onChange={setPestana}
+      />
 
       {pestana === 'competencias' && <SeccionCompetencias />}
 
@@ -422,21 +415,14 @@ const PartidosPage = () => {
               {/* Lista o calendario. La lista contesta «qué sigue» —está ordenada por cercanía y
                   separa lo que espera acción—; el calendario contesta «cómo viene el mes», que es
                   otra pregunta y hasta ahora no tenía dónde hacerse. Los dos filtran igual. */}
-              <div className="flex rounded-lg bg-slate-100 p-1">
-                {(['lista', 'calendario'] as const).map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setVista(v)}
-                    aria-pressed={vista === v}
-                    className={`min-h-[2.25rem] rounded-md px-3 text-xs font-semibold capitalize transition-all [touch-action:manipulation] ${
-                      vista === v ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'
-                    }`}
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
+              <Tabs
+                aria-label="Vista de partidos"
+                variante="segmentado"
+                size="sm"
+                items={[{ id: 'lista', label: 'Lista' }, { id: 'calendario', label: 'Calendario' }]}
+                value={vista}
+                onChange={setVista}
+              />
 
               {hayFiltros && (
                 <button

@@ -23,6 +23,7 @@ import { Input, Textarea } from '../../../shared/components/ui';
 import ModalGestionAdministradoresEntidad from '../../../shared/components/modalGestionAdministradoresEntidad/ModalGestionAdministradoresEntidad';
 import ConfirmModal from '../../../shared/components/ConfirmModal/ConfirmModal';
 import { agregarAdminEquipo, quitarAdminEquipo, getAdminsEquipo, getUsuarioById } from '../../auth/services/usersService';
+import { Tabs } from 'overtime-kit';
 
 type PestanaEquipo = 'plantel' | 'staff' | 'datos';
 
@@ -458,22 +459,7 @@ const EquipoPage = () => {
         cada una, porque para un DT es todo su gente. Se monta sólo la activa, así que entrar a
         ver el plantel ya no pide también los miembros y los administradores.
       */}
-      <div className="flex gap-1 rounded-lg bg-slate-100/70 p-1" role="tablist">
-        {PESTANAS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            role="tab"
-            aria-selected={pestana === p.id}
-            onClick={() => setPestana(p.id)}
-            className={`min-h-[2.5rem] flex-1 rounded-md px-2 text-[11px] font-bold uppercase tracking-tight transition-colors [touch-action:manipulation] ${
-              pestana === p.id ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      <Tabs aria-label="Secciones del equipo" variante="segmentado" fullWidth items={PESTANAS} value={pestana} onChange={setPestana} />
 
       {pestana === 'plantel' && <SeccionPlantel />}
 
