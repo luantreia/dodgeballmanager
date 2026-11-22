@@ -13,8 +13,8 @@ import {
 import { resumirSets, type SetAnalitico } from '../../utils/setsAnaliticos';
 import { calcularCondicion, FACTORES } from '../../utils/condicionesSet';
 import { formatearPorcentaje } from '../../utils/metricas';
-import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
 import { useEsMobile } from '../../../../shared/hooks/useEsMobile';
+import { DataTable } from 'overtime-kit';
 
 type Props = {
   sets: SetAnalitico[];
@@ -152,52 +152,43 @@ const SeccionCondicionesSet = ({ sets }: Props) => {
             </ResponsiveContainer>
           </div>
 
-          <TablaScroll>
-            <table className="w-full min-w-[420px] text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <th className="sticky left-0 bg-white px-2 py-2 text-left">{factor.label}</th>
-                  <th className="px-2 py-2 text-right">Sets</th>
-                  <th className="px-2 py-2 text-right">Decididos</th>
-                  <th className="px-2 py-2 text-right">Ganados</th>
-                  <th className="px-2 py-2 text-right text-slate-700">% ganados</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 tabular-nums">
-                {tramos.map((t) => (
-                  <tr key={t.tramo} className="hover:bg-slate-50/60">
-                    <td className="sticky left-0 bg-white px-2 py-2 font-medium text-slate-900">
-                      {t.tramo}
-                      {t.decididos > 0 && t.decididos < MUESTRA_CONFIABLE && (
-                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-amber-700">
-                          Poca muestra
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-2 py-2 text-right text-slate-700">{t.sets}</td>
-                    <td className="px-2 py-2 text-right text-slate-500">{t.decididos}</td>
-                    <td className="px-2 py-2 text-right text-slate-500">{t.ganados}</td>
-                    <td className="px-2 py-2 text-right font-semibold text-slate-900">
-                      {formatearPorcentaje(t.porcentaje)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-slate-300 text-slate-900">
-                  <td className="sticky left-0 bg-white px-2 py-2 text-xs font-bold uppercase tracking-wide">
-                    Total
-                  </td>
-                  <td className="px-2 py-2 text-right font-semibold tabular-nums">{base.sets}</td>
-                  <td className="px-2 py-2 text-right font-semibold tabular-nums">{base.decididos}</td>
-                  <td className="px-2 py-2 text-right font-semibold tabular-nums">{base.ganados}</td>
-                  <td className="px-2 py-2 text-right font-bold tabular-nums">
-                    {formatearPorcentaje(base.porcentaje)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </TablaScroll>
+          <DataTable
+            caption={`Sets ganados según ${factor.label}`}
+            data={tramos}
+            rowKey={(t) => t.tramo}
+            empty="Sin sets para este factor."
+            pageSize={0}
+            mobile="scroll"
+            stickyFirstColumn
+            columns={[
+              {
+                id: 'tramo',
+                header: factor.label,
+                cell: (t) => (
+                  <span className="font-medium text-slate-900">
+                    {t.tramo}
+                    {t.decididos > 0 && t.decididos < MUESTRA_CONFIABLE && (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-amber-700">
+                        Poca muestra
+                      </span>
+                    )}
+                  </span>
+                ),
+                footer: () => <span className="text-xs font-bold uppercase tracking-wide">Total</span>,
+              },
+              { id: 'sets', header: 'Sets', align: 'right', sortValue: (t) => t.sets, cell: (t) => t.sets, footer: () => base.sets },
+              { id: 'decididos', header: 'Decididos', align: 'right', sortValue: (t) => t.decididos, cell: (t) => <span className="text-slate-500">{t.decididos}</span>, footer: () => base.decididos },
+              { id: 'ganados', header: 'Ganados', align: 'right', sortValue: (t) => t.ganados, cell: (t) => <span className="text-slate-500">{t.ganados}</span>, footer: () => base.ganados },
+              {
+                id: 'porcentaje',
+                header: '% ganados',
+                align: 'right',
+                sortValue: (t) => t.porcentaje,
+                cell: (t) => <span className="font-semibold text-slate-900">{formatearPorcentaje(t.porcentaje)}</span>,
+                footer: () => <span className="font-bold">{formatearPorcentaje(base.porcentaje)}</span>,
+              },
+            ]}
+          />
 
           <p className="text-xs text-slate-500">
             Esto es asociación, no causa: los catches ganan sets casi por definición —el que ataja

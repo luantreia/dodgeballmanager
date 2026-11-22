@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { formatDate } from '../../../../shared/utils/formatDate';
 import { formatNumber } from '../../../../shared/utils/formatNumber';
 import { formatearPorcentaje } from '../../utils/metricas';
-import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
 import {
   construirTramos,
   resumirTramos,
@@ -11,6 +10,7 @@ import {
 } from '../../utils/tramosAlineacion';
 import type { SetAnalitico } from '../../utils/setsAnaliticos';
 import type { PartidoTimeline } from '../../services/timelineService';
+import { DataTable } from 'overtime-kit';
 
 type Props = {
   sets: SetAnalitico[];
@@ -190,50 +190,33 @@ const SeccionTramosAlineacion = ({ sets, partidos }: Props) => {
           <summary className="cursor-pointer text-[11px] font-medium text-slate-500 hover:text-slate-700">
             Por jugador
           </summary>
-          <TablaScroll className="mt-1.5">
-            <table className="w-full min-w-[460px] text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-                  <th className="sticky left-0 bg-white px-1.5 py-1 text-left">Jugador</th>
-                  <th className="px-1.5 py-1 text-right">Sets</th>
-                  <th className="px-1.5 py-1 text-right">Tiros/set</th>
-                  <th className="px-1.5 py-1 text-right">Hits/set</th>
-                  <th className="px-1.5 py-1 text-right">Efect.</th>
-                  <th className="px-1.5 py-1 text-right">Ataj./set</th>
-                  <th className="px-1.5 py-1 text-right">Outs/set</th>
-                  <th className="px-1.5 py-1 text-right">Sobrev.</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 tabular-nums">
-                {tramo.aportes.map((aporte) => (
-                  <tr key={aporte.jugadorId}>
-                    <td className="sticky left-0 bg-white px-1.5 py-1 font-medium text-slate-800">
-                      {aporte.jugador}
-                    </td>
-                    <td className="px-1.5 py-1 text-right text-slate-500">{aporte.sets}</td>
-                    <td className="px-1.5 py-1 text-right text-slate-600">
-                      {formatNumber(aporte.ritmo.throwsPorSet)}
-                    </td>
-                    <td className="px-1.5 py-1 text-right font-semibold text-slate-900">
-                      {formatNumber(aporte.ritmo.hitsPorSet)}
-                    </td>
-                    <td className="px-1.5 py-1 text-right text-slate-600">
-                      {formatearPorcentaje(aporte.ritmo.efectividad)}
-                    </td>
-                    <td className="px-1.5 py-1 text-right text-slate-600">
-                      {formatNumber(aporte.ritmo.catchesPorSet)}
-                    </td>
-                    <td className="px-1.5 py-1 text-right text-slate-600">
-                      {formatNumber(aporte.ritmo.outsPorSet)}
-                    </td>
-                    <td className="px-1.5 py-1 text-right text-slate-600">
-                      {formatearPorcentaje(aporte.supervivencia)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TablaScroll>
+          <div className="mt-1.5 text-xs">
+            <DataTable
+              caption="Aporte por jugador en el tramo"
+              data={tramo.aportes}
+              rowKey={(a) => a.jugadorId}
+              empty="Sin jugadores en este tramo."
+              pageSize={0}
+              mobile="scroll"
+              stickyFirstColumn
+              columns={[
+                { id: 'jugador', header: 'Jugador', sortValue: (a) => a.jugador, cell: (a) => <span className="font-medium text-slate-800">{a.jugador}</span> },
+                { id: 'sets', header: 'Sets', align: 'right', sortValue: (a) => a.sets, cell: (a) => a.sets },
+                { id: 'tiros', header: 'Tiros/set', align: 'right', sortValue: (a) => a.ritmo.throwsPorSet, cell: (a) => formatNumber(a.ritmo.throwsPorSet) },
+                {
+                  id: 'hits',
+                  header: 'Hits/set',
+                  align: 'right',
+                  sortValue: (a) => a.ritmo.hitsPorSet,
+                  cell: (a) => <span className="font-semibold text-slate-900">{formatNumber(a.ritmo.hitsPorSet)}</span>,
+                },
+                { id: 'efect', header: 'Efect.', align: 'right', sortValue: (a) => a.ritmo.efectividad, cell: (a) => formatearPorcentaje(a.ritmo.efectividad) },
+                { id: 'ataj', header: 'Ataj./set', align: 'right', sortValue: (a) => a.ritmo.catchesPorSet, cell: (a) => formatNumber(a.ritmo.catchesPorSet) },
+                { id: 'outs', header: 'Outs/set', align: 'right', sortValue: (a) => a.ritmo.outsPorSet, cell: (a) => formatNumber(a.ritmo.outsPorSet) },
+                { id: 'sobrev', header: 'Sobrev.', align: 'right', sortValue: (a) => a.supervivencia, cell: (a) => formatearPorcentaje(a.supervivencia) },
+              ]}
+            />
+          </div>
         </details>
       </li>
     );

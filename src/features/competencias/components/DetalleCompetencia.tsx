@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
-import TablaScroll from '../../../shared/components/TablaScroll/TablaScroll';
 import EstadoVacio from '../../../shared/components/EstadoVacio/EstadoVacio';
 import PartidoCard from '../../../shared/components/PartidoCard/PartidoCard';
 import { getTablaFase, type FilaTabla, type TablaFase } from '../services/tablaService';
@@ -12,7 +11,7 @@ import {
 } from '../../partidos/services/partidoService';
 import { getJugadoresEquipo } from '../../jugadores/services/jugadorEquipoService';
 import type { Jugador, Partido } from '../../../shared/utils/types/types';
-import { Tabs } from 'overtime-kit';
+import { Tabs, DataTable } from 'overtime-kit';
 
 type Props = {
   competenciaId: string;
@@ -286,44 +285,27 @@ const DetalleCompetencia = ({ competenciaId, competenciaNombre, equipoId, onVolv
                   </span>
                 )}
               </header>
-              <TablaScroll>
-                <table className="w-full min-w-[32rem] text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-500">
-                      <th className="py-1.5 pr-2">#</th>
-                      <th className="py-1.5 pr-2">Equipo</th>
-                      <th className="py-1.5 pr-2 text-right">Pts</th>
-                      <th className="py-1.5 pr-2 text-right">PJ</th>
-                      <th className="py-1.5 pr-2 text-right">G</th>
-                      <th className="py-1.5 pr-2 text-right">E</th>
-                      <th className="py-1.5 pr-2 text-right">P</th>
-                      <th className="py-1.5 text-right">Dif</th>
-                    </tr>
-                  </thead>
-                  <tbody className="tabular-nums">
-                    {tabla.posiciones.map((fila) => {
-                      const esPropio = fila.equipo?._id === equipoId;
-                      return (
-                        <tr
-                          key={fila._id}
-                          className={`border-b border-slate-100 last:border-0 ${
-                            esPropio ? 'bg-brand-50 font-semibold text-brand-900' : 'text-slate-700'
-                          }`}
-                        >
-                          <td className="py-1.5 pr-2">{fila.posicion ?? '—'}</td>
-                          <td className="py-1.5 pr-2">{fila.equipo?.nombre ?? 'Equipo'}</td>
-                          <td className="py-1.5 pr-2 text-right">{fila.puntos}</td>
-                          <td className="py-1.5 pr-2 text-right">{fila.partidosJugados}</td>
-                          <td className="py-1.5 pr-2 text-right">{fila.partidosGanados}</td>
-                          <td className="py-1.5 pr-2 text-right">{fila.partidosEmpatados}</td>
-                          <td className="py-1.5 pr-2 text-right">{fila.partidosPerdidos}</td>
-                          <td className="py-1.5 text-right">{fila.diferenciaPuntos}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </TablaScroll>
+              {/* Sin orden por columna a propósito: `posicion` la escribe el backend con los criterios
+                  de desempate de la fase, y reordenar acá mostraría otro orden que el oficial. */}
+              <DataTable
+                caption="Tabla de posiciones"
+                data={tabla.posiciones}
+                rowKey={(fila) => fila._id}
+                empty="Sin posiciones todavía."
+                pageSize={0}
+                mobile="scroll"
+                rowClassName={(fila) => (fila.equipo?._id === equipoId ? 'bg-brand-50 font-semibold text-brand-900' : undefined)}
+                columns={[
+                  { id: 'posicion', header: '#', className: 'w-10', cell: (fila) => fila.posicion ?? '—' },
+                  { id: 'equipo', header: 'Equipo', cell: (fila) => fila.equipo?.nombre ?? 'Equipo' },
+                  { id: 'puntos', header: <abbr title="Puntos" className="no-underline">Pts</abbr>, align: 'right', cell: (fila) => fila.puntos },
+                  { id: 'pj', header: <abbr title="Partidos jugados" className="no-underline">PJ</abbr>, align: 'right', cell: (fila) => fila.partidosJugados },
+                  { id: 'g', header: <abbr title="Ganados" className="no-underline">G</abbr>, align: 'right', cell: (fila) => fila.partidosGanados },
+                  { id: 'e', header: <abbr title="Empatados" className="no-underline">E</abbr>, align: 'right', cell: (fila) => fila.partidosEmpatados },
+                  { id: 'p', header: <abbr title="Perdidos" className="no-underline">P</abbr>, align: 'right', cell: (fila) => fila.partidosPerdidos },
+                  { id: 'dif', header: <abbr title="Diferencia" className="no-underline">Dif</abbr>, align: 'right', cell: (fila) => fila.diferenciaPuntos },
+                ]}
+              />
             </section>
           ) : (
             <EstadoVacio

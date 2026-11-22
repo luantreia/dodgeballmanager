@@ -9,7 +9,7 @@ import {
   type OrdenSinergia,
 } from '../../utils/sinergias';
 import { formatearPorcentaje } from '../../utils/metricas';
-import TablaScroll from '../../../../shared/components/TablaScroll/TablaScroll';
+import { DataTable } from 'overtime-kit';
 
 type Props = {
   sets: SetAnalitico[];
@@ -291,59 +291,55 @@ const SeccionSinergias = ({ sets }: Props) => {
                 ))}
               </div>
 
-              <TablaScroll className="hidden sm:block">
-                <table className="w-full min-w-[720px] text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      <th className="sticky left-0 bg-white px-2 py-2 text-left">Grupo</th>
-                      <th className="px-2 py-2 text-right">Sets</th>
-                      <th className="px-2 py-2 text-right">% juntos</th>
-                      <th className="px-2 py-2 text-right">Sets sep.</th>
-                      <th className="px-2 py-2 text-right">% separados</th>
-                      <th className="px-2 py-2 text-right text-slate-700">Sinergia</th>
-                      <th className="px-2 py-2 text-right">Efect.</th>
-                      <th className="px-2 py-2 text-right">Hits/set</th>
-                      <th className="px-2 py-2 text-right">Catches</th>
-                      <th className="px-2 py-2 text-right">Superv.</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 tabular-nums">
-                    {grupos.map((g) => (
-                      <tr key={g.clave} className="hover:bg-slate-50/60">
-                        <td className="sticky left-0 bg-white px-2 py-2">
+              {/* En mobile queda la lista de arriba (está pensada para eso); la tabla es para escritorio. */}
+              <div className="hidden sm:block">
+                <DataTable
+                  caption="Sinergias por grupo"
+                  data={grupos}
+                  rowKey={(g) => g.clave}
+                  empty="Sin grupos con sets suficientes."
+                  pageSize={0}
+                  mobile="scroll"
+                  stickyFirstColumn
+                  columns={[
+                    {
+                      id: 'grupo',
+                      header: 'Grupo',
+                      cell: (g) => (
+                        <>
                           <NombresGrupo nombres={g.nombres} />
                           {g.sinergia === null && (
                             <span className="ml-2">
                               <EtiquetaInseparables />
                             </span>
                           )}
-                        </td>
-                        <td className="px-2 py-2 text-right text-slate-700">{g.setsJuntos}</td>
-                        <td className="px-2 py-2 text-right text-slate-700">
-                          {formatearPorcentaje(g.porcentajeJuntos)}
-                        </td>
-                        <td className="px-2 py-2 text-right text-slate-500">{g.setsSeparados}</td>
-                        <td className="px-2 py-2 text-right text-slate-500">
-                          {formatearPorcentaje(g.porcentajeSeparados)}
-                        </td>
-                        <td className={`px-2 py-2 text-right font-semibold ${colorSinergia(g.sinergia)}`}>
-                          {formatearSinergia(g.sinergia)}
-                        </td>
-                        <td className="px-2 py-2 text-right text-slate-700">
-                          {formatearPorcentaje(g.efectividad, 1)}
-                        </td>
-                        <td className="px-2 py-2 text-right text-slate-700">
-                          {g.hitsPorSet === null ? '—' : g.hitsPorSet.toFixed(1)}
-                        </td>
-                        <td className="px-2 py-2 text-right text-slate-700">{g.catches}</td>
-                        <td className="px-2 py-2 text-right text-slate-700">
-                          {formatearPorcentaje(g.supervivencia)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TablaScroll>
+                        </>
+                      ),
+                    },
+                    { id: 'sets', header: 'Sets', align: 'right', sortValue: (g) => g.setsJuntos, cell: (g) => g.setsJuntos },
+                    { id: 'juntos', header: '% juntos', align: 'right', sortValue: (g) => g.porcentajeJuntos, cell: (g) => formatearPorcentaje(g.porcentajeJuntos) },
+                    { id: 'setsSep', header: 'Sets sep.', align: 'right', sortValue: (g) => g.setsSeparados, cell: (g) => <span className="text-slate-500">{g.setsSeparados}</span> },
+                    {
+                      id: 'separados',
+                      header: '% separados',
+                      align: 'right',
+                      sortValue: (g) => g.porcentajeSeparados,
+                      cell: (g) => <span className="text-slate-500">{formatearPorcentaje(g.porcentajeSeparados)}</span>,
+                    },
+                    {
+                      id: 'sinergia',
+                      header: 'Sinergia',
+                      align: 'right',
+                      sortValue: (g) => g.sinergia,
+                      cell: (g) => <span className={`font-semibold ${colorSinergia(g.sinergia)}`}>{formatearSinergia(g.sinergia)}</span>,
+                    },
+                    { id: 'efect', header: 'Efect.', align: 'right', sortValue: (g) => g.efectividad, cell: (g) => formatearPorcentaje(g.efectividad, 1) },
+                    { id: 'hitsSet', header: 'Hits/set', align: 'right', sortValue: (g) => g.hitsPorSet, cell: (g) => (g.hitsPorSet === null ? '—' : g.hitsPorSet.toFixed(1)) },
+                    { id: 'catches', header: 'Catches', align: 'right', sortValue: (g) => g.catches, cell: (g) => g.catches },
+                    { id: 'superv', header: 'Superv.', align: 'right', sortValue: (g) => g.supervivencia, cell: (g) => formatearPorcentaje(g.supervivencia) },
+                  ]}
+                />
+              </div>
             </>
           )}
 

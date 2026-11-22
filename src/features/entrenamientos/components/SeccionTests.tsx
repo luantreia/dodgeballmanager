@@ -14,6 +14,7 @@ import {
   type TipoTestMejorEs,
 } from '../services/testService';
 import { getResumenAsistencia, type ResumenJugador } from '../services/entrenamientoService';
+import { DataTable } from 'overtime-kit';
 
 type Props = { equipoId: string };
 
@@ -415,52 +416,39 @@ const SeccionTests = ({ equipoId }: Props) => {
           {porTest.map(([nombre, filas]) => (
             <div key={nombre} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
               <h3 className="mb-2 text-sm font-semibold text-slate-900">{nombre}</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[26rem] text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-left text-[11px] uppercase tracking-wide text-slate-500">
-                      <th className="py-1.5 pr-2 font-semibold">Jugador</th>
-                      <th className="py-1.5 pr-2 text-right font-semibold">Primera</th>
-                      <th className="py-1.5 pr-2 text-right font-semibold">Última</th>
-                      <th className="py-1.5 pr-2 text-right font-semibold">Cambio</th>
-                      <th className="py-1.5 text-right font-semibold">Mediciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="tabular-nums">
-                    {filas.map((f) => (
-                      <tr key={`${f.jugadorId}-${f.tipoTestId}`} className="border-b border-slate-100 last:border-0">
-                        <td className="py-1.5 pr-2 text-slate-800">{f.jugador}</td>
-                        <td className="py-1.5 pr-2 text-right text-slate-500">
-                          {formatear(f.primera, f.decimales)}
-                        </td>
-                        <td className="py-1.5 pr-2 text-right font-semibold text-slate-900">
-                          {formatear(f.ultima, f.decimales)}
-                        </td>
-                        <td
-                          className={`py-1.5 pr-2 text-right font-medium ${
-                            f.mejoro === null
-                              ? 'text-muted'
-                              : f.mejoro
-                              ? 'text-emerald-700'
-                              : 'text-rose-700'
-                          }`}
-                        >
-                          {f.mediciones.length < 2 ? (
-                            '—'
-                          ) : (
-                            <>
-                              {f.mejoro === null ? '' : f.mejoro ? '▲ ' : '▼ '}
-                              {f.delta > 0 ? '+' : ''}
-                              {formatear(f.delta, f.decimales)}
-                            </>
-                          )}
-                        </td>
-                        <td className="py-1.5 text-right text-muted">{f.mediciones.length}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                caption={`Evolución en ${nombre}`}
+                data={filas}
+                rowKey={(f) => `${f.jugadorId}-${f.tipoTestId}`}
+                empty="Sin mediciones."
+                pageSize={0}
+                mobile="scroll"
+                columns={[
+                  { id: 'jugador', header: 'Jugador', sortValue: (f) => f.jugador, cell: (f) => <span className="text-slate-800">{f.jugador}</span> },
+                  { id: 'primera', header: 'Primera', align: 'right', sortValue: (f) => f.primera, cell: (f) => <span className="text-slate-500">{formatear(f.primera, f.decimales)}</span> },
+                  { id: 'ultima', header: 'Última', align: 'right', sortValue: (f) => f.ultima, cell: (f) => <span className="font-semibold text-slate-900">{formatear(f.ultima, f.decimales)}</span> },
+                  {
+                    id: 'cambio',
+                    header: 'Cambio',
+                    align: 'right',
+                    sortValue: (f) => (f.mediciones.length < 2 ? null : f.delta),
+                    cell: (f) => (
+                      <span className={`font-medium ${f.mejoro === null ? 'text-muted' : f.mejoro ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        {f.mediciones.length < 2 ? (
+                          '—'
+                        ) : (
+                          <>
+                            {f.mejoro === null ? '' : f.mejoro ? '▲ ' : '▼ '}
+                            {f.delta > 0 ? '+' : ''}
+                            {formatear(f.delta, f.decimales)}
+                          </>
+                        )}
+                      </span>
+                    ),
+                  },
+                  { id: 'mediciones', header: 'Mediciones', align: 'right', sortValue: (f) => f.mediciones.length, cell: (f) => <span className="text-muted">{f.mediciones.length}</span> },
+                ]}
+              />
             </div>
           ))}
         </section>
