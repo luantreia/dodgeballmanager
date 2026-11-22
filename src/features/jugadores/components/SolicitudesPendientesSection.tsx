@@ -6,7 +6,8 @@ import type { ISolicitudEdicion } from '../../../shared/features/solicitudes/typ
 import { getEquipoAdministradoresIds } from '../../equipo/services/equipoService';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { authFetch } from '../../../shared/utils/authFetch';
-import { useToast } from '../../../shared/components/Toast/ToastProvider';
+import { useToast, useConfirm } from '../../../shared/components/Toast/ToastProvider';
+import { EstadoAprobacion } from 'overtime-kit';
 
 interface DatosCrearJugadorEquipo {
   jugadorId: string;
@@ -31,6 +32,7 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
   const [contratoToJugador, setContratoToJugador] = useState<Map<string, string>>(new Map());
   const { user } = useAuth();
   const { addToast } = useToast();
+  const confirm = useConfirm();
 
   const cargarSolicitudes = useCallback(async () => {
     try {
@@ -161,19 +163,6 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
     return jid ? (jugadorNombres.get(jid) || `Jugador ${jid.slice(-6)}`) : '';
   }, [contratoToJugador, jugadorNombres]);
 
-  const getEstadoColor = (estado: string) => {
-    switch (estado) {
-      case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'aceptado':
-        return 'bg-green-100 text-green-800';
-      case 'rechazado':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const getTipoLabel = (tipo: string) => {
     switch (tipo) {
       case 'jugador-equipo-crear':
@@ -204,6 +193,8 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
   };
 
   const handleRechazar = async (solicitudId: string) => {
+    const ok = await confirm({ title: '¿Rechazar la solicitud?', message: 'Quien la pidió va a tener que crearla de nuevo.', confirmLabel: 'Rechazar', danger: true });
+    if (!ok) return;
     try {
       await actualizarSolicitudEdicion(solicitudId, { estado: 'rechazado' });
       await cargarSolicitudes();
@@ -220,6 +211,8 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
   };
 
   const handleCancelar = async (solicitudId: string) => {
+    const ok = await confirm({ title: '¿Cancelar la solicitud?', confirmLabel: 'Cancelar solicitud', cancelLabel: 'Volver', danger: true });
+    if (!ok) return;
     try {
       await cancelarSolicitudEdicion(solicitudId);
       await cargarSolicitudes();
@@ -273,9 +266,6 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
                     {' | '}
                     {fecha ? new Date(fecha).toLocaleString('es-AR') : ''}
                   </div>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getEstadoColor(sol.estado)}`}>
-                    {sol.estado}
-                  </span>
 
                   {sol.datosPropuestos && sol.tipo === 'jugador-equipo-crear' && (() => {
                     const d = sol.datosPropuestos as unknown as DatosCrearJugadorEquipo;
@@ -365,8 +355,16 @@ const SolicitudesPendientesSection: React.FC<Props> = ({ equipoId, onRefresh }) 
                       }
                     }
 
+                    // De quién depende: es lo que más pregunta quien hizo el pedido.
+                    const aprobador = esEliminarOEditar
+                      ? 'el equipo o el jugador'
+                      : creadorEsEquipo
+                      ? 'el jugador'
+                      : 'el equipo';
+
                     return (
-                      <div className="flex gap-1 mt-2">
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <EstadoAprobacion estado="pendiente" aprobador={aprobador} fecha={fecha} />
                         {puedeCancelar ? (
                           <button
                             onClick={() => handleCancelar(sol._id)}
