@@ -1,16 +1,20 @@
 // Tabla agrupada por categoría de solicitudes
 
 import React from 'react';
+import { DataTable } from 'overtime-kit';
 import type { SolicitudEdicionTipo } from '../../solicitudes/types/solicitudesEdicion';
 import type { NotificacionesTableProps } from '../types/notificacionesTypes';
-import { NotificacionesRow } from './NotificacionesRow';
+import { AccionesSolicitud, DetalleSolicitud, EstadoSolicitud, formatearFechaSolicitud } from './NotificacionesRow';
 
+/**
+ * El detalle de cada solicitud se abre con el botón de la primera celda (renderExpanded de
+ * DataTable). El checkbox va en la misma celda que el tipo para que también se pueda seleccionar
+ * desde las tarjetas de mobile, donde la primera columna es el título de la tarjeta.
+ */
 export const NotificacionesTable: React.FC<NotificacionesTableProps> = ({
   categoria,
   items,
   labelTipo,
-  expanded,
-  setExpanded,
   rechazoEdit,
   setRechazoEdit,
   accionando,
@@ -22,14 +26,9 @@ export const NotificacionesTable: React.FC<NotificacionesTableProps> = ({
   onToggleSelect,
   onToggleSelectAll,
 }) => {
-  // Función para toggle expandido
-  const handleToggle = (id: string) => {
-    const newExpanded = { ...expanded, [id]: !expanded[id] };
-    setExpanded(newExpanded);
-  };
-
   const seleccionablesIds = items.filter((s) => s.estado === 'pendiente').map((s) => s._id);
   const todasSeleccionadas = seleccionablesIds.length > 0 && seleccionablesIds.every((id) => selectedIds.has(id));
+  const etiqueta = (s: (typeof items)[number]) => labelTipo(s.tipo as SolicitudEdicionTipo);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
@@ -41,12 +40,18 @@ export const NotificacionesTable: React.FC<NotificacionesTableProps> = ({
         </span>
       </div>
 
-      {/* Tabla */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="text-xs uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-3 py-2">
+      <DataTable
+        caption={`Solicitudes: ${categoria}`}
+        data={items}
+        rowKey={(s) => s._id}
+        empty="No hay solicitudes en esta categoría"
+        pageSize={0}
+        renderExpanded={(s) => <DetalleSolicitud solicitud={s} />}
+        columns={[
+          {
+            id: 'tipo',
+            header: (
+              <span className="inline-flex items-center gap-2">
                 {canApprove && seleccionablesIds.length > 0 && (
                   <input
                     type="checkbox"
@@ -56,42 +61,51 @@ export const NotificacionesTable: React.FC<NotificacionesTableProps> = ({
                     className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                   />
                 )}
-              </th>
-              <th className="px-3 py-2">Tipo</th>
-              <th className="px-3 py-2">Estado</th>
-              <th className="px-3 py-2">Fecha</th>
-              <th className="px-3 py-2">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((solicitud) => (
-              <NotificacionesRow
-                key={solicitud._id}
-                solicitud={solicitud}
-                labelTipo={labelTipo(solicitud.tipo as SolicitudEdicionTipo)}
-                expanded={!!expanded[solicitud._id]}
-                onToggle={() => handleToggle(solicitud._id)}
+                Tipo
+              </span>
+            ),
+            sortValue: etiqueta,
+            cell: (s) => (
+              <span className="inline-flex items-center gap-2">
+                {canApprove && s.estado === 'pendiente' && (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(s._id)}
+                    onChange={() => onToggleSelect(s._id)}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Seleccionar solicitud ${etiqueta(s)}`}
+                    className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                  />
+                )}
+                <span className="font-medium text-slate-900">{etiqueta(s)}</span>
+              </span>
+            ),
+          },
+          { id: 'estado', header: 'Estado', sortValue: (s) => s.estado, cell: (s) => <EstadoSolicitud solicitud={s} /> },
+          {
+            id: 'fecha',
+            header: 'Fecha',
+            sortValue: (s) => (s.createdAt ? new Date(s.createdAt) : null),
+            cell: (s) => <span className="text-sm text-slate-600">{formatearFechaSolicitud(s.createdAt)}</span>,
+          },
+          {
+            id: 'acciones',
+            header: 'Acciones',
+            cell: (s) => (
+              <AccionesSolicitud
+                solicitud={s}
                 rechazoEdit={rechazoEdit}
                 setRechazoEdit={setRechazoEdit}
                 accionando={accionando}
-                onAprobar={() => onAprobar(solicitud)}
-                onRechazar={() => onRechazar(solicitud)}
-                onEditar={() => onEditar(solicitud)}
+                onAprobar={() => onAprobar(s)}
+                onRechazar={() => onRechazar(s)}
+                onEditar={() => onEditar(s)}
                 canApprove={canApprove}
-                selected={selectedIds.has(solicitud._id)}
-                onToggleSelect={() => onToggleSelect(solicitud._id)}
               />
-            ))}
-          </tbody>
-        </table>
-
-        {/* Empty state */}
-        {items.length === 0 && (
-          <div className="py-8 text-center text-slate-500">
-            No hay solicitudes en esta categoría
-          </div>
-        )}
-      </div>
+            ),
+          },
+        ]}
+      />
     </section>
   );
 };
