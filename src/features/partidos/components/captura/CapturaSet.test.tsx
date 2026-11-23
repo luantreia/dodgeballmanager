@@ -15,6 +15,7 @@ function apiFalsa() {
   };
   let n = 0;
   const agregados: NuevoEvento[] = [];
+  const ganadores: string[] = [];
   const api = {
     leer: async () => estado,
     agregarEvento: async (_ref: unknown, e: NuevoEvento) => {
@@ -29,8 +30,13 @@ function apiFalsa() {
     guardarAlineacion: async () => estado,
     guardarTiempo: async () => estado,
     guardarVideos: async () => ({ videos: [], videoUrl: '' }),
+    guardarGanador: async (_ref: unknown, g: string) => {
+      ganadores.push(g);
+      estado = { ...estado, set: { ...estado.set, ganadorSet: g as 'local' } };
+      return estado;
+    },
   } as unknown as ApiCaptura;
-  return { api, agregados };
+  return { api, agregados, ganadores, fijar: (e: Partial<EstadoSet>) => { estado = { ...estado, ...e }; } };
 }
 
 const equipos = [{ id: 'A', nombre: 'MORAN' }, { id: 'B', nombre: 'MARVIN' }];
@@ -71,5 +77,15 @@ describe('CapturaSet', () => {
     render(<CapturaSet api={api} refSet={{ planillaSet: 's1' }} equipos={equipos} jugadores={jugadores} soloLectura />);
     await screen.findByText('Set 2');
     expect(screen.queryByRole('button', { name: /out por/ })).not.toBeInTheDocument();
+  });
+
+  it('sugiere el ganador de las marcas y lo carga con un clic', async () => {
+    const { api, ganadores, fijar } = apiFalsa();
+    fijar({ ganadorSugerido: { ganador: 'local', motivo: 'eliminacion', vivos: { local: 2, visitante: 0 }, equipo: 'A' } });
+    render(<CapturaSet api={api} refSet={{ planillaSet: 's1' }} equipos={equipos} jugadores={jugadores} obtenerTiempo={() => 1} />);
+    expect(await screen.findByText(/dejó al rival sin jugadores/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Marcar ganador a MORAN' }));
+    await waitFor(() => expect(ganadores).toEqual(['local']));
+    expect(await screen.findByText(/como dicen las marcas/)).toBeInTheDocument();
   });
 });
