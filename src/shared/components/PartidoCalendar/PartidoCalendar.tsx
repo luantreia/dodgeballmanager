@@ -16,6 +16,7 @@ const PUNTO_ESTADO: Record<string, string> = {
   programado: 'bg-slate-400',
   en_juego: 'bg-amber-500',
   finalizado: 'bg-emerald-500',
+  suspendido: 'bg-amber-300',
   cancelado: 'bg-red-400',
 };
 

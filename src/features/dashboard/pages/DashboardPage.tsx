@@ -39,7 +39,7 @@ const DashboardPage = () => {
           // Incluye 'en_juego': un partido que ya arrancó sigue siendo el próximo del DT hasta
           // que se cierra, y filtrando sólo por 'programado' desaparecía del dashboard justo
           // cuando más lo necesita.
-          getPartidos({ equipoId, estado: ['programado', 'en_juego'] }),
+          getPartidos({ equipoId, estado: ['programado', 'en_juego', 'suspendido'] }),
           getSolicitudesEdicion({ estado: 'pendiente' }),
           // .catch: si el resumen falla no debe arrastrar al resto del Promise.all. Antes
           // un 404 acá dejaba el dashboard entero sin partidos ni notificaciones.

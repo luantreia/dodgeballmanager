@@ -158,7 +158,7 @@ type BackendPartido = {
   equipoVisitante?: BackendEquipoRef | string;
   marcadorLocal?: number;
   marcadorVisitante?: number;
-  estado?: 'programado' | 'en_juego' | 'finalizado' | 'cancelado' | string;
+  estado?: EstadoPartido | string;
 };
 
 const mapCompetencia = (data?: BackendPartido['competencia']): Competencia | undefined => {
@@ -185,7 +185,7 @@ const mapEquipoNombre = (equipo?: BackendEquipoRef | string): { id: string; nomb
   return { id: equipo._id, nombre: equipo.nombre ?? 'Equipo' };
 };
 
-const ESTADOS_PARTIDO: readonly EstadoPartido[] = ['programado', 'en_juego', 'finalizado', 'cancelado'];
+const ESTADOS_PARTIDO: readonly EstadoPartido[] = ['programado', 'en_juego', 'finalizado', 'suspendido', 'cancelado'];
 
 /**
  * Antes había dos funciones que traducían de ida y de vuelta entre el enum real de Mongoose y

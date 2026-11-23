@@ -25,6 +25,7 @@ export const PARTIDO_ESTADOS = {
   PROGRAMADO: 'programado',
   EN_VIVO: 'en_vivo',
   FINALIZADO: 'finalizado',
+  SUSPENDIDO: 'suspendido',
   CANCELADO: 'cancelado'
 };
 

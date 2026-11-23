@@ -152,7 +152,7 @@ const DetalleCompetencia = ({ competenciaId, competenciaNombre, equipoId, onVolv
   );
 
   const pendientes = useMemo(
-    () => partidos.filter((p) => p.estado === 'programado' || p.estado === 'en_juego'),
+    () => partidos.filter((p) => p.estado === 'programado' || p.estado === 'en_juego' || p.estado === 'suspendido'),
     [partidos],
   );
 

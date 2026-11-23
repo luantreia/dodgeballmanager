@@ -113,7 +113,7 @@ const LineaTemporalPartidos = ({ partidos, onAbrir, onDescargar }: Props) => {
               const fecha = new Date(partido.fecha);
               const ganó = partido.marcadorEquipo > partido.marcadorRival;
               const empate = partido.marcadorEquipo === partido.marcadorRival;
-              const hayMarcador = partido.estado === 'finalizado' || partido.estado === 'en_juego';
+              const hayMarcador = partido.estado === 'finalizado' || partido.estado === 'en_juego' || partido.estado === 'suspendido';
 
               return (
                 <li key={partido._id} className="relative">
