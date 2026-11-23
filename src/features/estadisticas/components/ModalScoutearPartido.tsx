@@ -206,7 +206,7 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
                       type="button"
                       disabled={creando !== null}
                       onClick={() => void elegirPartido(partidoId)}
-                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-left text-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50"
+                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-left text-sm transition hover:border-brand-300 hover:bg-brand-50 disabled:opacity-50"
                     >
                       <span className="font-medium text-slate-800">{nombrePartidoScouteado(pl.partido)}</span>
                       <span className="shrink-0 text-xs text-slate-500">
@@ -234,7 +234,7 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
                   key={c.id}
                   type="button"
                   onClick={() => void elegirCompetencia(c.id)}
-                  className="w-full rounded-lg border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-800 transition hover:border-blue-300 hover:bg-blue-50"
+                  className="w-full rounded-lg border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-800 transition hover:border-brand-300 hover:bg-brand-50"
                 >
                   {c.nombre}
                 </button>
@@ -281,7 +281,7 @@ const ModalScoutearPartido = ({ equipoId, onClose, onCreada }: Props) => {
                                   type="button"
                                   disabled={creando !== null}
                                   onClick={() => void elegirPartido(p.id)}
-                                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-4 py-2.5 text-left text-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50"
+                                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-4 py-2.5 text-left text-sm transition hover:border-brand-300 hover:bg-brand-50 disabled:opacity-50"
                                 >
                                   <span className="font-medium text-slate-800">
                                     {p.equipoLocal?.nombre ?? 'Local'} vs {p.equipoVisitante?.nombre ?? 'Visitante'}

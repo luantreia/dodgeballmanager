@@ -28,15 +28,15 @@ const LoadingSpinner = ({
   };
 
   const colorClasses: Record<LoadingSpinnerColor, string> = {
-    blue: 'text-blue-600',
-    gray: 'text-gray-600',
+    blue: 'text-brand-600',
+    gray: 'text-slate-600',
     white: 'text-white'
   };
 
   return (
     <div className={`flex flex-col items-center justify-center p-4 ${className}`} {...props}>
       <div
-        className={`animate-spin rounded-full border-2 border-gray-300 border-t-2 ${colorClasses[color]} ${sizeClasses[size]}`}
+        className={`animate-spin rounded-full border-2 border-slate-300 border-t-2 ${colorClasses[color]} ${sizeClasses[size]}`}
         role="status"
         aria-label="Cargando"
       >

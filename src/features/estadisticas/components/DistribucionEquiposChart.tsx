@@ -38,7 +38,7 @@ export const DistribucionEquiposChart: FC<DistribucionEquiposChartProps> = ({ es
             </span>
           </h4>
         </div>
-        <div className="text-center text-gray-500 py-8">
+        <div className="text-center text-slate-500 py-8">
           <p>No hay datos de equipos para mostrar en este modo.</p>
         </div>
       </div>

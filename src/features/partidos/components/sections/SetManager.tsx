@@ -56,13 +56,13 @@ export const SetManager: FC<SetManagerProps> = ({
 
       {/* Selector de set */}
       <div className="mb-4">
-        <label htmlFor="setmanager-campo-59" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="setmanager-campo-59" className="block text-sm font-medium text-slate-700 mb-2">
           Set a editar:
         </label>
         <select id="setmanager-campo-59"
           value={numeroSetSeleccionado}
           onChange={(e) => setNumeroSetSeleccionado(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
         >
           <option value="">-- Elegí un set --</option>
           {setsLocales.map(set => (
@@ -77,13 +77,13 @@ export const SetManager: FC<SetManagerProps> = ({
         <div className="border-t pt-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
             <div>
-              <label htmlFor="setmanager-campo-80" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="setmanager-campo-80" className="block text-sm font-medium text-slate-700 mb-1">
                 Ganador del set:
               </label>
               <select id="setmanager-campo-80"
                 value={estadisticasSet.ganadorSet || 'pendiente'}
                 onChange={(e) => handleChangeGanador(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 <option value="pendiente">Pendiente</option>
                 <option value="local">{estadisticasSet.equipoLocal?.nombre || 'Equipo Local'}</option>
@@ -92,7 +92,7 @@ export const SetManager: FC<SetManagerProps> = ({
             </div>
 
             <div>
-              <p className="block text-sm font-medium text-gray-700 mb-1">
+              <p className="block text-sm font-medium text-slate-700 mb-1">
                 Estado:
               </p>
               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -107,7 +107,7 @@ export const SetManager: FC<SetManagerProps> = ({
             <div className="flex gap-2">
               <button
                 onClick={() => guardar(false)}
-                className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                className="flex-1 px-3 py-2 bg-brand-600 text-white text-sm rounded hover:bg-brand-700 transition-colors"
               >
                 Guardar Set
               </button>

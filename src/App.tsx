@@ -161,7 +161,7 @@ const App = () => {
   return (
     // El padding inferior deja pasar la barra de pestañas fija de mobile: sin él tapa el final
     // del contenido y el pie de página. Suma el safe-area porque la barra también lo hace.
-    <div className="flex min-h-screen flex-col bg-slate-50 pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0">
+    <div className="flex min-h-dvh flex-col bg-slate-50 pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0">
       <Navbar />
       <EmailVerificacionBanner />
       <IndicadorSinConexion />

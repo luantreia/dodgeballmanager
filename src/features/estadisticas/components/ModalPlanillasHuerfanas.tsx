@@ -186,7 +186,7 @@ const ModalPlanillasHuerfanas = ({ equipoId, onClose, onCambio }: Props) => {
                         <button
                           type="button"
                           onClick={() => void empezarReasignacion(pl)}
-                          className="shrink-0 rounded-md border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                          className="shrink-0 rounded-md border border-brand-300 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100"
                         >
                           Reasignar
                         </button>
@@ -232,7 +232,7 @@ const ModalPlanillasHuerfanas = ({ equipoId, onClose, onCambio }: Props) => {
                     key={c.id}
                     type="button"
                     onClick={() => void elegirCompetencia(c.id)}
-                    className="w-full rounded-lg border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-800 transition hover:border-blue-300 hover:bg-blue-50"
+                    className="w-full rounded-lg border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-800 transition hover:border-brand-300 hover:bg-brand-50"
                   >
                     {c.nombre}
                   </button>
@@ -249,7 +249,7 @@ const ModalPlanillasHuerfanas = ({ equipoId, onClose, onCambio }: Props) => {
                     <button
                       type="button"
                       onClick={() => setDestino(p)}
-                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-4 py-2.5 text-left text-sm transition hover:border-blue-300 hover:bg-blue-50"
+                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-4 py-2.5 text-left text-sm transition hover:border-brand-300 hover:bg-brand-50"
                     >
                       <span className="font-medium text-slate-800">
                         {p.equipoLocal?.nombre ?? 'Local'} vs {p.equipoVisitante?.nombre ?? 'Visitante'}
@@ -304,7 +304,7 @@ const ModalPlanillasHuerfanas = ({ equipoId, onClose, onCambio }: Props) => {
                 type="button"
                 disabled={guardando}
                 onClick={() => void confirmarReasignacion()}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
               >
                 {guardando ? 'Reasignando…' : 'Sí, reasignar la planilla'}
               </button>

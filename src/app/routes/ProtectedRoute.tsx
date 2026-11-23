@@ -12,7 +12,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-900/90 text-white">
+      <div className="flex h-dvh items-center justify-center bg-slate-900/90 text-white">
         <div className="flex flex-col items-center gap-3 rounded-xl bg-slate-800 px-8 py-6 shadow-lg shadow-slate-950/40">
           <span className="h-10 w-10 animate-spin rounded-full border-4 border-slate-400 border-t-transparent" />
           <p className="text-sm font-medium">Cargando sesión…</p>

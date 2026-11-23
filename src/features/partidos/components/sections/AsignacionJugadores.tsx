@@ -50,10 +50,10 @@ const AsignacionJugadores: FC<AsignacionJugadoresProps> = ({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+        <h3 className="text-xl font-semibold text-slate-800 mb-2">
           Asignar Jugadores al Partido
         </h3>
-        <p className="text-gray-600">
+        <p className="text-slate-600">
           Selecciona los jugadores que participarán en este partido
         </p>
       </div>
@@ -67,7 +67,7 @@ const AsignacionJugadores: FC<AsignacionJugadoresProps> = ({
           </h4>
 
           {loadingLocal ? (
-            <p className="text-blue-600">Cargando jugadores...</p>
+            <p className="text-brand-600">Cargando jugadores...</p>
           ) : (
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {jugadoresLocal?.map(jugador => {
@@ -80,11 +80,11 @@ const AsignacionJugadores: FC<AsignacionJugadoresProps> = ({
                     id={`local-${jugador._id}`}
                     checked={jugadorId ? jugadoresSeleccionadosLocal.has(jugadorId) : false}
                     onChange={() => jugadorId && toggleJugadorLocal(jugadorId)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                   />
                   <label
                     htmlFor={`local-${jugador._id}`}
-                    className="text-sm text-gray-700 cursor-pointer flex-1"
+                    className="text-sm text-slate-700 cursor-pointer flex-1"
                   >
                     {jugadorNombre || 'Jugador'}
                   </label>
@@ -92,7 +92,7 @@ const AsignacionJugadores: FC<AsignacionJugadoresProps> = ({
               );
               })}
               {jugadoresLocal?.length === 0 && (
-                <p className="text-gray-500 text-sm">No hay jugadores disponibles</p>
+                <p className="text-slate-500 text-sm">No hay jugadores disponibles</p>
               )}
             </div>
           )}
@@ -119,11 +119,11 @@ const AsignacionJugadores: FC<AsignacionJugadoresProps> = ({
                     id={`visitante-${jugador._id}`}
                     checked={jugadorId ? jugadoresSeleccionadosVisitante.has(jugadorId) : false}
                     onChange={() => jugadorId && toggleJugadorVisitante(jugadorId)}
-                    className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                    className="rounded border-slate-300 text-red-600 focus:ring-red-500"
                   />
                   <label
                     htmlFor={`visitante-${jugador._id}`}
-                    className="text-sm text-gray-700 cursor-pointer flex-1"
+                    className="text-sm text-slate-700 cursor-pointer flex-1"
                   >
                     {jugadorNombre || 'Jugador'}
                   </label>
@@ -131,7 +131,7 @@ const AsignacionJugadores: FC<AsignacionJugadoresProps> = ({
               );
               })}
               {jugadoresVisitante?.length === 0 && (
-                <p className="text-gray-500 text-sm">No hay jugadores disponibles</p>
+                <p className="text-slate-500 text-sm">No hay jugadores disponibles</p>
               )}
             </div>
           )}
@@ -142,7 +142,7 @@ const AsignacionJugadores: FC<AsignacionJugadoresProps> = ({
       <div className="flex justify-between items-center pt-4 border-t">
         <button
           onClick={onClose}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+          className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
           disabled={asignandoJugadores}
         >
           Cancelar
@@ -152,7 +152,7 @@ const AsignacionJugadores: FC<AsignacionJugadoresProps> = ({
           {hayJugadoresAsignados && (
             <button
               onClick={() => window.location.reload()} // Recargar para volver a captura
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors"
               disabled={asignandoJugadores}
             >
               Modificar Asignación
@@ -162,7 +162,7 @@ const AsignacionJugadores: FC<AsignacionJugadoresProps> = ({
           <button
             onClick={asignarJugadores}
             disabled={asignandoJugadores || (jugadoresSeleccionadosLocal.size === 0 && jugadoresSeleccionadosVisitante.size === 0)}
-            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+            className="px-6 py-2 bg-brand-600 text-white rounded hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
           >
             {asignandoJugadores ? (
               <>

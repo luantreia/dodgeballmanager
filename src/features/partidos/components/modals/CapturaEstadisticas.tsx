@@ -101,12 +101,12 @@ const CapturaEstadisticas: FC<CapturaEstadisticasProps> = ({
 
         {jugador && (
           <div className="space-y-1">
-            <div className="text-xs text-gray-600 dark:text-gray-400 truncate">
+            <div className="text-xs text-slate-600 dark:text-gray-400 truncate">
               {obtenerNombreJugador(jugador.jugador)}
             </div>
             <div className="grid grid-cols-4 gap-1 text-xs">
               <div>
-                <label htmlFor="capturaestadisticas-throws" className="block text-gray-500 dark:text-gray-400 text-xs">Throws</label>
+                <label htmlFor="capturaestadisticas-throws" className="block text-slate-500 dark:text-gray-400 text-xs">Throws</label>
                 <input id="capturaestadisticas-throws"
                   type="number"
                   min="0"
@@ -116,7 +116,7 @@ const CapturaEstadisticas: FC<CapturaEstadisticasProps> = ({
                 />
               </div>
               <div>
-                <label htmlFor="capturaestadisticas-hits" className="block text-gray-500 dark:text-gray-400 text-xs">Hits</label>
+                <label htmlFor="capturaestadisticas-hits" className="block text-slate-500 dark:text-gray-400 text-xs">Hits</label>
                 <input id="capturaestadisticas-hits"
                   type="number"
                   min="0"
@@ -126,7 +126,7 @@ const CapturaEstadisticas: FC<CapturaEstadisticasProps> = ({
                 />
               </div>
               <div>
-                <label htmlFor="capturaestadisticas-outs" className="block text-gray-500 dark:text-gray-400 text-xs">Outs</label>
+                <label htmlFor="capturaestadisticas-outs" className="block text-slate-500 dark:text-gray-400 text-xs">Outs</label>
                 <input id="capturaestadisticas-outs"
                   type="number"
                   min="0"
@@ -136,7 +136,7 @@ const CapturaEstadisticas: FC<CapturaEstadisticasProps> = ({
                 />
               </div>
               <div>
-                <label htmlFor="capturaestadisticas-catches" className="block text-gray-500 dark:text-gray-400 text-xs">Catches</label>
+                <label htmlFor="capturaestadisticas-catches" className="block text-slate-500 dark:text-gray-400 text-xs">Catches</label>
                 <input id="capturaestadisticas-catches"
                   type="number"
                   min="0"
@@ -158,12 +158,12 @@ const CapturaEstadisticas: FC<CapturaEstadisticasProps> = ({
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setMostrarAsignacion(true)}
-            className="flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+            className="flex items-center px-3 py-2 bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors"
           >
             <ArrowLeftIcon className="w-4 h-4 mr-2" />
             Modificar Jugadores
           </button>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-slate-600">
             {seleccionesLocal.filter(Boolean).length + seleccionesVisitante.filter(Boolean).length} jugadores seleccionados
           </div>
         </div>

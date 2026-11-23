@@ -45,7 +45,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="min-h-dvh flex items-center justify-center bg-slate-50 p-4">
           <div className="max-w-md w-full">
             <ErrorMessage
               title="Algo salió mal"
@@ -54,8 +54,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               className="shadow-lg"
             />
             {process.env.NODE_ENV === 'development' && (
-              <details className="mt-4 p-4 bg-gray-100 rounded-lg">
-                <summary className="cursor-pointer font-medium text-gray-700">
+              <details className="mt-4 p-4 bg-slate-100 rounded-lg">
+                <summary className="cursor-pointer font-medium text-slate-700">
                   Detalles del error (desarrollo)
                 </summary>
                 <pre className="mt-2 text-xs text-red-600 overflow-auto">

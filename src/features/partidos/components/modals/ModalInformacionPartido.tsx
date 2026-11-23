@@ -182,7 +182,7 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                     <button
                       type="button"
                       onClick={() => setModoEdicion(true)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      className="px-4 py-2 bg-brand-600 text-white rounded hover:bg-brand-700"
                     >
                       Editar
                     </button>
@@ -194,7 +194,7 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                       <button
                         type="button"
                         onClick={() => setSolicitudVideoAbierta(true)}
-                        className="px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full hover:bg-indigo-100"
+                        className="px-3 py-1 text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-200 rounded-full hover:bg-brand-100"
                       >
                         Solicitar video
                       </button>
@@ -211,7 +211,7 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                   </button>
                   <button
                     onClick={() => setModoEdicion(false)}
-                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                    className="px-4 py-2 bg-slate-500 text-white rounded hover:bg-slate-600"
                   >
                     Cancelar
                   </button>
@@ -222,49 +222,49 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
             {modoEdicion ? (
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="modalinformacionpartido-nombre-del-partido" className="block text-sm font-medium text-gray-700">Nombre del Partido</label>
+                  <label htmlFor="modalinformacionpartido-nombre-del-partido" className="block text-sm font-medium text-slate-700">Nombre del Partido</label>
                   <input id="modalinformacionpartido-nombre-del-partido"
                     type="text"
                     value={datosEdicion.nombrePartido}
                     onChange={(e) =>
                       setDatosEdicion((prev) => (prev ? { ...prev, nombrePartido: e.target.value } : prev))
                     }
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="modalinformacionpartido-fecha-y-hora" className="block text-sm font-medium text-gray-700">Fecha y Hora</label>
+                    <label htmlFor="modalinformacionpartido-fecha-y-hora" className="block text-sm font-medium text-slate-700">Fecha y Hora</label>
                     <input id="modalinformacionpartido-fecha-y-hora"
                       type="datetime-local"
                       value={datosEdicion.fecha}
                       onChange={(e) =>
                         setDatosEdicion((prev) => (prev ? { ...prev, fecha: e.target.value } : prev))
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                     />
                   </div>
                   <div>
-                    <label htmlFor="modalinformacionpartido-ubicacion" className="block text-sm font-medium text-gray-700">Ubicación</label>
+                    <label htmlFor="modalinformacionpartido-ubicacion" className="block text-sm font-medium text-slate-700">Ubicación</label>
                     <input id="modalinformacionpartido-ubicacion"
                       type="text"
                       value={datosEdicion.ubicacion}
                       onChange={(e) =>
                         setDatosEdicion((prev) => (prev ? { ...prev, ubicacion: e.target.value } : prev))
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label htmlFor="modalinformacionpartido-estado" className="block text-sm font-medium text-gray-700">Estado</label>
+                    <label htmlFor="modalinformacionpartido-estado" className="block text-sm font-medium text-slate-700">Estado</label>
                     <select id="modalinformacionpartido-estado"
                       value={datosEdicion.estado}
                       onChange={(e) =>
                         setDatosEdicion((prev) => (prev ? { ...prev, estado: e.target.value } : prev))
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                     >
                       <option value="programado">Programado</option>
                       <option value="en_juego">En Juego</option>
@@ -274,13 +274,13 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="modalinformacionpartido-modalidad" className="block text-sm font-medium text-gray-700">Modalidad</label>
+                    <label htmlFor="modalinformacionpartido-modalidad" className="block text-sm font-medium text-slate-700">Modalidad</label>
                     <select id="modalinformacionpartido-modalidad"
                       value={datosEdicion.modalidad}
                       onChange={(e) =>
                         setDatosEdicion((prev) => (prev ? { ...prev, modalidad: e.target.value } : prev))
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                     >
                       <option value="">Seleccionar...</option>
                       <option value="Foam">Foam</option>
@@ -288,13 +288,13 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="modalinformacionpartido-categoria" className="block text-sm font-medium text-gray-700">Categoría</label>
+                    <label htmlFor="modalinformacionpartido-categoria" className="block text-sm font-medium text-slate-700">Categoría</label>
                     <select id="modalinformacionpartido-categoria"
                       value={datosEdicion.categoria}
                       onChange={(e) =>
                         setDatosEdicion((prev) => (prev ? { ...prev, categoria: e.target.value } : prev))
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                     >
                       <option value="">Seleccionar...</option>
                       <option value="Masculino">Masculino</option>
@@ -304,13 +304,13 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="modalinformacionpartido-competencia" className="block text-sm font-medium text-gray-700">Competencia</label>
+                  <label htmlFor="modalinformacionpartido-competencia" className="block text-sm font-medium text-slate-700">Competencia</label>
                   <select id="modalinformacionpartido-competencia"
                     value={datosEdicion.competencia}
                     onChange={(e) =>
                       setDatosEdicion((prev) => (prev ? { ...prev, competencia: e.target.value } : prev))
                     }
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                   >
                     <option value="">Sin competencia</option>
                     {competencias.map((competencia) => (
@@ -322,7 +322,7 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="modalinformacionpartido-marcador-local" className="block text-sm font-medium text-gray-700">Marcador Local</label>
+                    <label htmlFor="modalinformacionpartido-marcador-local" className="block text-sm font-medium text-slate-700">Marcador Local</label>
                     <input id="modalinformacionpartido-marcador-local"
                       type="number"
                       value={datosEdicion.marcadorLocal}
@@ -337,12 +337,12 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                             : prev,
                         )
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                       min="0"
                     />
                   </div>
                   <div>
-                    <label htmlFor="modalinformacionpartido-marcador-visitante" className="block text-sm font-medium text-gray-700">Marcador Visitante</label>
+                    <label htmlFor="modalinformacionpartido-marcador-visitante" className="block text-sm font-medium text-slate-700">Marcador Visitante</label>
                     <input id="modalinformacionpartido-marcador-visitante"
                       type="number"
                       value={datosEdicion.marcadorVisitante}
@@ -357,13 +357,13 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                             : prev,
                         )
                       }
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                       min="0"
                     />
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="modalinformacionpartido-video-de-youtube-en-vivo-o-fin" className="block text-sm font-medium text-gray-700">Video de YouTube (en vivo o final)</label>
+                  <label htmlFor="modalinformacionpartido-video-de-youtube-en-vivo-o-fin" className="block text-sm font-medium text-slate-700">Video de YouTube (en vivo o final)</label>
                   <input id="modalinformacionpartido-video-de-youtube-en-vivo-o-fin"
                     type="text"
                     value={datosEdicion.videoUrl}
@@ -371,14 +371,14 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                       setDatosEdicion((prev) => (prev ? { ...prev, videoUrl: e.target.value } : prev))
                     }
                     placeholder="https://youtube.com/watch?v=..."
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                   />
                 </div>
                 <div className="pt-2">
                   <button
                     type="button"
                     onClick={handleRecalcular}
-                    className="text-sm text-blue-600 hover:text-blue-800"
+                    className="text-sm text-brand-600 hover:text-brand-800"
                   >
                     Recalcular marcador
                   </button>
@@ -420,7 +420,7 @@ const ModalInformacionPartido = ({ partidoId, isOpen, onClose, modoSoloLectura =
                       href={(partido as any).videoUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-blue-600 hover:underline"
+                      className="text-brand-600 hover:underline"
                     >
                       Ver video
                     </a>

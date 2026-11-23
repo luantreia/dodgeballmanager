@@ -307,13 +307,13 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
   if (loading) return <div>Cargando estadísticas...</div>;
 
   return (
-    <div className="p-4 bg-gray-50 rounded-lg">
+    <div className="p-4 bg-slate-50 rounded-lg">
       <div className="flex justify-between items-start mb-6">
         <div className="flex-1">
           <h2 className="text-2xl font-bold">Estadísticas del Partido</h2>
           <div className="mt-4 space-y-3">
             {/* Información del modo actual */}
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-slate-600">
               Modo Estadísticas: {modoEstadisticasUI} | Modo Visualización: {modoVisualizacionUI}
               {modoEstadisticasUI === 'manual'
                 ? '📝 Mostrando estadísticas manuales totales (ingresadas directamente)'
@@ -326,11 +326,11 @@ const EstadisticasGeneralesPartido: FC<EstadisticasGeneralesPartidoProps> = ({
         <div className="flex flex-col gap-2 ml-4">
           {/* Selector de Modo de Estadísticas (centro) */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Modo de captura:</span>
+            <span className="text-sm font-medium text-slate-700">Modo de captura:</span>
             <select
               value={modoEstadisticasUI}
               onChange={(e) => handleCambiarModo(e.target.value as ModoEstadisticas)}
-              className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="automatico">📊 Automático (por set)</option>
               <option value="manual">✏️ Manual (totales)</option>

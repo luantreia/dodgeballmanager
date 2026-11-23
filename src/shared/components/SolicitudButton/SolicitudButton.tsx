@@ -30,12 +30,12 @@ export const SolicitudButton: React.FC<SolicitudButtonProps> = ({
 
   const variantClasses = {
     primary:
-      'px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition',
+      'px-4 py-2 bg-brand-600 text-white rounded-md hover:bg-brand-700 disabled:opacity-50 transition',
     secondary:
-      'px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 transition',
+      'px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 disabled:opacity-50 transition',
     danger:
       'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 transition',
-    icon: 'p-2 text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100 transition',
+    icon: 'p-2 text-slate-600 hover:text-slate-900 rounded-md hover:bg-slate-100 transition',
   };
 
   return (

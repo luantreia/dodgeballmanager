@@ -30,17 +30,17 @@ export const ConfiguracionAvanzadaSection: React.FC<ConfiguracionAvanzadaSection
         </summary>
 
         <div className="mt-4 pt-4 border-t border-red-200">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <h4 className="text-blue-800 font-semibold mb-3">👁️ Configuración de Visualización</h4>
-            <p className="text-blue-700 text-sm mb-4">
+          <div className="bg-brand-50 border border-brand-200 rounded-lg p-4 mb-4">
+            <h4 className="text-brand-800 font-semibold mb-3">👁️ Configuración de Visualización</h4>
+            <p className="text-brand-700 text-sm mb-4">
               Controla qué estadísticas ven los usuarios comunes del partido.
             </p>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-blue-700">Mostrar al público:</span>
+              <span className="text-sm font-medium text-brand-700">Mostrar al público:</span>
               <select
                 value={(partido.modoVisualizacion as 'automatico' | 'manual') || 'automatico'}
                 onChange={(e) => onCambiarModoVisualizacion(e.target.value as 'automatico' | 'manual')}
-                className="px-3 py-2 text-sm border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="px-3 py-2 text-sm border border-brand-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
               >
                 <option value="automatico">📊 Estadísticas por Set (calculadas)</option>
                 <option value="manual">✏️ Estadísticas Totales (ingresadas)</option>

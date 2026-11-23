@@ -38,7 +38,7 @@ export const ComparativaEquiposTable: FC<ComparativaEquiposTableProps> = ({ esta
             </span>
           </h4>
         </div>
-        <div className="text-center text-gray-500 py-8">
+        <div className="text-center text-slate-500 py-8">
           <p>No hay datos de equipos para mostrar en este modo.</p>
         </div>
       </div>
@@ -74,7 +74,7 @@ export const ComparativaEquiposTable: FC<ComparativaEquiposTableProps> = ({ esta
             cell: (equipo) => (
               <div className="flex items-center whitespace-nowrap">
                 {equipo.escudo && <img src={equipo.escudo} alt="" className="w-8 h-8 object-contain mr-3" />}
-                <span className="font-medium text-gray-900">{equipo.nombre ?? 'Equipo'}</span>
+                <span className="font-medium text-slate-900">{equipo.nombre ?? 'Equipo'}</span>
               </div>
             ),
           },

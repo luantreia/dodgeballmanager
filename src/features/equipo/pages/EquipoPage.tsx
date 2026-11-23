@@ -620,7 +620,7 @@ const EquipoPage = () => {
           <h3 className="text-lg font-semibold">Administradores</h3>
           <button
             onClick={() => setIsAdminModalOpen(true)}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
           >
             Gestionar
           </button>
@@ -712,7 +712,7 @@ const EquipoPage = () => {
             <button
               type="submit"
               disabled={savingMiembro}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
             >
               {savingMiembro ? 'Agregando…' : 'Agregar miembro'}
             </button>
@@ -853,7 +853,7 @@ const EquipoPage = () => {
             <button
               type="button"
               onClick={mantenerPermisosActuales}
-              className="w-full rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+              className="w-full rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100"
             >
               Mantener permisos actuales
             </button>

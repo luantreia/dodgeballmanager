@@ -57,21 +57,21 @@ const ModalSolicitudVideoPartido: React.FC<ModalSolicitudVideoPartidoProps> = ({
         </p>
 
         <div>
-          <label htmlFor="modalsolicitudvideopartido-link-de-youtube" className="block text-sm font-medium text-gray-700">Link de YouTube</label>
+          <label htmlFor="modalsolicitudvideopartido-link-de-youtube" className="block text-sm font-medium text-slate-700">Link de YouTube</label>
           <input id="modalsolicitudvideopartido-link-de-youtube"
             type="text"
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
             placeholder="https://youtube.com/watch?v=..."
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="modalsolicitudvideopartido-comentario-opcional" className="block text-sm font-medium text-gray-700">Comentario (opcional)</label>
+          <label htmlFor="modalsolicitudvideopartido-comentario-opcional" className="block text-sm font-medium text-slate-700">Comentario (opcional)</label>
           <textarea id="modalsolicitudvideopartido-comentario-opcional"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
             rows={3}
             value={mensaje}
             onChange={(e) => setMensaje(e.target.value)}
@@ -83,14 +83,14 @@ const ModalSolicitudVideoPartido: React.FC<ModalSolicitudVideoPartidoProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-md hover:bg-brand-700 disabled:opacity-50"
           >
             {loading ? 'Enviando...' : 'Enviar Solicitud'}
           </button>

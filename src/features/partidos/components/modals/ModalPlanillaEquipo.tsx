@@ -1193,7 +1193,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       headerClassName="!mb-0 !border-b !border-slate-100 !pb-1 sm:!pb-1"
     >
       {loading ? (
-        <div className="py-10 text-center text-gray-600">Cargando planilla...</div>
+        <div className="py-10 text-center text-slate-600">Cargando planilla...</div>
       ) : !planilla ? (
         <div className="space-y-5 py-4">
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -1203,19 +1203,19 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           </div>
 
           <div className="space-y-2">
-            <span className="block text-sm font-medium text-gray-700">¿Cómo querés cargarla?</span>
+            <span className="block text-sm font-medium text-slate-700">¿Cómo querés cargarla?</span>
             <div className="grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => setModoNuevo('sets')}
                 className={`rounded-lg border p-4 text-left transition ${
                   modoNuevo === 'sets'
-                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-200'
+                    : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
-                <span className="block font-semibold text-gray-900">Set a set</span>
-                <span className="mt-1 block text-sm text-gray-600">
+                <span className="block font-semibold text-slate-900">Set a set</span>
+                <span className="mt-1 block text-sm text-slate-600">
                   Desglose por set. Es lo que permite analizar rendimiento dentro del partido.
                 </span>
               </button>
@@ -1224,12 +1224,12 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                 onClick={() => setModoNuevo('directa')}
                 className={`rounded-lg border p-4 text-left transition ${
                   modoNuevo === 'directa'
-                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-200'
+                    : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
-                <span className="block font-semibold text-gray-900">Totales del partido</span>
-                <span className="mt-1 block text-sm text-gray-600">
+                <span className="block font-semibold text-slate-900">Totales del partido</span>
+                <span className="mt-1 block text-sm text-slate-600">
                   Un solo número por jugador. Más rápido si no tenés el detalle por set.
                 </span>
               </button>
@@ -1240,7 +1240,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
             type="button"
             onClick={crear}
             disabled={creando}
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
           >
             {creando ? 'Creando...' : 'Crear planilla con mi plantel'}
           </button>
@@ -1248,13 +1248,13 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
       ) : (
         <div className="space-y-5">
           {planilla.estado === 'pendiente_oficializacion' && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900">
               <span>Esperando que la organización apruebe la oficialización. Mientras tanto no se puede editar.</span>
               <button
                 type="button"
                 onClick={cancelar}
                 disabled={guardando}
-                className="rounded-md border border-blue-300 bg-white px-3 py-1.5 font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+                className="rounded-md border border-brand-300 bg-white px-3 py-1.5 font-medium text-brand-700 hover:bg-brand-100 disabled:opacity-50"
               >
                 Retirar solicitud
               </button>
@@ -1285,7 +1285,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                   <span
                     key={s._id}
                     className={`inline-flex items-stretch overflow-hidden rounded-md ${
-                      activo ? 'bg-blue-600' : 'bg-gray-100'
+                      activo ? 'bg-brand-600' : 'bg-slate-100'
                     }`}
                   >
                     <button
@@ -1297,7 +1297,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                         setSetActivoId(s._id);
                       }}
                       className={`px-3 py-1.5 text-sm font-medium transition ${
-                        activo ? 'text-white' : 'text-gray-700 hover:bg-gray-200'
+                        activo ? 'text-white' : 'text-slate-700 hover:bg-slate-200'
                       }`}
                     >
                       Set {s.numeroSet}
@@ -1318,8 +1318,8 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                         }
                         className={`px-2 text-sm font-bold transition disabled:opacity-40 ${
                           activo
-                            ? 'text-blue-100 hover:bg-blue-700 hover:text-white'
-                            : 'text-muted hover:bg-gray-200 hover:text-rose-600'
+                            ? 'text-brand-100 hover:bg-brand-700 hover:text-white'
+                            : 'text-muted hover:bg-slate-200 hover:text-rose-600'
                         }`}
                       >
                         ×
@@ -1332,7 +1332,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={agregarSet}
-                  className="rounded-md border border-dashed border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:border-gray-400 hover:text-gray-800"
+                  className="rounded-md border border-dashed border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-slate-400 hover:text-slate-800"
                 >
                   + Agregar set
                 </button>
@@ -1341,10 +1341,10 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           )}
 
           {planilla.modo === 'sets' && setActivo && (
-            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
               <label
                 htmlFor="ganador-set-planilla"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-slate-700"
               >
                 ¿Quién ganó el set {setActivo.numeroSet}?
               </label>
@@ -1355,7 +1355,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                 onChange={(e) =>
                   void cambiarGanador(e.target.value as PlanillaSetTipo['ganadorSet'])
                 }
-                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800 disabled:bg-gray-100 disabled:text-gray-500"
+                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 disabled:bg-slate-100 disabled:text-slate-500"
               >
                 <option value="pendiente">Sin definir</option>
                 <option value="local">{nombreLocal}</option>
@@ -1379,7 +1379,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                   type="button"
                   disabled={autocompletandoEquipo !== null}
                   onClick={() => void autocompletarPlantelDe(eq.id)}
-                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition [touch-action:manipulation] hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
+                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition [touch-action:manipulation] hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-50"
                 >
                   {autocompletandoEquipo === eq.id ? 'Agregando…' : eq.nombre}
                   {eq.id === equipoIdDePlanilla ? ' (el mío)' : ''}
@@ -1389,12 +1389,12 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           )}
 
           {planilla.presentes.length === 0 ? (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
               La planilla no tiene jugadores. Revisá que tu plantel tenga contratos aceptados, o
               agregá el plantel del rival con los botones de arriba.
             </div>
           ) : planilla.modo === 'sets' && !setActivoId ? (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
               Agregá un set para empezar a cargar estadísticas.
             </div>
           ) : (
@@ -1481,14 +1481,14 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
               había dónde sacar a alguien que se cargó de más (el autocompletado trae el plantel
               entero, incluida gente que no fue al partido). */}
           {editable && planilla.presentes.length > 0 && (
-            <details className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <summary className="cursor-pointer text-sm font-semibold text-gray-700">
+            <details className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-slate-700">
                 Jugadores en la planilla ({planilla.presentes.length})
               </summary>
-              <ul className="mt-3 divide-y divide-gray-200">
+              <ul className="mt-3 divide-y divide-slate-200">
                 {planilla.presentes.map((presente) => (
                   <li key={presente._id} className="flex items-center justify-between gap-3 py-1.5">
-                    <span className="text-sm text-gray-800">
+                    <span className="text-sm text-slate-800">
                       {nombrePresente(presente)}
                       {gruposDePlanilla.length > 1 && (
                         <span className="ml-1.5 text-xs text-muted">
@@ -1519,8 +1519,8 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           )}
 
           {Object.keys(totales).length > 0 && (
-            <details className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <summary className="cursor-pointer text-sm font-semibold text-gray-700">
+            <details className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-slate-700">
                 Totales del partido según esta planilla
               </summary>
               <div className="mt-3">
@@ -1536,7 +1536,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                       id: 'jugador',
                       header: 'Jugador',
                       cell: (presente) => (
-                        <span className="text-gray-800">
+                        <span className="text-slate-800">
                           {nombrePresente(presente)}
                           {gruposDePlanilla.length > 1 && (
                             <span className="ml-1.5 text-xs text-muted">
@@ -1575,11 +1575,11 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
             para no obligar a bajar toda la grilla para llegar acá.
           */}
           <div className="sticky bottom-0 z-10 -mx-4 -mb-3 flex items-center justify-between gap-2
-                          border-t border-gray-200 bg-white px-4 py-2
+                          border-t border-slate-200 bg-white px-4 py-2
                           pb-[calc(0.5rem+env(safe-area-inset-bottom))]
                           sm:-mx-6 sm:-mb-4 sm:px-6 sm:pb-2">
             {planilla.estado === 'oficializada' ? (
-              <p className="text-xs text-gray-500">Oficializada: no se puede eliminar.</p>
+              <p className="text-xs text-slate-500">Oficializada: no se puede eliminar.</p>
             ) : (
               <button
                 type="button"
@@ -1619,8 +1619,8 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                   onClick={guardar}
                   disabled={guardando}
                   title="Cada fila ya se guarda sola; esto fuerza el guardado de todo ahora"
-                  className="px-1 py-2 text-xs font-medium text-gray-500 transition
-                             [touch-action:manipulation] hover:text-gray-700 hover:underline
+                  className="px-1 py-2 text-xs font-medium text-slate-500 transition
+                             [touch-action:manipulation] hover:text-slate-700 hover:underline
                              disabled:opacity-50"
                 >
                   {guardando ? 'Guardando...' : 'Guardar ahora'}
@@ -1629,9 +1629,9 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                   type="button"
                   onClick={oficializar}
                   disabled={guardando}
-                  className="min-h-[2.75rem] rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold
+                  className="min-h-[2.75rem] rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold
                              text-white transition [touch-action:manipulation]
-                             hover:bg-blue-700 disabled:opacity-50"
+                             hover:bg-brand-700 disabled:opacity-50"
                 >
                   Pedir oficial
                 </button>
@@ -1691,10 +1691,10 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                   setDecisionCambioJugador(null);
                   asignarJugadorMoviendoNumeros(index, nuevoPresenteId);
                 }}
-                className="w-full rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-left text-sm font-medium text-blue-800 transition hover:bg-blue-100"
+                className="w-full rounded-lg border border-brand-300 bg-brand-50 px-4 py-2 text-left text-sm font-medium text-brand-800 transition hover:bg-brand-100"
               >
                 Mover estos números a {decisionCambioJugador.nombreNuevo}
-                <span className="mt-0.5 block text-xs font-normal text-blue-700">
+                <span className="mt-0.5 block text-xs font-normal text-brand-700">
                   Los números no cambian, sólo el dueño. {decisionCambioJugador.nombreAnterior} queda sin fila en este
                   set.
                 </span>

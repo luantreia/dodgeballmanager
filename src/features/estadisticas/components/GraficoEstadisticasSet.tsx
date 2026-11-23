@@ -254,7 +254,7 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
   // Returns tempranos DESPUÉS de los hooks
   if (loading) {
     return (
-      <div className="text-center py-4 text-gray-600">
+      <div className="text-center py-4 text-slate-600">
         <span className="text-sm">Cargando estadísticas...</span>
       </div>
     );
@@ -270,7 +270,7 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
 
   if (estadisticas.length === 0) {
     return (
-      <div className="text-center py-4 text-gray-500">
+      <div className="text-center py-4 text-slate-500">
         <span className="text-sm">No hay estadísticas capturadas para este set</span>
       </div>
     );
@@ -292,9 +292,9 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
     
     
     return (
-      <div className="bg-white p-3 border border-gray-300 rounded shadow-lg z-50">
-        <p className="font-semibold text-gray-900">{label || jugadorData.nombre}</p>
-        <p className="text-xs text-gray-600 mb-2">Equipo: {jugadorData.equipo}</p>
+      <div className="bg-white p-3 border border-slate-300 rounded shadow-lg z-50">
+        <p className="font-semibold text-slate-900">{label || jugadorData.nombre}</p>
+        <p className="text-xs text-slate-600 mb-2">Equipo: {jugadorData.equipo}</p>
         <div className="space-y-1">
           <p style={{ color: '#3b82f6' }} className="text-sm">
             Lanzamientos: <span className="font-semibold">{jugadorData.lanzamientosReal ?? 0}</span>
@@ -323,8 +323,8 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
               onClick={() => setVistaActual('tabla')}
               className={`px-3 py-1 text-sm rounded ${
                 vistaActual === 'tabla' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-brand-600 text-white' 
+                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
               }`}
             >
               📊 Tabla
@@ -333,8 +333,8 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
               onClick={() => setVistaActual('grafico')}
               className={`px-3 py-1 text-sm rounded ${
                 vistaActual === 'grafico' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-brand-600 text-white' 
+                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
               }`}
             >
               📈 Gráfico
@@ -344,7 +344,7 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
           {/* Control de escala logarítmica (solo visible en vista gráfico) */}
           {vistaActual === 'grafico' && (
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-700">
+              <label className="text-sm text-slate-700">
                 <input
                   type="checkbox"
                   checked={escalaLogaritmica}
@@ -359,13 +359,13 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
         
         {/* Controles de ordenamiento (solo visible en vista gráfico) */}
         {vistaActual === 'grafico' && (
-          <div className="flex gap-3 items-center bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <span className="text-sm font-medium text-gray-700">Ordenar por:</span>
+          <div className="flex gap-3 items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+            <span className="text-sm font-medium text-slate-700">Ordenar por:</span>
             
             <select
               value={ordenPor}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => setOrdenPor(e.target.value as OrdenCampo)}
-              className="px-3 py-1 text-sm border border-gray-300 rounded bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-1 text-sm border border-slate-300 rounded bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             >
               <option value="equipo">📋 Por Equipos (separados)</option>
               <option value="throws">🎯 Lanzamientos</option>
@@ -377,7 +377,7 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
             {ordenPor !== 'equipo' && (
               <button
                 onClick={() => setOrdenDireccion(prev => prev === 'desc' ? 'asc' : 'desc')}
-                className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
+                className="px-3 py-1 text-sm bg-white border border-slate-300 rounded hover:bg-slate-50 flex items-center gap-2"
                 title={ordenDireccion === 'desc' ? 'Mayor a Menor' : 'Menor a Mayor'}
               >
                 {ordenDireccion === 'desc' ? '⬇️ Mayor a Menor' : '⬆️ Menor a Mayor'}
@@ -390,7 +390,7 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
       {/* Vista de Gráfico */}
       {vistaActual === 'grafico' && (
         <div className="bg-white p-4 rounded-lg border">
-          <h4 className="text-sm font-semibold text-gray-700 mb-4">
+          <h4 className="text-sm font-semibold text-slate-700 mb-4">
             Estadísticas por Jugador {escalaLogaritmica && '(Escala Logarítmica)'}
           </h4>
           <ResponsiveContainer width="100%" height={450}>
@@ -498,10 +498,10 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
               ).map((item, index) => (
               <div key={index} className="flex items-center gap-2">
                 <div 
-                  className="w-4 h-4 rounded border border-gray-300" 
+                  className="w-4 h-4 rounded border border-slate-300" 
                   style={{ backgroundColor: item.color }}
                 />
-                <span className="text-sm text-gray-700 font-medium">{item.equipo}</span>
+                <span className="text-sm text-slate-700 font-medium">{item.equipo}</span>
               </div>
             ))}
           </div>
@@ -514,7 +514,7 @@ const GraficoEstadisticasSet: FC<GraficoEstadisticasSetProps> = ({ setId }) => {
           {Object.entries(equiposData).map(([equipoId, equipoInfo]) => (
             <div key={equipoId} className="border rounded-lg overflow-hidden bg-white">
               {/* Header del equipo con totales */}
-              <div className="bg-blue-600 text-white px-4 py-2">
+              <div className="bg-brand-600 text-white px-4 py-2">
                 <h4 className="font-semibold">{equipoInfo.nombre}</h4>
                 <div className="grid grid-cols-4 gap-2 mt-1 text-xs">
                   <div>

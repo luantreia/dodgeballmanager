@@ -117,14 +117,14 @@ export const SolicitudModal: React.FC<SolicitudModalProps> = ({
           {/* Selector de tipo de solicitud. Si el modal fue abierto con prefillTipo, mostrarlo fijo y no permitir cambiarlo */}
           {prefillTipo ? (
             <div>
-              <p className="block text-sm font-medium text-gray-700 mb-2">Tipo de Solicitud</p>
-              <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">
+              <p className="block text-sm font-medium text-slate-700 mb-2">Tipo de Solicitud</p>
+              <div className="w-full px-3 py-2 border border-slate-200 rounded-md bg-slate-50 text-sm text-slate-700">
                 {formatearTipo(prefillTipo)}
               </div>
             </div>
           ) : (
             <div>
-              <label htmlFor="solicitudmodal-campo-127" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="solicitudmodal-campo-127" className="block text-sm font-medium text-slate-700 mb-2">
                 Tipo de Solicitud
               </label>
               <select id="solicitudmodal-campo-127"
@@ -133,7 +133,7 @@ export const SolicitudModal: React.FC<SolicitudModalProps> = ({
                   setTipoSeleccionado(e.target.value as SolicitudEdicionTipo);
                   setDatosPropuestos({});
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500"
               >
                 <option value="">Selecciona una opción...</option>
                 {opciones.map((opcion) => (
@@ -180,14 +180,14 @@ export const SolicitudModal: React.FC<SolicitudModalProps> = ({
             <button
               onClick={onClose}
               disabled={creandoSolicitud}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
+              className="px-4 py-2 text-slate-700 bg-slate-100 rounded-md hover:bg-slate-200 disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               onClick={handleSubmit}
               disabled={creandoSolicitud || !tipoSeleccionado}
-              className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 text-white bg-brand-600 rounded-md hover:bg-brand-700 disabled:opacity-50"
             >
               {creandoSolicitud ? 'Creando...' : 'Crear Solicitud'}
             </button>
@@ -225,8 +225,8 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
           {/* Jugador: mostrar nombre/alias si vienen en prefill, sino mostrar ID o input editable */}
           {valores.jugadorNombre ? (
             <div>
-              <p className="block text-sm font-medium text-gray-700 mb-1">Jugador</p>
-              <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">
+              <p className="block text-sm font-medium text-slate-700 mb-1">Jugador</p>
+              <div className="w-full px-3 py-2 border border-slate-200 rounded-md bg-slate-50 text-sm text-slate-700">
                 <div className="font-medium">{valores.jugadorNombre}</div>
                 {valores.jugadorAlias ? <div className="text-xs text-slate-500">Alias: {valores.jugadorAlias}</div> : null}
                 {valores.jugadorId ? <div className="text-xs text-muted mt-1">ID: {valores.jugadorId}</div> : null}
@@ -234,8 +234,8 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
             </div>
           ) : valores.jugadorId ? (
             <div>
-              <p className="block text-sm font-medium text-gray-700 mb-1">Jugador</p>
-              <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">{valores.jugadorId}</div>
+              <p className="block text-sm font-medium text-slate-700 mb-1">Jugador</p>
+              <div className="w-full px-3 py-2 border border-slate-200 rounded-md bg-slate-50 text-sm text-slate-700">{valores.jugadorId}</div>
             </div>
           ) : (
             <InputField
@@ -249,16 +249,16 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
           {/* Equipo: mostrar nombre si viene en prefill, sino mostrar ID o input editable */}
           {valores.equipoNombre ? (
             <div>
-              <p className="block text-sm font-medium text-gray-700 mb-1">Equipo</p>
-              <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">
+              <p className="block text-sm font-medium text-slate-700 mb-1">Equipo</p>
+              <div className="w-full px-3 py-2 border border-slate-200 rounded-md bg-slate-50 text-sm text-slate-700">
             <div className="font-medium">{valores.equipoNombre}</div>
             {valores.equipoId ? <div className="text-xs text-muted mt-1">ID: {valores.equipoId}</div> : null}
               </div>
             </div>
           ) : valores.equipoId ? (
             <div>
-              <p className="block text-sm font-medium text-gray-700 mb-1">Equipo</p>
-              <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700">{valores.equipoId}</div>
+              <p className="block text-sm font-medium text-slate-700 mb-1">Equipo</p>
+              <div className="w-full px-3 py-2 border border-slate-200 rounded-md bg-slate-50 text-sm text-slate-700">{valores.equipoId}</div>
             </div>
           ) : (
             <InputField
@@ -482,8 +482,8 @@ const FormularioSolicitudDinamico: React.FC<FormularioSolicitudDinamicoProps> = 
 
     default:
       return (
-        <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
-          <p className="text-sm text-gray-600">
+        <div className="bg-slate-50 border border-slate-200 rounded-md p-3">
+          <p className="text-sm text-slate-600">
             Formulario no disponible para este tipo de solicitud
           </p>
         </div>
@@ -514,7 +514,7 @@ const InputField: React.FC<InputFieldProps> = ({
   <div>
     {/* El control va adentro del label: así queda asociado sin necesidad de ids. */}
     <label className="block">
-      <span className="block text-sm font-medium text-gray-700 mb-1">
+      <span className="block text-sm font-medium text-slate-700 mb-1">
         {label} {required && <span className="text-red-500">*</span>}
       </span>
       <input
@@ -522,7 +522,7 @@ const InputField: React.FC<InputFieldProps> = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500"
       />
     </label>
   </div>
@@ -546,13 +546,13 @@ const SelectField: React.FC<SelectFieldProps> = ({
   <div>
     {/* El control va adentro del label: así queda asociado sin necesidad de ids. */}
     <label className="block">
-      <span className="block text-sm font-medium text-gray-700 mb-1">
+      <span className="block text-sm font-medium text-slate-700 mb-1">
         {label} {required && <span className="text-red-500">*</span>}
       </span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -582,7 +582,7 @@ const TextAreaField: React.FC<TextAreaFieldProps> = ({
   <div>
     {/* El control va adentro del label: así queda asociado sin necesidad de ids. */}
     <label className="block">
-      <span className="block text-sm font-medium text-gray-700 mb-1">
+      <span className="block text-sm font-medium text-slate-700 mb-1">
         {label} {required && <span className="text-red-500">*</span>}
       </span>
       <textarea
@@ -590,7 +590,7 @@ const TextAreaField: React.FC<TextAreaFieldProps> = ({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500"
       />
     </label>
   </div>

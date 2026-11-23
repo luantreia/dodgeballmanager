@@ -271,7 +271,7 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
     [tabla, seriesGrafico, metrica],
   );
 
-  const selectClase = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20';
+  const selectClase = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20';
 
   const maximo = useMemo(() => {
     let max = 0;
@@ -358,7 +358,7 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
                         <button
                           type="button"
                           onClick={() => onAbrirPartido(tabla.partidoPorEtiqueta.get(kf)!)}
-                          className="rounded text-left text-blue-700 underline decoration-blue-300 underline-offset-2 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                          className="rounded text-left text-brand-700 underline decoration-brand-300 underline-offset-2 hover:text-brand-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                         >
                           {kf}
                         </button>
@@ -483,7 +483,7 @@ const AnalisisCruzado: React.FC<Props> = ({ filas: filasCrudas, onAbrirPartido }
                       onAbrirPartido?.(fila.partidoId);
                       setCeldaAbierta(null);
                     }}
-                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:cursor-default disabled:opacity-60"
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-sm transition hover:border-brand-300 hover:bg-brand-50 disabled:cursor-default disabled:opacity-60"
                   >
                     <span>
                       <span className="block font-medium text-slate-800">{etiquetaPartido(fila)}</span>
