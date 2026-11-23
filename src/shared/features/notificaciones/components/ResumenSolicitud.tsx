@@ -17,6 +17,7 @@ export interface ContextoSolicitud {
   equipo: { id: string; nombre: string } | null;
   jugador: { id: string; nombre: string | null } | null;
   organizacion: { id: string; nombre: string } | null;
+  temporada?: { id: string; nombre: string | null; competencia: string | null } | null;
 }
 
 interface SolicitudResumible {
@@ -46,7 +47,32 @@ const VISIBILIDAD: Record<string, string> = {
 
 const B = ({ children }: { children: React.ReactNode }) => <strong className="font-semibold text-slate-900">{children}</strong>;
 
-type Resumen = { que: React.ReactNode; siAprobas?: React.ReactNode };
+/** `aviso`: el "si aprobás" es una advertencia (aprobar no hace lo que uno esperaría). */
+type Resumen = { que: React.ReactNode; siAprobas?: React.ReactNode; aviso?: boolean };
+
+/**
+ * Tipos que al aprobarse no aplican ningún cambio: no tienen rama en el PUT de aprobación y caen
+ * en el `else` vacío. Ninguna app los crea hoy, pero /opciones los ofrece. Mejor avisarlo que
+ * dejar que alguien apruebe creyendo que cambió algo.
+ */
+const SIN_EFECTO = new Set([
+  'contratoEquipoCompetencia',
+  'participacion-temporada-actualizar',
+  'jugador-temporada-actualizar',
+  'resultadoPartido',
+  'estadisticasEquipoSet',
+]);
+
+const CAMPOS_REPORTE: Record<string, string> = {
+  resultado: 'resultado',
+  fecha_hora: 'fecha y hora',
+  ubicacion: 'ubicación',
+  alineacion: 'alineación',
+  sets: 'sets',
+  estadisticas: 'estadísticas',
+  estado: 'estado del partido',
+  nombre: 'nombre del partido',
+};
 
 function resumir(s: SolicitudResumible): Resumen | null {
   const c = s.contexto ?? null;
@@ -58,8 +84,57 @@ function resumir(s: SolicitudResumible): Resumen | null {
   const delSet = set != null ? <B>set {set}</B> : <>un set</>;
   const visibilidad = VISIBILIDAD[d.visibilidadObjetivo] ?? VISIBILIDAD.organizacion;
   const equipo = c?.equipo?.nombre;
+  const jugador = c?.jugador?.nombre;
+  const elJugador = jugador ? <B>{jugador}</B> : <>un jugador</>;
+  const alEquipo = equipo ? <B>{equipo}</B> : <>el equipo</>;
+  const t = c?.temporada;
+  const laTemporada = t?.nombre ? <><B>{t.nombre}</B>{t.competencia ? <> de {t.competencia}</> : null}</> : <>la temporada</>;
+
+  if (SIN_EFECTO.has(s.tipo)) {
+    return {
+      que: <>{quien} envió una solicitud{partido ? <> sobre <B>{partido}</B></> : null}{equipo && !partido ? <> sobre <B>{equipo}</B></> : null}.</>,
+      siAprobas: <>Aprobarla no aplica ningún cambio: este tipo de solicitud todavía no tiene implementación. Si el cambio hace falta, hacelo a mano y aprobala o rechazala para cerrarla.</>,
+      aviso: true,
+    };
+  }
 
   switch (s.tipo) {
+    case 'jugador-equipo-crear':
+      return {
+        que: <>{quien} quiere sumar a {elJugador} a {alEquipo}{d.rol && d.rol !== 'jugador' ? <> como {d.rol}</> : null}{d.numeroCamiseta ? <> con la camiseta {d.numeroCamiseta}</> : null}.</>,
+        siAprobas: <>Se crea el contrato{d.fechaInicio ? <> desde el {fechaCorta(d.fechaInicio)}</> : null}. Si ya tiene un contrato con ese equipo que se superpone en fechas, la aprobación falla.</>,
+      };
+    case 'jugador-equipo-eliminar':
+      return { que: <>{quien} quiere dar de baja a {elJugador} de {alEquipo}.</>, siAprobas: <>El contrato queda en baja con fecha de hoy.</> };
+    case 'jugador-equipo-editar':
+      return { que: <>{quien} quiere cambiar el contrato de {elJugador} en {alEquipo}.</>, siAprobas: <>Se aplican los cambios propuestos (rol, fechas, estado o foto).</> };
+    case 'participacion-temporada-crear':
+      return { que: <>{quien} quiere inscribir a {alEquipo} en {laTemporada}.</>, siAprobas: <>El equipo queda inscripto en esa temporada.</> };
+    case 'participacion-temporada-eliminar':
+      return { que: <>{quien} quiere dar de baja a {alEquipo} de {laTemporada}.</>, siAprobas: <>La inscripción del equipo queda en baja.</> };
+    case 'jugador-temporada-crear':
+      return { que: <>{quien} quiere sumar a {elJugador} a la lista de {alEquipo} en {laTemporada}.</>, siAprobas: <>El jugador queda en la lista de esa temporada.</> };
+    case 'jugador-temporada-eliminar':
+      return { que: <>{quien} quiere sacar a {elJugador} de la lista de {alEquipo} en {laTemporada}.</>, siAprobas: <>Queda en baja en esa lista.</> };
+    case 'estadisticasJugadorPartido':
+      return { que: <>{quien} quiere publicar las estadísticas de {elJugador}{enPartido}.</>, siAprobas: <>Pasan a ser oficiales y las ve {visibilidad}.</> };
+    case 'estadisticasEquipoPartido':
+      return { que: <>{quien} quiere publicar las estadísticas de {alEquipo}{enPartido}.</>, siAprobas: <>Pasan a ser oficiales y las ve {visibilidad}.</> };
+    case 'editarPartidoCompetencia': {
+      const campos = Array.isArray(d.camposSolicitados)
+        ? d.camposSolicitados.map((k: string) => CAMPOS_REPORTE[k] ?? k).join(', ')
+        : null;
+      return {
+        que: (
+          <>
+            {quien} reporta un problema{enPartido}{campos ? <> en: <B>{campos}</B></> : null}
+            {d.prioridad ? <> (prioridad {d.prioridad})</> : null}.
+            {d.mensaje ? <span className="mt-1 block border-l-2 border-slate-300 pl-2 italic text-slate-600">“{d.mensaje}”</span> : null}
+          </>
+        ),
+        siAprobas: <>No cambia nada en el partido: marca el reporte como atendido. La corrección la hacés vos desde el partido.</>,
+      };
+    }
     case 'estadisticasJugadorSet-lote':
     case 'estadisticasJugadorSet':
       return {
@@ -92,10 +167,6 @@ function resumir(s: SolicitudResumible): Resumen | null {
       }
       return { que: <>{quien} propone un cambio en el {delSet}{enPartido}.</> };
     }
-    case 'resultadoPartido':
-      return { que: <>{quien} quiere cargar el resultado{enPartido}.</> };
-    case 'editarPartidoCompetencia':
-      return { que: <>{quien} quiere editar los datos{enPartido}.</> };
     case 'editarPartidoVideo':
       return { que: <>{quien} quiere agregar el video{enPartido}.</>, siAprobas: <>El video queda asociado al partido.</> };
     case 'planilla-equipo-oficializacion':
@@ -141,10 +212,17 @@ export const ResumenSolicitud: React.FC<{ solicitud: SolicitudResumible }> = ({ 
       <p>{r.que}</p>
       {donde ? <p className="text-xs text-slate-500">{donde}</p> : null}
       {r.siAprobas ? (
-        <p className="text-sm">
-          <span className="font-semibold text-emerald-800">Si aprobás: </span>
-          {r.siAprobas}
-        </p>
+        r.aviso ? (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-sm text-amber-900">
+            <span className="font-semibold">Ojo: </span>
+            {r.siAprobas}
+          </p>
+        ) : (
+          <p className="text-sm">
+            <span className="font-semibold text-emerald-800">Si aprobás: </span>
+            {r.siAprobas}
+          </p>
+        )
       ) : null}
     </div>
   );
