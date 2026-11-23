@@ -1387,10 +1387,11 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                 <div className="mt-3">
                   <CapturaVideoSet
                     key={setActivo._id}
-                    partidoId={partidoId}
+                    planillaId={planilla._id}
                     planillaSetId={setActivo._id}
                     equipos={equiposDelPartido}
                     presentes={planilla.presentes}
+                    videosPlanilla={(planilla as { videos?: import('overtime-kit/captura').VideoPartido[] }).videos}
                     videos={(partido as { videos?: import('overtime-kit/captura').VideoPartido[] } | null | undefined)?.videos}
                     videoUrl={(partido as { videoUrl?: string } | null | undefined)?.videoUrl}
                     editable={editable}

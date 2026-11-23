@@ -28,10 +28,12 @@ const api = crearApiCaptura((ruta, init) =>
 );
 
 interface Props {
-  partidoId: string;
+  planillaId: string;
   planillaSetId: string;
   equipos: EquipoCaptura[];
   presentes: PlanillaPresente[];
+  /** Cámaras propias de la planilla. Vacío = se usan las del partido. */
+  videosPlanilla?: VideoPartido[];
   /** `videos` y `videoUrl` del partido, como vienen del backend. */
   videos?: VideoPartido[];
   videoUrl?: string | null;
@@ -47,12 +49,16 @@ const nombreDe = (p: PlanillaPresente): string => {
 };
 
 const CapturaVideoSet: React.FC<Props> = ({
-  partidoId, planillaSetId, equipos, presentes, videos: videosIniciales, videoUrl, editable, onCambio,
+  planillaId, planillaSetId, equipos, presentes, videosPlanilla, videos: videosPartido, videoUrl, editable, onCambio,
 }) => {
   const reproductor = useRef<ReproductorPartidoHandle>(null);
-  // Un partido viejo sólo tiene `videoUrl`: se trata como una cámara.
+  // Las cámaras de la planilla mandan; si no tiene, se arranca con las del partido (un partido
+  // viejo sólo tiene `videoUrl`: se trata como una cámara). Guardar siempre escribe en la
+  // planilla, nunca en el partido: lo oficial se actualiza al oficializar.
+  const [propias, setPropias] = useState(Boolean(videosPlanilla?.length));
   const [videos, setVideos] = useState<VideoPartido[]>(() => {
-    if (videosIniciales?.length) return videosIniciales;
+    if (videosPlanilla?.length) return videosPlanilla;
+    if (videosPartido?.length) return videosPartido;
     const id = extraerYoutubeId(videoUrl);
     return id ? [{ youtubeId: id, etiqueta: 'Cámara principal', tramos: [] }] : [];
   });
@@ -84,11 +90,25 @@ const CapturaVideoSet: React.FC<Props> = ({
 
       <div>
         <button type="button" onClick={() => setVerCamaras((v) => !v)} className="text-sm text-brand-700 hover:underline">
-          {verCamaras ? 'Ocultar cámaras' : `Cámaras del partido (${videos.length})`}
+          {verCamaras ? 'Ocultar cámaras' : `Cámaras ${propias ? 'de la planilla' : 'del partido'} (${videos.length})`}
         </button>
         {verCamaras && (
-          <div className="mt-2">
-            <CamarasPartido api={api} partidoId={partidoId} videos={videos} onGuardado={setVideos} soloLectura={!editable} />
+          <div className="mt-2 space-y-2">
+            {!propias && editable && (
+              <p className="text-xs text-muted">
+                Son las del partido. Si agregás o alineás una, se guardan en esta planilla y pasan al partido cuando se oficialice.
+              </p>
+            )}
+            <CamarasPartido
+              api={api}
+              planillaId={planillaId}
+              videos={videos}
+              onGuardado={(v) => {
+                setVideos(v);
+                setPropias(v.length > 0);
+              }}
+              soloLectura={!editable}
+            />
           </div>
         )}
       </div>
