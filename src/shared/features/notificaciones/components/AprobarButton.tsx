@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { getSolicitudAprobadores } from '../../solicitudes/services/solicitudesEdicionService';
 import { useToast } from '../../../components/Toast/ToastProvider';
 import type { ISolicitudEdicion } from '../../solicitudes/types/solicitudesEdicion';
+import { useHaySeleccion } from './SeleccionAprobacion';
 
 interface AprobarButtonProps {
   solicitud: ISolicitudEdicion;
@@ -23,6 +24,7 @@ export const AprobarButton: React.FC<AprobarButtonProps> = ({
   const [loadingAprobadores, setLoadingAprobadores] = useState(false);
   // Por qué no se puede aprobar, en palabras (lo arma el backend: quién sí puede, o que ya se resolvió).
   const [motivo, setMotivo] = useState<string | null>(null);
+  const haySeleccion = useHaySeleccion(solicitud._id);
 
   // Verificar si el usuario puede aprobar esta solicitud
   useEffect(() => {
@@ -80,7 +82,7 @@ export const AprobarButton: React.FC<AprobarButtonProps> = ({
       }`}
       title={puedeAprobar === false ? motivo ?? 'No podés aprobar esta solicitud' : 'Aprobar solicitud'}
     >
-      {loadingAprobadores ? '...' : 'Aprobar'}
+      {loadingAprobadores ? '...' : haySeleccion ? 'Aprobar selección' : 'Aprobar'}
     </button>
     {puedeAprobar === false && motivo ? (
       <span className="max-w-[16rem] text-2xs leading-snug text-slate-500">{motivo}</span>

@@ -4,6 +4,7 @@ import React from 'react';
 import type { NotificacionesRowProps } from '../types/notificacionesTypes';
 import { AprobarButton } from './AprobarButton';
 import { ResumenSolicitud, esCampoTecnico, humanizar, valorLegible } from './ResumenSolicitud';
+import { SeleccionContrato, SeleccionLote } from './SeleccionAprobacion';
 
 // Maps raw datosPropuestos keys to Spanish labels
 const FIELD_LABELS: Record<string, string> = {
@@ -176,6 +177,17 @@ export const DetalleSolicitud: React.FC<{ solicitud: Solicitud }> = ({ solicitud
   return (
     <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <ResumenSolicitud solicitud={solicitud as any} />
+      {solicitud.estado === 'pendiente' && solicitud.tipo === 'estadisticasJugadorSet-lote' && solicitud.entidad &&
+      Array.isArray(solicitud.datosPropuestos?.statIds) ? (
+        <SeleccionLote
+          solicitudId={solicitud._id}
+          setId={String(solicitud.entidad)}
+          statIds={(solicitud.datosPropuestos.statIds as unknown[]).map(String)}
+        />
+      ) : null}
+      {solicitud.estado === 'pendiente' && solicitud.tipo === 'jugador-equipo-editar' ? (
+        <SeleccionContrato solicitudId={solicitud._id} datos={solicitud.datosPropuestos || {}} />
+      ) : null}
 
       {/* Meta: quién pidió + doble confirmación */}
       <div className="flex flex-wrap items-start gap-x-6 gap-y-2 border-b border-slate-100 pb-3">

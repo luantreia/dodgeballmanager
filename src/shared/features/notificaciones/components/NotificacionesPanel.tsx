@@ -10,6 +10,7 @@ import type { ISolicitudEdicion, SolicitudEdicionEstado } from '../../solicitude
 import type { NotificacionesPanelProps } from '../types/notificacionesTypes';
 import { NotificacionesFilters } from './NotificacionesFilters';
 import { NotificacionesTable } from './NotificacionesTable';
+import { getSeleccion, setSeleccion } from './SeleccionAprobacion';
 
 export const NotificacionesPanel: React.FC<NotificacionesPanelProps> = ({
   title,
@@ -171,7 +172,9 @@ export const NotificacionesPanel: React.FC<NotificacionesPanelProps> = ({
   const manejarAprobar = async (s: ISolicitudEdicion) => {
     try {
       setAccionando(s._id);
-      const updated = await actualizarSolicitudEdicion(s._id, { estado: 'aceptado' });
+      const seleccion = getSeleccion(s._id);
+      const updated = await actualizarSolicitudEdicion(s._id, { estado: 'aceptado', ...(seleccion ? { seleccion } : {}) });
+      setSeleccion(s._id, null);
       setSolicitudes((prev) => prev.map((x) => (x._id === s._id ? { ...updated } : x)));
       onSolicitudUpdate?.({ ...updated });
       addToast({ type: 'success', title: 'Solicitud aprobada' });
@@ -230,7 +233,10 @@ export const NotificacionesPanel: React.FC<NotificacionesPanelProps> = ({
     setAprobandoSeleccion(true);
     try {
       const resultados = await Promise.allSettled(
-        ids.map((id) => actualizarSolicitudEdicion(id, { estado: 'aceptado' }))
+        ids.map((id) => {
+          const seleccion = getSeleccion(id);
+          return actualizarSolicitudEdicion(id, { estado: 'aceptado', ...(seleccion ? { seleccion } : {}) });
+        })
       );
 
       const exitosas = resultados.filter((r) => r.status === 'fulfilled').length;

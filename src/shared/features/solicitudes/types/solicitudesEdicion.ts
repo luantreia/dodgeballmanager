@@ -120,6 +120,8 @@ export interface ISolicitudActualizarPayload {
   estado?: 'aceptado' | 'rechazado';
   motivoRechazo?: string;
   datosPropuestos?: Record<string, any>;
+  /** Aprobación parcial: qué partes incorporar (ver overtime/src/utils/seleccionAprobacion.js). */
+  seleccion?: Record<string, unknown>;
 }
 
 // Interfaces específicas para datos propuestos
