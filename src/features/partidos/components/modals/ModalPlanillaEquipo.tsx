@@ -35,6 +35,7 @@ import {
 } from '../../services/planillaEquipoService';
 import { extractEquipoId, extractEquipoNombre, type PartidoDetallado } from '../../services/partidoService';
 import { DataTable } from 'overtime-kit';
+import CapturaVideoSet from '../captura/CapturaVideoSet';
 
 /**
  * Upsert de una fila dentro de `planilla.estadisticas`, sin tocar el resto — ni el autoguardado
@@ -129,6 +130,8 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   const [creando, setCreando] = useState(false);
   const [modoNuevo, setModoNuevo] = useState<PlanillaModo>('sets');
   const [setActivoId, setSetActivoId] = useState<string | null>(null);
+  // Captura con video (overtime-kit/captura): tiempos del set, alineación y marcas de out.
+  const [capturaVideo, setCapturaVideo] = useState(false);
   const [slots, setSlots] = useState<Slot[]>(() => slotsVaciosPara(JUGADORES_POR_SET));
   const [eliminando, setEliminando] = useState(false);
 
@@ -1366,6 +1369,34 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
                 <span className="text-xs text-amber-700">
                   Sin esto el set queda como no jugado si alguna vez se oficializa.
                 </span>
+              )}
+            </div>
+          )}
+
+          {planilla.modo === 'sets' && setActivo && (
+            <div className="rounded-lg border border-slate-200 px-3 py-2">
+              <button
+                type="button"
+                onClick={() => setCapturaVideo((v) => !v)}
+                aria-expanded={capturaVideo}
+                className="text-sm font-semibold text-brand-700 hover:underline"
+              >
+                {capturaVideo ? 'Ocultar captura con video' : `Capturar el set ${setActivo.numeroSet} con video: tiempos, outs y vivos`}
+              </button>
+              {capturaVideo && (
+                <div className="mt-3">
+                  <CapturaVideoSet
+                    key={setActivo._id}
+                    partidoId={partidoId}
+                    planillaSetId={setActivo._id}
+                    equipos={equiposDelPartido}
+                    presentes={planilla.presentes}
+                    videos={(partido as { videos?: import('overtime-kit/captura').VideoPartido[] } | null | undefined)?.videos}
+                    videoUrl={(partido as { videoUrl?: string } | null | undefined)?.videoUrl}
+                    editable={editable}
+                    onCambio={() => void recargarPlanilla(planilla._id)}
+                  />
+                </div>
               )}
             </div>
           )}
