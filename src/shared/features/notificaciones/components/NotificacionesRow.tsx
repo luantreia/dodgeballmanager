@@ -177,7 +177,7 @@ export const DetalleSolicitud: React.FC<{ solicitud: Solicitud }> = ({ solicitud
   return (
     <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <ResumenSolicitud solicitud={solicitud as any} />
-      {solicitud.estado === 'pendiente' && solicitud.tipo === 'estadisticasJugadorSet-lote' && solicitud.entidad &&
+      {solicitud.estado === 'pendiente' && (solicitud.tipo as string) === 'estadisticasJugadorSet-lote' && solicitud.entidad &&
       Array.isArray(solicitud.datosPropuestos?.statIds) ? (
         <SeleccionLote
           solicitudId={solicitud._id}
@@ -185,7 +185,7 @@ export const DetalleSolicitud: React.FC<{ solicitud: Solicitud }> = ({ solicitud
           statIds={(solicitud.datosPropuestos.statIds as unknown[]).map(String)}
         />
       ) : null}
-      {solicitud.estado === 'pendiente' && solicitud.tipo === 'jugador-equipo-editar' ? (
+      {solicitud.estado === 'pendiente' && (solicitud.tipo as string) === 'jugador-equipo-editar' ? (
         <SeleccionContrato solicitudId={solicitud._id} datos={solicitud.datosPropuestos || {}} />
       ) : null}
 
