@@ -237,6 +237,7 @@ export const esCampoTecnico = (clave: string, valor: unknown) =>
 const VALORES: Record<string, string> = {
   en_juego: 'En juego',
   finalizado: 'Finalizado',
+  suspendido: 'Suspendido',
   pendiente: 'Pendiente',
   programado: 'Programado',
   cancelado: 'Cancelado',

@@ -6,7 +6,7 @@ import EstadoVacio from '../../../shared/components/EstadoVacio/EstadoVacio';
 import PartidoCalendar from '../../../shared/components/PartidoCalendar/PartidoCalendar';
 import SeccionCompetencias from '../../competencias/components/SeccionCompetencias';
 import { useEquipo } from '../../../app/providers/EquipoContext';
-import { getPartido, getPartidos, getTemporadasByCompetencia, getFasesByTemporada } from '../services/partidoService';
+import { actualizarPartido, getPartido, getPartidos, getTemporadasByCompetencia, getFasesByTemporada } from '../services/partidoService';
 import type { Partido } from '../../../shared/utils/types/types';
 import { ModalPartidoAdmin, ModalSolicitudEditarPartido } from '../components';
 import { useToken } from '../../../app/providers/AuthContext';
@@ -14,7 +14,7 @@ import { ModalCrearPartido } from '../components/modals/ModalCrearPartidoAmistos
 import ModalAlineacionPartido from '../components/modals/ModalAlineacionPartido';
 import ModalInformacionPartido from '../components/modals/ModalInformacionPartido';
 import { useToast } from '../../../shared/components/Toast/ToastProvider';
-import { AdjustmentsHorizontalIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { AdjustmentsHorizontalIcon, Cog6ToothIcon, PlayIcon } from '@heroicons/react/24/outline';
 import { getParticipaciones } from '../../competencias/services/equipoCompetenciaService';
 import { Tabs } from 'overtime-kit';
 
@@ -288,6 +288,17 @@ const PartidosPage = () => {
    * posible a sugerir lo que sigue. Antes de jugar un amistoso, la alineación; con el partido en
    * curso o terminado, la carga de estadísticas.
    */
+  const handleReanudar = async (partidoId: string) => {
+    try {
+      await actualizarPartido(partidoId, { estado: 'en_juego' }, equipoSeleccionado?.id);
+      addToast({ type: 'success', title: 'Partido reanudado', message: 'Volvió a estar en juego.' });
+      await refreshPartidos();
+    } catch (error) {
+      console.error(error);
+      addToast({ type: 'error', title: 'Error', message: 'No pudimos reanudar el partido.' });
+    }
+  };
+
   const accionesDe =
     (partido: Partido) => {
       const esCompetencia = esPartidoCompetencia(partido);
@@ -295,6 +306,7 @@ const PartidosPage = () => {
       const rival = partido.equipoVisitante?.nombre ?? partido.rival ?? 'el rival';
 
       const alineacionDisponible = !esCompetencia;
+      const puedeReanudar = estado === 'suspendido' && !esCompetencia;
       const primariaEsAlineacion = estado === 'programado' && alineacionDisponible;
 
       const etiquetaGestionar =
@@ -320,6 +332,23 @@ const PartidosPage = () => {
           primariaEsAlineacion
             ? { label: etiquetaGestionar, onSelect: () => handleSeleccionar(partido.id) }
             : { label: 'Alineación', onSelect: () => handleAbrirAlineacion(partido.id) },
+        );
+      }
+
+      if (puedeReanudar) {
+        secundarias.unshift({ label: etiquetaGestionar, onSelect: () => handleSeleccionar(partido.id) });
+        return (
+          <>
+            <button
+              type="button"
+              onClick={() => handleReanudar(partido.id)}
+              className="inline-flex min-h-[2.75rem] flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm transition [touch-action:manipulation] hover:bg-brand-700 sm:flex-none"
+            >
+              <PlayIcon className="h-4 w-4" />
+              Reanudar
+            </button>
+            <MenuAcciones acciones={secundarias} etiqueta={`Más acciones del partido contra ${rival}`} />
+          </>
         );
       }
 
