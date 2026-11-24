@@ -16,6 +16,7 @@ function apiFalsa() {
   let n = 0;
   const agregados: NuevoEvento[] = [];
   const ganadores: string[] = [];
+  const tiempos: unknown[] = [];
   const api = {
     leer: async () => estado,
     agregarEvento: async (_ref: unknown, e: NuevoEvento) => {
@@ -28,7 +29,11 @@ function apiFalsa() {
       return estado;
     },
     guardarAlineacion: async () => estado,
-    guardarTiempo: async () => estado,
+    guardarTiempo: async (_ref: unknown, t: EstadoSet['set']['tiempo']) => {
+      tiempos.push(t);
+      estado = { ...estado, set: { ...estado.set, tiempo: t } };
+      return estado;
+    },
     guardarVideos: async () => ({ videos: [], videoUrl: '' }),
     guardarGanador: async (_ref: unknown, g: string) => {
       ganadores.push(g);
@@ -36,7 +41,7 @@ function apiFalsa() {
       return estado;
     },
   } as unknown as ApiCaptura;
-  return { api, agregados, ganadores, fijar: (e: Partial<EstadoSet>) => { estado = { ...estado, ...e }; } };
+  return { api, agregados, ganadores, tiempos, fijar: (e: Partial<EstadoSet>) => { estado = { ...estado, ...e }; } };
 }
 
 const equipos = [{ id: 'A', nombre: 'MORAN' }, { id: 'B', nombre: 'MARVIN' }];
@@ -87,5 +92,22 @@ describe('CapturaSet', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Marcar ganador a MORAN' }));
     await waitFor(() => expect(ganadores).toEqual(['local']));
     expect(await screen.findByText(/como dicen las marcas/)).toBeInTheDocument();
+  });
+
+  it('carga inicio y duración del set sin prompt, y valida el formato', async () => {
+    const { api, tiempos } = apiFalsa();
+    render(<CapturaSet api={api} refSet={{ planillaSet: 's1' }} equipos={equipos} jugadores={jugadores} obtenerTiempo={() => 1} />);
+    await screen.findByText('Set 2');
+    fireEvent.click(screen.getByRole('button', { name: 'Editar tiempo' }));
+    fireEvent.change(screen.getByLabelText('Empieza (m:ss)'), { target: { value: '3:12' } });
+    fireEvent.change(screen.getByLabelText('Dura (m:ss)'), { target: { value: 'abc' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('La duración');
+    expect(tiempos).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText('Dura (m:ss)'), { target: { value: '2:30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    await waitFor(() => expect(tiempos).toHaveLength(1));
+    expect(tiempos[0]).toMatchObject({ desde: 192, hasta: 342, confirmado: true });
+    expect(screen.queryByLabelText('Dura (m:ss)')).not.toBeInTheDocument();
   });
 });
