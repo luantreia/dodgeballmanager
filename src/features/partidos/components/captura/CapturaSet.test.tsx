@@ -17,6 +17,7 @@ function apiFalsa() {
   const agregados: NuevoEvento[] = [];
   const ganadores: string[] = [];
   const tiempos: unknown[] = [];
+  const alineaciones: { id: string; segundo: number }[] = [];
   const api = {
     leer: async () => estado,
     agregarEvento: async (_ref: unknown, e: NuevoEvento) => {
@@ -35,13 +36,18 @@ function apiFalsa() {
       return estado;
     },
     guardarVideos: async () => ({ videos: [], videoUrl: '' }),
+    alinearEnVivo: async (id: string, segundo: number) => {
+      alineaciones.push({ id, segundo });
+      estado = { ...estado, relojEnVivo: { ...estado.relojEnVivo!, alineado: true } };
+      return estado;
+    },
     guardarGanador: async (_ref: unknown, g: string) => {
       ganadores.push(g);
       estado = { ...estado, set: { ...estado.set, ganadorSet: g as 'local' } };
       return estado;
     },
   } as unknown as ApiCaptura;
-  return { api, agregados, ganadores, tiempos, fijar: (e: Partial<EstadoSet>) => { estado = { ...estado, ...e }; } };
+  return { api, agregados, ganadores, tiempos, alineaciones, fijar: (e: Partial<EstadoSet>) => { estado = { ...estado, ...e }; } };
 }
 
 const equipos = [{ id: 'A', nombre: 'MORAN' }, { id: 'B', nombre: 'MARVIN' }];
@@ -109,5 +115,32 @@ describe('CapturaSet', () => {
     await waitFor(() => expect(tiempos).toHaveLength(1));
     expect(tiempos[0]).toMatchObject({ desde: 192, hasta: 342, confirmado: true });
     expect(screen.queryByLabelText('Dura (m:ss)')).not.toBeInTheDocument();
+  });
+
+  it('en vivo, el tiempo sale del reloj del partido y no del que pasa la app', async () => {
+    const { api, agregados, fijar } = apiFalsa();
+    const ahora = Date.now();
+    // El reloj arrancó hace 100 s reales; el servidor y el cliente están en hora.
+    fijar({ relojEnVivo: { ancla: new Date(ahora - 100000).toISOString(), segundo: 0, alineado: false }, ahoraServidor: ahora });
+    render(<CapturaSet api={api} refSet={{ setPartido: 's1' }} equipos={equipos} jugadores={jugadores} obtenerTiempo={() => 5} origen="en_vivo" />);
+    await screen.findByText('Set 2');
+    fireEvent.click(screen.getByRole('button', { name: 'Dani: out por Línea' }));
+    await waitFor(() => expect(agregados).toHaveLength(1));
+    expect(agregados[0].t).toBeGreaterThanOrEqual(100);
+    expect(agregados[0].t).toBeLessThan(103);
+    expect(agregados[0].origen).toBe('en_vivo');
+  });
+
+  it('mirando el video, «Es acá» alinea las marcas en vivo con el segundo del video', async () => {
+    const { api, alineaciones, fijar } = apiFalsa();
+    fijar({
+      relojEnVivo: { ancla: new Date().toISOString(), segundo: 0, alineado: false },
+      eventos: [{ _id: 'ev1', t: 30, tipo: 'out', jugador: 'b2', equipo: 'B', motivo: 'linea', hora: new Date().toISOString(), origen: 'en_vivo' }],
+    });
+    render(<CapturaSet api={api} refSet={{ setPartido: 's1' }} equipos={equipos} jugadores={jugadores} obtenerTiempo={() => 42} />);
+    expect(await screen.findByText(/todavía no están alineadas/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Es acá' }));
+    await waitFor(() => expect(alineaciones).toEqual([{ id: 'ev1', segundo: 42 }]));
+    expect(screen.queryByRole('button', { name: 'Es acá' })).not.toBeInTheDocument();
   });
 });
