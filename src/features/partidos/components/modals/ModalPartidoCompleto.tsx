@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { crearApiCaptura, extraerYoutubeId, PartidoCompleto, type SetDelPartido, type VideoPartido } from 'overtime-kit/captura';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
+import { useToast } from '../../../../shared/components/Toast/ToastProvider';
+import ModalPedirOficializacion from './ModalPedirOficializacion';
 import { authFetch } from '../../../../shared/utils/authFetch';
 import {
   crearPlanilla,
@@ -40,6 +42,8 @@ const ModalPartidoCompleto: React.FC<Props> = ({ partidoId, equipoId, partido, o
   const [planilla, setPlanilla] = useState<PlanillaConVideo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [videos, setVideos] = useState<VideoPartido[]>([]);
+  const [pidiendo, setPidiendo] = useState(false);
+  const { addToast } = useToast();
 
   const recargar = useCallback(async (id: string) => {
     const p = (await obtenerPlanilla(id)) as PlanillaConVideo;
@@ -130,10 +134,39 @@ const ModalPartidoCompleto: React.FC<Props> = ({ partidoId, equipoId, partido, o
             }}
             soloLectura={!editable}
           />
-          <p className="mt-4 text-xs text-muted">
-            Después, en «Capturar», cargá los jugadores de cada set: con la botonera de estadísticas o
-            marcando los outs con su causa.
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-muted">
+              Después, en «Capturar», cargá los jugadores de cada set: con la botonera de estadísticas o
+              marcando los outs con su causa.
+            </p>
+            {editable && sets.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setPidiendo(true)}
+                className="min-h-[2.75rem] rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+              >
+                Pedir oficialización
+              </button>
+            )}
+          </div>
+          {pidiendo && (
+            <ModalPedirOficializacion
+              planillaId={planilla._id}
+              tieneEstadisticas={planilla.estadisticas.length > 0}
+              onClose={() => setPidiendo(false)}
+              onHecho={async (r) => {
+                setPidiendo(false);
+                await recargar(planilla._id);
+                addToast({
+                  type: 'success',
+                  title: r.oficializada ? 'Partido oficializado' : 'Solicitud enviada',
+                  message: r.oficializada
+                    ? 'Como es un amistoso, no hacía falta aprobación de nadie.'
+                    : 'La organización tiene que aprobarla para que pase al partido oficial.',
+                });
+              }}
+            />
+          )}
         </>
       )}
     </ModalBase>

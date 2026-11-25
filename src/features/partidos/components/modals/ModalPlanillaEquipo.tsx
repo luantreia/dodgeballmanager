@@ -18,7 +18,7 @@ import {
   crearPlanilla,
   guardarSet,
   guardarEstadisticas,
-  solicitarOficializacion,
+  type RespuestaOficializacion,
   cancelarOficializacion,
   eliminarPlanilla,
   eliminarSet,
@@ -36,6 +36,7 @@ import {
 import { extractEquipoId, extractEquipoNombre, type PartidoDetallado } from '../../services/partidoService';
 import { DataTable } from 'overtime-kit';
 import CapturaVideoSet from '../captura/CapturaVideoSet';
+import ModalPedirOficializacion from './ModalPedirOficializacion';
 
 /**
  * Upsert de una fila dentro de `planilla.estadisticas`, sin tocar el resto — ni el autoguardado
@@ -1045,11 +1046,17 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     }
   };
 
-  const oficializar = async (): Promise<void> => {
+  const [eligiendoOficializacion, setEligiendoOficializacion] = useState(false);
+  const oficializar = (): void => {
+    if (planilla) setEligiendoOficializacion(true);
+  };
+
+  /** Después de pedirla en ModalPedirOficializacion. */
+  const oficializacionPedida = async (resultado: RespuestaOficializacion): Promise<void> => {
     if (!planilla) return;
+    setEligiendoOficializacion(false);
     setGuardando(true);
     try {
-      const resultado = await solicitarOficializacion(planilla._id);
       const completa = await obtenerPlanilla(planilla._id);
       setPlanilla(completa);
       await Promise.resolve(onRefresh?.());
@@ -1064,7 +1071,7 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
     } catch (error) {
       addToast({
         type: 'error',
-        title: 'No se pudo solicitar la oficialización',
+        title: 'La solicitud se envió, pero no se pudo recargar la planilla',
         message: error instanceof Error ? error.message : 'Error inesperado',
       });
     } finally {
@@ -1720,6 +1727,15 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
           await accion?.();
         }}
       />
+
+      {eligiendoOficializacion && planilla && (
+        <ModalPedirOficializacion
+          planillaId={planilla._id}
+          tieneEstadisticas={planilla.estadisticas.length > 0}
+          onClose={() => setEligiendoOficializacion(false)}
+          onHecho={oficializacionPedida}
+        />
+      )}
 
       <ModalBase
         isOpen={decisionCambioJugador !== null}

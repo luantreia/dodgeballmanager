@@ -227,8 +227,15 @@ export const guardarEstadisticas = (
     body: payload,
   });
 
+/**
+ * 'estructura': sólo sets (tiempo, ganador), alineaciones, marcas y cámaras.
+ * 'completa': además la convocatoria y las estadísticas de jugadores.
+ */
+export type AlcanceOficializacion = 'completa' | 'estructura';
+
 export interface RespuestaOficializacion {
   oficializada: boolean;
+  alcance?: AlcanceOficializacion;
   motivo?: string;
   solicitudId?: string;
   planilla?: PlanillaCompleta;
@@ -241,10 +248,11 @@ export interface RespuestaOficializacion {
 export const solicitarOficializacion = (
   planillaId: string,
   visibilidadObjetivo: PlanillaVisibilidad = 'organizacion',
+  alcance: AlcanceOficializacion = 'completa',
 ) =>
   authFetch<RespuestaOficializacion>(`${BASE}/${planillaId}/solicitar-oficializacion`, {
     method: 'POST',
-    body: { visibilidadObjetivo },
+    body: { visibilidadObjetivo, alcance },
   });
 
 export const cancelarOficializacion = (planillaId: string) =>
