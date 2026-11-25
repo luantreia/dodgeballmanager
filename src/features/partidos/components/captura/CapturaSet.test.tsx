@@ -41,6 +41,11 @@ function apiFalsa() {
       estado = { ...estado, relojEnVivo: { ...estado.relojEnVivo!, alineado: true } };
       return estado;
     },
+    alinearEnVivoConReloj: async (_set: string, hora: string, segundo: number) => {
+      alineaciones.push({ id: hora, segundo });
+      estado = { ...estado, relojEnVivo: { ...estado.relojEnVivo!, alineado: true } };
+      return estado;
+    },
     guardarGanador: async (_ref: unknown, g: string) => {
       ganadores.push(g);
       estado = { ...estado, set: { ...estado.set, ganadorSet: g as 'local' } };
@@ -138,9 +143,29 @@ describe('CapturaSet', () => {
       eventos: [{ _id: 'ev1', t: 30, tipo: 'out', jugador: 'b2', equipo: 'B', motivo: 'linea', hora: new Date().toISOString(), origen: 'en_vivo' }],
     });
     render(<CapturaSet api={api} refSet={{ setPartido: 's1' }} equipos={equipos} jugadores={jugadores} obtenerTiempo={() => 42} />);
-    expect(await screen.findByText(/todavía no están alineadas/)).toBeInTheDocument();
+    expect(await screen.findByText(/todavía no está alineado/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Es acá' }));
     await waitFor(() => expect(alineaciones).toEqual([{ id: 'ev1', segundo: 42 }]));
     expect(screen.queryByRole('button', { name: 'Es acá' })).not.toBeInTheDocument();
+  });
+
+  it('muestra el minuto de juego de cada marca y alinea con el arranque de un tiempo', async () => {
+    const { api, alineaciones, fijar } = apiFalsa();
+    const ancla = '2026-11-24T15:30:00.000Z';
+    fijar({
+      relojEnVivo: { ancla, segundo: 0, alineado: false },
+      // 1T arranca en el ancla con 20:00; time out a los 5 min reales, se reanuda a los 7.
+      relojJuego: [
+        { tipo: 'inicio', periodo: 1, hora: ancla, restante: 1200 },
+        { tipo: 'pausa', periodo: 1, hora: '2026-11-24T15:35:00.000Z', restante: 900, motivo: 'time_out', lado: 'local' },
+        { tipo: 'reanuda', periodo: 1, hora: '2026-11-24T15:37:00.000Z', restante: 900 },
+      ],
+      // Out a los 8 min reales (480 s del video sin alinear): van 6 de juego → quedan 14:00.
+      eventos: [{ _id: 'ev1', t: 480, tipo: 'out', jugador: 'b2', equipo: 'B', motivo: 'linea', hora: '2026-11-24T15:38:00.000Z', origen: 'en_vivo' }],
+    });
+    render(<CapturaSet api={api} refSet={{ setPartido: 's1' }} equipos={equipos} jugadores={jugadores} obtenerTiempo={() => 15} />);
+    expect(await screen.findByText('1T 14:00')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Arranque del 1T es acá' }));
+    await waitFor(() => expect(alineaciones).toEqual([{ id: ancla, segundo: 15 }]));
   });
 });
