@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { crearApiCaptura, extraerYoutubeId, PartidoCompleto, type SetDelPartido, type VideoPartido } from 'overtime-kit/captura';
+import {
+  crearApiCaptura,
+  extraerYoutubeId,
+  PartidoCompleto,
+  type SetDelPartido,
+  type TiempoSet,
+  type VentanaPartido,
+  type VideoPartido,
+} from 'overtime-kit/captura';
 import ModalBase from '../../../../shared/components/ModalBase/ModalBase';
 import { useToast } from '../../../../shared/components/Toast/ToastProvider';
 import ModalPedirOficializacion from './ModalPedirOficializacion';
@@ -27,7 +35,13 @@ const api = crearApiCaptura((ruta, init) =>
   authFetch(ruta, { method: init?.method ?? 'GET', body: init?.body ? JSON.parse(init.body) : undefined }),
 );
 
-type PlanillaConVideo = PlanillaCompleta & { videos?: VideoPartido[] };
+type PlanillaConVideo = PlanillaCompleta & { videos?: VideoPartido[]; ventana?: VentanaPartido | null };
+
+/** Lo que la consola de Overtime-Partido dejó del partido oficial (GET /eventos-set/consola/:id). */
+interface Consola {
+  ventana: VentanaPartido | null;
+  sets: Array<{ _id: string; numeroSet: number; ganadorSet: SetDelPartido['ganadorSet']; tiempo: TiempoSet | null; deConsola: boolean }>;
+}
 
 interface Props {
   partidoId: string;
@@ -43,6 +57,15 @@ const ModalPartidoCompleto: React.FC<Props> = ({ partidoId, equipoId, partido, o
   const [error, setError] = useState<string | null>(null);
   const [videos, setVideos] = useState<VideoPartido[]>([]);
   const [pidiendo, setPidiendo] = useState(false);
+  const [consola, setConsola] = useState<Consola | null>(null);
+  const [trayendo, setTrayendo] = useState(false);
+
+  // Si el partido se manejó con la consola, sus sets ya están ubicados en el tiempo del partido.
+  useEffect(() => {
+    authFetch<Consola>(`/eventos-set/consola/${partidoId}`)
+      .then(setConsola)
+      .catch(() => setConsola(null));
+  }, [partidoId]);
   const { addToast } = useToast();
 
   const recargar = useCallback(async (id: string) => {
@@ -94,6 +117,26 @@ const ModalPartidoCompleto: React.FC<Props> = ({ partidoId, equipoId, partido, o
 
   const editable = planilla ? planilla.modo === 'sets' && ['borrador', 'rechazada'].includes(planilla.estado) : false;
 
+  const setsDeConsola = (consola?.sets ?? []).filter((s) => s.tiempo);
+
+  /** La planilla vacía arranca con los sets que ubicó la consola: ganador y tiempo, a revisar. */
+  const traerDeConsola = async () => {
+    if (!planilla) return;
+    setTrayendo(true);
+    try {
+      for (const s of setsDeConsola) {
+        const creado = await guardarSet(planilla._id, { numeroSet: s.numeroSet, ganadorSet: s.ganadorSet });
+        await api.guardarTiempo({ planillaSet: creado._id }, { ...s.tiempo!, confirmado: false });
+      }
+      await recargar(planilla._id);
+      addToast({ type: 'success', title: 'Sets traídos', message: 'Revisá cada uno contra el video y confirmalo.' });
+    } catch (e) {
+      addToast({ type: 'error', title: 'No se pudieron traer los sets', message: e instanceof Error ? e.message : 'Error inesperado' });
+    } finally {
+      setTrayendo(false);
+    }
+  };
+
   const cerrar = () => {
     void onCambio?.();
     onClose();
@@ -120,8 +163,25 @@ const ModalPartidoCompleto: React.FC<Props> = ({ partidoId, equipoId, partido, o
               La planilla está {planilla.estado === 'oficializada' ? 'oficializada' : 'esperando oficialización'}: se puede mirar, no editar.
             </p>
           )}
+          {editable && planilla.sets.length === 0 && setsDeConsola.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <span>
+                Este partido se manejó con la consola: tiene {setsDeConsola.length} set{setsDeConsola.length === 1 ? '' : 's'} ubicado
+                {setsDeConsola.length === 1 ? '' : 's'} en el video, con su ganador.
+              </span>
+              <button
+                type="button"
+                disabled={trayendo}
+                onClick={() => void traerDeConsola()}
+                className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {trayendo ? 'Trayendo…' : 'Traer los sets'}
+              </button>
+            </div>
+          )}
           <PartidoCompleto
             api={api}
+            ventana={planilla.ventana ?? consola?.ventana ?? null}
             videos={videos}
             destinoCamaras={{ planillaId: planilla._id }}
             onVideos={setVideos}

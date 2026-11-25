@@ -62,4 +62,31 @@ describe('PartidoCompleto', () => {
     expect(await screen.findByText('Set 2')).toBeInTheDocument();
     expect(llamadas).toEqual(['crear 1', 'tiempo s1 120-330', 'ganador s1 local', 'crear 2']);
   });
+
+  it('un set de la consola se confirma donde está, y muestra el inicio y fin del partido', async () => {
+    const llamadas: string[] = [];
+    const api = {
+      guardarTiempo: async (ref: { planillaSet: string }, t: { desde: number; hasta: number; origen: string; confirmado: boolean }, op?: { marcarAhora?: boolean }) => {
+        llamadas.push(`tiempo ${ref.planillaSet} ${t.desde}-${t.hasta} ${t.origen} ${t.confirmado} ${op?.marcarAhora}`);
+      },
+    } as unknown as ApiCaptura;
+    render(
+      <PartidoCompleto
+        api={api}
+        videos={[]}
+        destinoCamaras={{ planillaId: 'p1' }}
+        equipos={equipos}
+        ventana={{ desde: 81, hasta: 1741, origen: 'en_vivo', confirmado: false }}
+        sets={[{ id: 's1', numeroSet: 1, ganadorSet: 'visitante', tiempo: { desde: 81, hasta: 285, origen: 'en_vivo', confirmado: false } }]}
+        refDe={(id) => ({ planillaSet: id })}
+        crearSet={async () => 'x'}
+        onCambio={() => undefined}
+      />,
+    );
+    expect(screen.getByText('en vivo (consola) · sin confirmar')).toBeInTheDocument();
+    expect(screen.getByText('(27:40)')).toBeInTheDocument();
+    expect(screen.getByText('consola')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '✓ confirmar' }));
+    await waitFor(() => expect(llamadas).toEqual(['tiempo s1 81-285 en_vivo true false']));
+  });
 });
