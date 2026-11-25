@@ -6,6 +6,10 @@ type Props = {
   onAbrir: (partido: PartidoTimeline) => void;
   /** Descarga el CSV de ese partido puntual, con los dos equipos. */
   onDescargar?: (partido: PartidoTimeline) => void | Promise<void>;
+  /** Paso 1 de la captura: los sets sobre el video, con duración y ganador. */
+  onPartidoCompleto?: (partido: PartidoTimeline) => void;
+  /** Paso 2: jugadores y estadísticas set a set (la planilla). */
+  onCapturar?: (partido: PartidoTimeline) => void;
 };
 
 /**
@@ -65,7 +69,10 @@ const MESES = [
  * que ya estaba ahí de todos modos; ponerlo además como badge de texto costaba dos renglones
  * más por partido y hacía que veinte partidos no entraran en ninguna pantalla.
  */
-const LineaTemporalPartidos = ({ partidos, onAbrir, onDescargar }: Props) => {
+const BOTON_FILA =
+  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-brand-300 hover:text-brand-600 [touch-action:manipulation]';
+
+const LineaTemporalPartidos = ({ partidos, onAbrir, onDescargar, onPartidoCompleto, onCapturar }: Props) => {
   const grupos = useMemo(() => {
     const mapa = new Map<string, { titulo: string; partidos: PartidoTimeline[] }>();
 
@@ -171,6 +178,29 @@ const LineaTemporalPartidos = ({ partidos, onAbrir, onDescargar }: Props) => {
                         </span>
                       )}
                     </button>
+
+                    {onPartidoCompleto && (
+                      <button
+                        type="button"
+                        onClick={() => onPartidoCompleto(partido)}
+                        title="Partido completo: sets, duración y ganadores sobre el video"
+                        aria-label={`Partido completo contra ${partido.rival?.nombre ?? 'rival'}`}
+                        className={BOTON_FILA}
+                      >
+                        <span aria-hidden className="text-sm">▶</span>
+                      </button>
+                    )}
+                    {onCapturar && (
+                      <button
+                        type="button"
+                        onClick={() => onCapturar(partido)}
+                        title="Capturar: jugadores y estadísticas set a set"
+                        aria-label={`Capturar jugadores y estadísticas contra ${partido.rival?.nombre ?? 'rival'}`}
+                        className={BOTON_FILA}
+                      >
+                        <span aria-hidden className="text-sm">✎</span>
+                      </button>
+                    )}
 
                     {/* Aparte del botón principal: abre el modal, esto baja el archivo directo.
                         Sólo si hay algo cargado — nadie exporta un partido sin datos. */}

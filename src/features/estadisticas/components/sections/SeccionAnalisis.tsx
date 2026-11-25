@@ -25,6 +25,7 @@ import ModalVisorPartido from '../ModalVisorPartido';
 import ModalScoutearPartido from '../ModalScoutearPartido';
 import ModalPlanillasHuerfanas from '../ModalPlanillasHuerfanas';
 import ModalPlanillaEquipo from '../../../partidos/components/modals/ModalPlanillaEquipo';
+import ModalPartidoCompleto from '../../../partidos/components/modals/ModalPartidoCompleto';
 import ModalCapturaSetEstadisticas from '../../../partidos/components/modals/ModalCapturaSetEstadisticas';
 import { getPartidoDetallado, type PartidoDetallado } from '../../../partidos/services/partidoService';
 import { Tabs } from 'overtime-kit';
@@ -39,7 +40,8 @@ type Vista =
   | { tipo: 'ninguna' }
   | { tipo: 'visor'; partido: PartidoTimeline }
   | { tipo: 'planilla'; partido: PartidoTimeline }
-  | { tipo: 'captura'; partido: PartidoTimeline };
+  | { tipo: 'captura'; partido: PartidoTimeline }
+  | { tipo: 'partidoCompleto'; partido: PartidoTimeline };
 
 type Pestana = 'resumen' | 'sinergias' | 'sets' | 'partidos' | 'mas';
 
@@ -200,6 +202,22 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
         addToast({
           type: 'error',
           title: 'No pudimos abrir la captura',
+          message: err instanceof Error ? err.message : 'Error inesperado',
+        });
+      }
+    },
+    [addToast],
+  );
+
+  const abrirPartidoCompleto = useCallback(
+    async (partido: PartidoTimeline) => {
+      try {
+        setDetalle(await getPartidoDetallado(partido._id));
+        setVista({ tipo: 'partidoCompleto', partido });
+      } catch (err) {
+        addToast({
+          type: 'error',
+          title: 'No pudimos abrir el partido',
           message: err instanceof Error ? err.message : 'Error inesperado',
         });
       }
@@ -470,6 +488,8 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
           partidos={filtros.partidosFiltrados}
           onAbrir={(partido) => setVista({ tipo: 'visor', partido })}
           onDescargar={descargarPartido}
+          onPartidoCompleto={(partido) => void abrirPartidoCompleto(partido)}
+          onCapturar={(partido) => void abrirCaptura(partido, 'planilla')}
         />
       )}
 
@@ -513,6 +533,15 @@ const SeccionAnalisis = ({ equipoId, equipoNombre, token }: Props) => {
           partido={detalle}
           onClose={cerrarYRecargar}
           onRefresh={cargar}
+        />
+      )}
+
+      {vista.tipo === 'partidoCompleto' && (
+        <ModalPartidoCompleto
+          partidoId={vista.partido._id}
+          equipoId={equipoId}
+          partido={detalle}
+          onClose={cerrarYRecargar}
         />
       )}
 

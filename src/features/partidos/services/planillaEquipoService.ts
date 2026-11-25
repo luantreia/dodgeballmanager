@@ -52,6 +52,8 @@ export interface PlanillaSet {
   numeroSet: number;
   ganadorSet: 'local' | 'visitante' | 'empate' | 'pendiente';
   setPartido: string | null;
+  /** Dónde está el set en el video (segundos de partido). Ver overtime/src/models/Partido/tiempoVideo.js. */
+  tiempo?: { desde: number; hasta: number; origen?: 'manual' | 'cv' | 'en_vivo'; confirmado?: boolean } | null;
 }
 
 export interface PlanillaEstadistica {

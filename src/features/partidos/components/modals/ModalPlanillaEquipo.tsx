@@ -131,7 +131,21 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
   const [modoNuevo, setModoNuevo] = useState<PlanillaModo>('sets');
   const [setActivoId, setSetActivoId] = useState<string | null>(null);
   // Captura con video (overtime-kit/captura): tiempos del set, alineación y marcas de out.
-  const [capturaVideo, setCapturaVideo] = useState(false);
+  // Cómo se capturan los jugadores del set: la botonera de estadísticas (contadores por
+  // jugador) o las marcas de out con su causa sobre el video, de donde salen solas las
+  // estadísticas. Se recuerda la última elección en este dispositivo.
+  const [modoCaptura, setModoCapturaEstado] = useState<'botonera' | 'outs'>(() =>
+    typeof window !== 'undefined' && window.localStorage.getItem('planilla-modo-captura') === 'outs' ? 'outs' : 'botonera',
+  );
+  const setModoCaptura = (m: 'botonera' | 'outs') => {
+    setModoCapturaEstado(m);
+    try {
+      window.localStorage.setItem('planilla-modo-captura', m);
+    } catch {
+      /* sin localStorage: no se recuerda, nada más */
+    }
+  };
+  const capturaVideo = modoCaptura === 'outs';
   const [slots, setSlots] = useState<Slot[]>(() => slotsVaciosPara(JUGADORES_POR_SET));
   const [eliminando, setEliminando] = useState(false);
 
@@ -1375,14 +1389,28 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
 
           {planilla.modo === 'sets' && setActivo && (
             <div className="rounded-lg border border-slate-200 px-3 py-2">
-              <button
-                type="button"
-                onClick={() => setCapturaVideo((v) => !v)}
-                aria-expanded={capturaVideo}
-                className="text-sm font-semibold text-brand-700 hover:underline"
-              >
-                {capturaVideo ? 'Ocultar captura con video' : `Capturar el set ${setActivo.numeroSet} con video: tiempos, outs y vivos`}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-slate-700">Capturar el set {setActivo.numeroSet} con:</span>
+                <div role="radiogroup" aria-label="Cómo capturar el set" className="inline-flex rounded-lg bg-slate-100 p-0.5">
+                  {([
+                    ['botonera', 'Botonera de stats'],
+                    ['outs', 'Outs con causa (video)'],
+                  ] as const).map(([valor, texto]) => (
+                    <button
+                      key={valor}
+                      type="button"
+                      role="radio"
+                      aria-checked={modoCaptura === valor}
+                      onClick={() => setModoCaptura(valor)}
+                      className={`rounded-md px-3 py-1 text-xs font-semibold transition [touch-action:manipulation] ${
+                        modoCaptura === valor ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'
+                      }`}
+                    >
+                      {texto}
+                    </button>
+                  ))}
+                </div>
+              </div>
               {capturaVideo && (
                 <div className="mt-3">
                   <CapturaVideoSet
@@ -1429,6 +1457,11 @@ const ModalPlanillaEquipo: React.FC<Props> = ({
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
               Agregá un set para empezar a cargar estadísticas.
             </div>
+          ) : planilla.modo === 'sets' && capturaVideo ? (
+            <p className="text-xs text-muted">
+              Con «Outs con causa», los jugadores del set son la alineación de arriba y sus outs, hits,
+              catches y sobrevive salen de las marcas. Los tiros (throws) se cargan en la botonera.
+            </p>
           ) : (
             <div>
               {filasHuerfanasDelSet.length > 0 && (
